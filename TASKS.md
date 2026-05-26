@@ -6,6 +6,8 @@
 - [x] Add starter product, documentation, and verification files.
 - [x] Import outbound AI calling agent PRD into project docs.
 - [x] Create implementation plan and phased task list.
+- [x] Create focused MVP product and execution plan in `PLAN.md`.
+- [x] Create Superpowers realtime Plivo voice agent spec and implementation plan.
 - [ ] Initialize git repository if desired.
 - [ ] Scaffold Next.js App Router TypeScript project.
 - [ ] Add Tailwind CSS.
@@ -152,6 +154,7 @@
 ## Phase 11: Documentation
 - [x] Create `design.md` UI and UX design specification.
 - [x] Apply UI-UX-Pro-Max quality pass to `design.md`.
+- [x] Create daily progress summary for 2026-05-26.
 - [ ] Update `README.md` with final setup commands.
 - [ ] Update `README.md` with provider setup steps.
 - [ ] Update `docs/api.md` as route contracts change.
@@ -171,5 +174,11 @@
 - [ ] Add config layer with `.env.example` alignment.
 - [ ] Add minimal admin auth, webhook auth, and cron auth helpers.
 - [ ] Add enums and pure domain helpers for statuses, dispositions, and next actions.
+- [ ] Build Plivo outbound call start API.
+- [ ] Build Plivo answer URL that returns bidirectional AudioStream XML.
+- [ ] Build Node WebSocket voice bridge for Plivo AudioStream.
+- [ ] Connect voice bridge to OpenAI Realtime with configurable voice.
+- [ ] Save realtime call transcript and outcome to database.
+- [ ] Show realtime call outcome in MVP dashboard.
 - [ ] Add unit tests for status and disposition mapping.
 - [ ] Run verify script and update this checklist.
