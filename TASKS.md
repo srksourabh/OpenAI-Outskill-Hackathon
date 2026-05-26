@@ -170,27 +170,28 @@
 - [ ] Perform demo rehearsal with seeded or live contacts.
 
 ## First Implementation Slice
-- [ ] Scaffold Next.js App Router TypeScript project with Tailwind and tests.
-- [ ] Add config layer with `.env.example` alignment.
-- [ ] Add minimal admin auth, webhook auth, and cron auth helpers.
-- [ ] Add enums and pure domain helpers for statuses, dispositions, and next actions.
-- [ ] Build Plivo outbound call start API. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml).
-- [ ] Build Plivo answer URL that returns bidirectional AudioStream XML. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml).
-- [ ] Build Node WebSocket voice bridge for Plivo AudioStream. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 6 - Build Voice Bridge Plivo Side](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-6-build-voice-bridge-plivo-side).
-- [ ] Connect voice bridge to OpenAI Realtime with configurable voice. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 7 - Connect Voice Bridge to OpenAI Realtime](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-7-connect-voice-bridge-to-openai-realtime).
-- [ ] Save realtime call transcript and outcome to database. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 8 - Save Final Voice Outcome](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-8-save-final-voice-outcome).
-- [ ] Show realtime call outcome in MVP dashboard. Spec: [Realtime Plivo Voice Agent Design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [Task 9 - Build Minimal Dashboard](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-9-build-minimal-dashboard).
-- [ ] Add unit tests for status and disposition mapping.
+- [ ] Scaffold Next.js App Router TypeScript project with Tailwind and tests. Spec: [MVP scope](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#mvp-scope-for-tomorrow). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification).
+- [ ] Add config layer with `.env.example` alignment. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 2 - Add Environment Validation](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-2-add-environment-validation).
+- [ ] Add minimal admin auth, webhook auth, and cron auth helpers. Spec: [API authentication](docs/api.md#authentication). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification).
+- [ ] Add enums and pure domain helpers for statuses, dispositions, and next actions. Spec: [shared enums](docs/api.md#shared-enums). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions).
+- [ ] Build Plivo outbound call start API. Spec: [architecture](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#architecture). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml).
+- [ ] Build Plivo answer URL that returns bidirectional AudioStream XML. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml).
+- [ ] Build Node WebSocket voice bridge for Plivo AudioStream. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Plan: [Task 6 - Build Voice Bridge Plivo Side](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-6-build-voice-bridge-plivo-side).
+- [ ] Connect voice bridge to OpenAI Realtime with configurable voice. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 7 - Connect Voice Bridge to OpenAI Realtime](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-7-connect-voice-bridge-to-openai-realtime).
+- [ ] Save realtime call transcript and outcome to database. Spec: [database outcome](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#database-outcome). Plan: [Task 8 - Save Final Voice Outcome](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-8-save-final-voice-outcome).
+- [ ] Show realtime call outcome in MVP dashboard. Spec: [acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria). Plan: [Task 9 - Add MVP Dashboard](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-9-add-mvp-dashboard).
+- [ ] Add unit tests for status and disposition mapping. Spec: [testing strategy](docs/architecture.md#testing-strategy). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions).
 - [ ] Run verify script and update this checklist.
 
 ### First Implementation Slice Acceptance Criteria
-- [ ] A test call can be started from an API or dashboard action.
-- [ ] Plivo fetches the app answer URL for the outbound call.
-- [ ] The answer URL returns bidirectional Stream XML, not Speak-only XML.
-- [ ] The voice bridge receives Plivo `start` and `media` events.
-- [ ] The OpenAI Realtime session sends at least one audio response with the configured voice.
-- [ ] The customer hears the AI voice through the phone call.
-- [ ] Transcript fragments or a conversation summary are saved.
-- [ ] The call row has a disposition and next action after the call.
-- [ ] The dashboard shows the realtime call result.
-- [ ] Simulated callback fallback remains available for demo reliability.
+- [ ] A call can be started from `POST /api/calls/start` or a dashboard action using an existing call row.
+- [ ] Plivo fetches the app answer URL after the outbound call is answered.
+- [ ] The answer URL returns bidirectional Plivo AudioStream XML, not Speak-only XML.
+- [ ] The voice bridge receives Plivo `start` and `media` events for the call.
+- [ ] The voice bridge opens one OpenAI Realtime session per Plivo stream.
+- [ ] The OpenAI Realtime session uses `OPENAI_REALTIME_MODEL` and `OPENAI_REALTIME_VOICE`.
+- [ ] OpenAI audio deltas are sent back to Plivo with `playAudio` so the customer hears the AI voice.
+- [ ] Transcript text or a conservative conversation summary is saved for the call.
+- [ ] The saved call row has a disposition and next action after the call closes.
+- [ ] The MVP dashboard shows the realtime call status, disposition, next action, and summary.
+- [ ] A simulated callback fallback remains available for demo resilience.
