@@ -150,6 +150,8 @@
 - [ ] Export engineer-ready CSV.
 
 ## Phase 11: Documentation
+- [x] Create `design.md` UI and UX design specification.
+- [x] Apply UI-UX-Pro-Max quality pass to `design.md`.
 - [ ] Update `README.md` with final setup commands.
 - [ ] Update `README.md` with provider setup steps.
 - [ ] Update `docs/api.md` as route contracts change.
