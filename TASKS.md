@@ -155,6 +155,7 @@
 - [x] Create `design.md` UI and UX design specification.
 - [x] Apply UI-UX-Pro-Max quality pass to `design.md`.
 - [x] Create [daily progress summary for 2026-05-26](docs/daily-summary-2026-05-26.md).
+- [x] Create `Memory.md` crash-resume checkpoint for 2026-05-27.
 - [ ] Update `README.md` with final setup commands.
 - [ ] Update `README.md` with provider setup steps.
 - [ ] Update `docs/api.md` as route contracts change.
