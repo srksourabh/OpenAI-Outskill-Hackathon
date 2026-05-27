@@ -107,17 +107,18 @@ For quick testing in the app:
 
 ## Deployment Notes
 - Deploy the Next.js dashboard and API to Vercel.
-- Deploy the Node WebSocket voice bridge to Railway, Fly.io, Render, Cloud Run, or another always-on container service. Railway is the recommended MVP choice because it can run a persistent Node process for Plivo AudioStream.
+- Deploy the Node WebSocket voice bridge to Render, Fly.io, Railway, Cloud Run, or another always-on container service. Render is the current recommended MVP choice for this repo because it can run a persistent Node process for Plivo AudioStream and expose a simple health check.
 - Use Supabase or managed PostgreSQL for the database.
 - Configure Plivo answer/status/recording webhooks to point at the Vercel app.
-- Configure Plivo AudioStream XML to point at the public Railway WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
+- Configure Plivo AudioStream XML to point at the public Render WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
+- The voice bridge serves HTTP health checks on `/health` and accepts WebSocket upgrades on `/plivo/audio-stream`.
 - Store real credentials only in local `.env` or Vercel environment variables.
 - The demo JSON file store now writes to a temp directory on Vercel instead of `/var/task/.data`, so serverless uploads can persist during a runtime instance without hitting the read-only filesystem.
-- Store voice bridge secrets in the Railway service environment as well.
+- Store voice bridge secrets in the Render service environment as well.
 - Keep `.env.example` limited to placeholder variable names.
 - Add Vercel Cron routes for retry and provider status reconciliation.
 - The checked-in `vercel.json` currently uses once-daily cron schedules so Hobby deployments succeed. Upgrade to Vercel Pro and restore the higher-frequency retry cadence when you need `*/10` and `*/15` production jobs.
-- Ship through preview deployments first, then promote one production Vercel deployment and one production Railway service after smoke tests pass.
+- Ship through preview deployments first, then promote one production Vercel deployment and one production Render service after smoke tests pass.
 
 ## Key Docs
 - `PRD.md`: Product requirements.

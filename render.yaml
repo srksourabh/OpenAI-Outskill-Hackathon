@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: outbound-ai-calling-agent-voice-bridge
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm run voice:start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: VOICE_OUTCOME_SECRET
+        sync: false
+      - key: VOICE_BRIDGE_PORT
+        value: "8080"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_RESPONSES_MODEL
+        value: gpt-4.1-mini
+      - key: OPENAI_REALTIME_MODEL
+        value: gpt-realtime
+      - key: OPENAI_REALTIME_VOICE
+        value: marin
+      - key: OPENAI_REALTIME_FALLBACK_VOICE
+        value: cedar
+      - key: PRIMARY_CALL_LANGUAGE
+        value: en
+      - key: SUPPORTED_CALL_LANGUAGES
+        value: en,hi,bn,ta,te,mr,gu

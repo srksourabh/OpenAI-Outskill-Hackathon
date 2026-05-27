@@ -17,7 +17,7 @@ The product needs a real OpenAI Realtime voice agent that can:
 Create an OpenAI Realtime outbound calling agent for pickup and de-installation readiness workflows that sounds natural, stays operationally focused, supports a controlled multilingual experience, and can be modified through the dashboard UI instead of hardcoded prompt edits alone.
 
 ## Approved Product Direction
-Use a stateful server-side voice bridge with one OpenAI Realtime session per live phone call. Keep Vercel as the web and API system of record. Keep the always-on voice bridge on Railway or an equivalent host. Let the voice bridge manage call stages, language policy, interruption handling, transcript buffering, and outcome finalization.
+Use a stateful server-side voice bridge with one OpenAI Realtime session per live phone call. Keep Vercel as the web and API system of record. Keep the always-on voice bridge on Render or an equivalent host. Let the voice bridge manage call stages, language policy, interruption handling, transcript buffering, and outcome finalization.
 
 The first designed version is:
 - English-first at call opening
@@ -79,7 +79,7 @@ Vercel answer route returns AudioStream XML
   |
   | bidirectional audio stream
   v
-Railway voice bridge
+Render voice bridge
   |
   | one live call session object per call
   | one OpenAI Realtime session per call
@@ -441,4 +441,4 @@ Proceed with a stateful OpenAI Realtime multilingual outbound operations agent:
 - controlled additional Indian language switching
 - semi-flexible operations call flow
 - UI-configurable agent settings
-- Railway-hosted bridge and Vercel-hosted dashboard/API
+- Render-hosted bridge and Vercel-hosted dashboard/API

@@ -197,6 +197,7 @@
 ## Phase 12: Deployment Readiness
 - [x] Add Vercel configuration for cron jobs.
 - [x] Add Railway service configuration for the Node WebSocket voice bridge.
+- [x] Add Render service configuration and health-check support for the Node WebSocket voice bridge.
 - [x] Configure Supabase or database connection.
 - [x] Configure provider webhook URLs.
 - [x] Configure `APP_BASE_URL`, `VOICE_BRIDGE_PUBLIC_WS_URL`, and `VOICE_OUTCOME_SECRET` across Vercel and Railway.

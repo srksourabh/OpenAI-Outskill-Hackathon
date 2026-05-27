@@ -1,16 +1,31 @@
+import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { buildVoiceAgentInstructions } from "../domain/voice-agent";
 import { analyzeTranscriptWithOpenAI } from "../services/ai/openai";
+import { getBridgeRequestInfo, isVoiceBridgeHealthPath, isVoiceBridgeUpgradePath, voiceBridgePath } from "./http";
 import { connectOpenAIRealtime, appendRealtimeAudio } from "./openaiRealtime";
 import { postVoiceOutcome } from "./outcomeClient";
 import { parsePlivoEvent, sendAudioToPlivo } from "./plivoStream";
 
 const port = Number(process.env.VOICE_BRIDGE_PORT ?? process.env.PORT ?? 8080);
-const server = new WebSocketServer({ port });
+const httpServer = createServer((request, response) => {
+  const { pathname } = getBridgeRequestInfo(request.url, request.headers.host);
+
+  if (isVoiceBridgeHealthPath(pathname)) {
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ ok: true, service: "voice-bridge", path: voiceBridgePath }));
+    return;
+  }
+
+  response.writeHead(404, { "Content-Type": "application/json" });
+  response.end(JSON.stringify({ error: "Not found" }));
+});
+
+const server = new WebSocketServer({ noServer: true });
 
 server.on("connection", (plivoWs, request) => {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
-  const callId = url.searchParams.get("callId");
+  const { searchParams } = getBridgeRequestInfo(request.url, request.headers.host);
+  const callId = searchParams.get("callId");
   if (!callId) {
     plivoWs.close(1008, "Missing callId");
     return;
@@ -63,7 +78,23 @@ server.on("connection", (plivoWs, request) => {
   });
 });
 
-console.log(`Voice bridge listening on ${port}`);
+httpServer.on("upgrade", (request, socket, head) => {
+  const { pathname } = getBridgeRequestInfo(request.url, request.headers.host);
+
+  if (!isVoiceBridgeUpgradePath(pathname)) {
+    socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  server.handleUpgrade(request, socket, head, (ws) => {
+    server.emit("connection", ws, request);
+  });
+});
+
+httpServer.listen(port, () => {
+  console.log(`Voice bridge listening on ${port}`);
+});
 
 function getMediaPayload(event: Record<string, unknown>) {
   if (event.event !== "media") return null;

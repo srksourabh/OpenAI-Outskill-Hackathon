@@ -14,3 +14,4 @@ All notable changes to this project will be documented in this file.
 - Wired campaign start into a real Plivo outbound-call path, added provider selection in the dashboard, persisted outbound provider call IDs locally, and surfaced clear preflight errors when public callback or voice-bridge settings are missing.
 - Added OpenAI Responses API transcript analysis for live calls, with deterministic fallback classification when the API key, model response, or network path is unavailable.
 - Fixed Vercel serverless demo uploads failing with `ENOENT ... /var/task/.data` by moving the file-backed campaign store to a writable temp directory at runtime.
+- Added Render deployment support for the voice bridge, including a `render.yaml` blueprint and an HTTP health-check path alongside the WebSocket stream endpoint.
