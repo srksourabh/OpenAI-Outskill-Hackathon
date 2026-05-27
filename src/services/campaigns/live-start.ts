@@ -56,7 +56,11 @@ export async function startCampaignLive(campaign: Campaign) {
         location: contact.location,
         machineCount: String(contact.machine_count),
         languageHint: contact.language_hint,
-        providerName: contact.provider_name
+        providerName: contact.provider_name,
+        assetLabel: campaign.prompt_config.asset_label,
+        referenceLabel: campaign.prompt_config.reference_label,
+        accountLabel: campaign.prompt_config.account_label,
+        accountName: campaign.prompt_config.account_name
       });
       const ringUrl = buildSignedCallbackUrl("/api/plivo/ring", call.id);
       const hangupUrl = buildSignedCallbackUrl("/api/plivo/hangup", call.id);

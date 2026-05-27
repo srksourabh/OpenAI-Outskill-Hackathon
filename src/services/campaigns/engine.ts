@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isRetryEligible } from "@/domain/calls";
 import { getEffectiveLanguage } from "@/domain/languages";
+import { getPromptConfig } from "@/domain/voice-agent";
 import { classifyTranscript } from "@/services/ai/classifier";
 import type { ParsedContact } from "@/services/ingestion/types";
 import type { CallRecord, Campaign, CampaignStats, ContactRecord } from "./types";
@@ -12,6 +13,7 @@ type CreateCampaignInput = {
   concurrencyLimit: number;
   contacts: ParsedContact[];
   provider?: Campaign["provider"];
+  promptConfig?: Campaign["prompt_config"];
 };
 
 const demoTranscripts = [
@@ -41,6 +43,7 @@ export function createCampaignFromContacts(input: CreateCampaignInput): Campaign
     id,
     name: input.name,
     company_name: input.companyName,
+    prompt_config: getPromptConfig(input.promptConfig),
     provider: input.provider ?? "simulated",
     status: "draft",
     default_language: getEffectiveLanguage(input.defaultLanguage, "hi"),

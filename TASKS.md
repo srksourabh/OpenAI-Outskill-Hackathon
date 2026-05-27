@@ -114,6 +114,8 @@
 - [x] Add scripted language pack configuration for additional Indian languages.
 - [x] Add language fallback rules: missing or unsupported `language_hint` falls back to Hindi.
 - [x] Strengthen voice-agent instructions so the caller can request a supported language switch mid-call.
+- [x] Add UI-editable prompt variables with `UDS` as the default company name for live and manual campaigns.
+- [x] Improve explicit-request language switching speed in the realtime bridge.
 - [x] Add deterministic yes/no/unclear classifier fallback.
 - [x] Add AI helper for language detection.
 - [x] Add AI helper for transcript summarization.

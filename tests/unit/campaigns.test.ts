@@ -26,14 +26,21 @@ describe("campaign engine", () => {
   it("starts campaigns with bounded parallel active calls", () => {
     const campaign = createCampaignFromContacts({
       name: "Demo",
-      companyName: "Demo Logistics",
+      companyName: "UDS",
       defaultLanguage: "hi",
       concurrencyLimit: 5,
-      contacts
+      contacts,
+      promptConfig: {
+        asset_label: "POS machine",
+        reference_label: "Terminal ID",
+        account_label: "bank",
+        account_name: "HDFC"
+      }
     });
 
     const started = startCampaign(campaign);
 
+    expect(started.prompt_config.reference_label).toBe("Terminal ID");
     expect(started.calls).toHaveLength(7);
     expect(started.calls.filter((call) => call.status === "ringing")).toHaveLength(5);
     expect(started.calls.filter((call) => call.status === "queued")).toHaveLength(2);

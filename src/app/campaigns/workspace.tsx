@@ -6,6 +6,12 @@ type Campaign = {
   id: string;
   name: string;
   company_name: string;
+  prompt_config: {
+    asset_label: string;
+    reference_label: string;
+    account_label: string;
+    account_name: string;
+  };
   provider: string;
   status: string;
   default_language: string;
@@ -42,6 +48,20 @@ type UploadSummary = {
   source_columns: string[];
   invalid_rows: UploadIssue[];
   duplicate_rows: UploadIssue[];
+};
+
+const defaultPromptConfig: {
+  companyName: string;
+  assetLabel: string;
+  referenceLabel: string;
+  accountLabel: string;
+  accountName: string;
+} = {
+  companyName: "UDS",
+  assetLabel: "POS machine",
+  referenceLabel: "POS machine number",
+  accountLabel: "company/bank",
+  accountName: ""
 };
 
 export function CampaignWorkspace() {
@@ -112,7 +132,7 @@ export function CampaignWorkspace() {
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-line bg-rail p-5 text-white lg:border-b-0 lg:border-r">
           <div className="text-lg font-semibold">Calling Ops</div>
-          <p className="mt-2 text-sm text-white/70">Hindi-first outbound AI campaigns</p>
+          <p className="mt-2 text-sm text-white/70">Multilingual outbound AI campaigns</p>
           <nav className="mt-8 space-y-2 text-sm">
             <a className="block rounded-md bg-white/10 px-3 py-2" href="/campaigns">Campaigns</a>
             <a className="block rounded-md px-3 py-2 text-white/75" href="/api/health">Health</a>
@@ -168,6 +188,11 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
   const [manualPhone, setManualPhone] = useState("");
   const [manualLanguage, setManualLanguage] = useState("en");
   const [manualProvider, setManualProvider] = useState("plivo");
+  const [manualCompanyName, setManualCompanyName] = useState(defaultPromptConfig.companyName);
+  const [manualAssetLabel, setManualAssetLabel] = useState(defaultPromptConfig.assetLabel);
+  const [manualReferenceLabel, setManualReferenceLabel] = useState(defaultPromptConfig.referenceLabel);
+  const [manualAccountLabel, setManualAccountLabel] = useState(defaultPromptConfig.accountLabel);
+  const [manualAccountName, setManualAccountName] = useState(defaultPromptConfig.accountName);
 
   function submitManualCheck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -175,7 +200,11 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
 
     const formData = new FormData();
     formData.set("campaign_name", "Manual number check");
-    formData.set("company_name", "Demo Logistics");
+    formData.set("company_name", manualCompanyName);
+    formData.set("asset_label", manualAssetLabel);
+    formData.set("reference_label", manualReferenceLabel);
+    formData.set("account_label", manualAccountLabel);
+    formData.set("account_name", manualAccountName);
     formData.set("default_language", manualLanguage);
     formData.set("concurrency_limit", "1");
     formData.set("provider", manualProvider);
@@ -209,7 +238,23 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
         </label>
         <label className="mt-3 block text-sm font-medium">
           Company name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" defaultValue="Demo Logistics" />
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" defaultValue={defaultPromptConfig.companyName} />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Asset label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" defaultValue={defaultPromptConfig.assetLabel} />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Reference label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" defaultValue={defaultPromptConfig.referenceLabel} />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Account label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_label" defaultValue={defaultPromptConfig.accountLabel} />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Account name
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_name" defaultValue={defaultPromptConfig.accountName} placeholder="HDFC Bank, SBI, Pine Labs, etc." />
         </label>
         <label className="mt-3 block text-sm font-medium">
           Calling mode
@@ -254,6 +299,31 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
             placeholder="+919876543210 or 9876543210"
             value={manualPhone}
             onChange={(event) => setManualPhone(event.target.value)}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Company name
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Asset label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Reference label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Account label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Account name
+          <input
+            className="mt-1 w-full rounded-md border border-line px-3 py-2"
+            placeholder="Optional bank or company name"
+            value={manualAccountName}
+            onChange={(event) => setManualAccountName(event.target.value)}
           />
         </label>
         <label className="block text-sm font-medium">

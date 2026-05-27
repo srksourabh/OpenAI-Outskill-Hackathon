@@ -4,6 +4,13 @@ import type { ParsedContact } from "@/services/ingestion/types";
 
 export type CampaignStatus = "draft" | "running" | "completed";
 
+export type PromptConfig = {
+  asset_label: string;
+  reference_label: string;
+  account_label: string;
+  account_name: string;
+};
+
 export type ContactRecord = ParsedContact & {
   id: string;
   campaign_id: string;
@@ -33,6 +40,7 @@ export type Campaign = {
   id: string;
   name: string;
   company_name: string;
+  prompt_config: PromptConfig;
   provider: "simulated" | "plivo" | "twilio" | "exotel";
   status: CampaignStatus;
   default_language: LanguageCode;

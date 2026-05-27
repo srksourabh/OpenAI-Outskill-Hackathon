@@ -16,3 +16,4 @@ All notable changes to this project will be documented in this file.
 - Fixed Vercel serverless demo uploads failing with `ENOENT ... /var/task/.data` by moving the file-backed campaign store to a writable temp directory at runtime.
 - Added Render deployment support for the voice bridge, including a `render.yaml` blueprint and an HTTP health-check path alongside the WebSocket stream endpoint.
 - Upgraded the live Plivo voice path so calls stay alive, the agent speaks first, recording callbacks persist recording URLs, stream and hangup webhooks update live call status, and the dashboard surfaces clearer live-call remarks, language, and next-action data.
+- Defaulted live calling branding to `UDS`, added UI-editable prompt variables for company and asset wording, made the spoken opener sound more natural, and sped up explicit-request language switching in the realtime bridge.

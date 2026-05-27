@@ -22,6 +22,10 @@ export async function GET(request: Request) {
   copyIfPresent(url, wsUrl, "machineCount");
   copyIfPresent(url, wsUrl, "languageHint");
   copyIfPresent(url, wsUrl, "providerName");
+  copyIfPresent(url, wsUrl, "assetLabel");
+  copyIfPresent(url, wsUrl, "referenceLabel");
+  copyIfPresent(url, wsUrl, "accountLabel");
+  copyIfPresent(url, wsUrl, "accountName");
   const xml = buildPlivoStreamXml({
     wsUrl: wsUrl.toString(),
     statusCallbackUrl: buildSignedCallbackUrl("/api/plivo/stream-status", callId),

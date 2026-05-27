@@ -2,27 +2,33 @@ import { describe, expect, it } from "vitest";
 import { buildInitialAgentPrompt, createAgentSessionState, planAgentTurn } from "@/voice-bridge/agent-session";
 
 const context = {
-  companyName: "Demo Logistics",
+  companyName: "UDS",
   orderId: "ORD-1001",
   location: "Mumbai",
   machineCount: 1,
   languageHint: "en",
-  contactName: "Receiver"
+  contactName: "Receiver",
+  promptConfig: {
+    asset_label: "POS machine",
+    reference_label: "POS machine number",
+    account_label: "bank",
+    account_name: "HDFC"
+  }
 } as const;
 
 describe("voice bridge agent session", () => {
   it("creates an opening prompt with the required de-installation question", () => {
     const prompt = buildInitialAgentPrompt(context, createAgentSessionState("en"), ["en", "hi", "bn"]);
 
-    expect(prompt.openingLine).toContain("Please tell me whether the machine is there with you or not");
+    expect(prompt.openingLine).toContain("Could you please confirm whether the pos machine is with you right now or not");
     expect(prompt.instructions).toContain("Current stage: opening");
   });
 
   it("switches language only when the receiver explicitly asks", () => {
-    const turn = planAgentTurn("Please speak in Hindi", context, createAgentSessionState("en"), ["en", "hi", "bn"]);
+    const turn = planAgentTurn("Hindi me bolo", context, createAgentSessionState("en"), ["en", "hi", "bn"]);
 
     expect(turn.state.selectedLanguage).toBe("hi");
-    expect(turn.instructions).toContain("Hindi");
+    expect(turn.plan.responseGoal).toContain("switch immediately");
   });
 
   it("moves to closing with a confirmed disposition when the receiver says yes", () => {

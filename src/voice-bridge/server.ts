@@ -34,12 +34,18 @@ server.on("connection", (plivoWs, request) => {
   }
 
   const context = {
-    companyName: searchParams.get("companyName") ?? "Demo Logistics",
+    companyName: searchParams.get("companyName") ?? "UDS",
     orderId: searchParams.get("orderId") ?? "Realtime call",
     location: searchParams.get("location") ?? "Uploaded location",
     machineCount: Number(searchParams.get("machineCount") ?? "1") || 1,
     languageHint: searchParams.get("languageHint") ?? env.primaryCallLanguage,
-    contactName: searchParams.get("providerName") ?? "sir/ma'am"
+    contactName: searchParams.get("providerName") ?? "sir/ma'am",
+    promptConfig: {
+      asset_label: searchParams.get("assetLabel") ?? "POS machine",
+      reference_label: searchParams.get("referenceLabel") ?? "POS machine number",
+      account_label: searchParams.get("accountLabel") ?? "company/bank",
+      account_name: searchParams.get("accountName") ?? ""
+    }
   };
   const supportedLanguages = normalizeSupportedLanguages(env.supportedCallLanguages);
   let sessionState = createAgentSessionState(context.languageHint);

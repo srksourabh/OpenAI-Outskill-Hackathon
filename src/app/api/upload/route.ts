@@ -21,7 +21,13 @@ export async function POST(request: Request) {
 
     const defaultLanguage = String(form.get("default_language") ?? env.primaryCallLanguage);
     const campaignName = String(form.get("campaign_name") ?? "Uploaded campaign");
-    const companyName = String(form.get("company_name") ?? "Demo Logistics");
+    const companyName = String(form.get("company_name") ?? "UDS");
+    const promptConfig = {
+      asset_label: String(form.get("asset_label") ?? "POS machine"),
+      reference_label: String(form.get("reference_label") ?? "POS machine number"),
+      account_label: String(form.get("account_label") ?? "company/bank"),
+      account_name: String(form.get("account_name") ?? "")
+    };
     const requestedProvider = String(form.get("provider") ?? env.telephonyProvider ?? "simulated");
     const concurrencyLimit = Number(form.get("concurrency_limit") ?? 5);
     const content = Buffer.from(await file.arrayBuffer());
@@ -32,7 +38,8 @@ export async function POST(request: Request) {
       defaultLanguage,
       concurrencyLimit,
       contacts: parsed.validRows,
-      provider: requestedProvider === "plivo" ? "plivo" : "simulated"
+      provider: requestedProvider === "plivo" ? "plivo" : "simulated",
+      promptConfig
     });
 
     await saveCampaign(campaign);

@@ -65,7 +65,7 @@ export function planAgentTurn(
       context,
       supportedLanguages,
       transcript,
-      `Acknowledge the language request and continue in ${languageLabels[requestedLanguage]} with the same de-installation question.`
+      `Acknowledge briefly, switch immediately to ${languageLabels[requestedLanguage]}, and continue with the same de-installation question without restarting the whole script.`
     );
   }
 
@@ -169,18 +169,18 @@ function buildTurnResult(
 
 function detectRequestedLanguage(text: string, supportedLanguages: LanguageCode[]) {
   const entries: Array<[LanguageCode, string[]]> = [
-    ["en", ["english", "speak english"]],
-    ["hi", ["hindi", "speak hindi", "हिंदी"]],
-    ["bn", ["bengali", "bangla"]],
-    ["pa", ["punjabi"]],
-    ["gu", ["gujarati"]],
-    ["mr", ["marathi"]],
-    ["ta", ["tamil"]],
-    ["te", ["telugu"]],
-    ["ml", ["malayalam"]],
-    ["kn", ["kannada"]],
-    ["or", ["odia", "oriya"]],
-    ["as", ["assamese"]]
+    ["en", ["english", "speak english", "english me", "in english", "english please"]],
+    ["hi", ["hindi", "speak hindi", "hindi me", "in hindi", "hindi mein"]],
+    ["bn", ["bengali", "bangla", "bangla bolo", "bangla te"]],
+    ["pa", ["punjabi", "punjabi me"]],
+    ["gu", ["gujarati", "gujarati me"]],
+    ["mr", ["marathi", "marathi me"]],
+    ["ta", ["tamil", "tamil la", "tamil le", "in tamil"]],
+    ["te", ["telugu", "telugu lo", "in telugu"]],
+    ["ml", ["malayalam", "malayalam il"]],
+    ["kn", ["kannada", "kannada dalli"]],
+    ["or", ["odia", "oriya", "odia re"]],
+    ["as", ["assamese", "assamese te"]]
   ];
 
   for (const [code, markers] of entries) {
