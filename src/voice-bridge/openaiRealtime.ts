@@ -1,11 +1,8 @@
 import WebSocket from "ws";
 
 export function connectOpenAIRealtime(input: { apiKey: string; model: string; voice: string; instructions: string }) {
-  const ws = new WebSocket(`wss://api.openai.com/v1/realtime?model=${encodeURIComponent(input.model)}`, {
-    headers: {
-      Authorization: `Bearer ${input.apiKey}`,
-      "OpenAI-Beta": "realtime=v1"
-    }
+  const ws = new WebSocket(buildRealtimeUrl(input.model), {
+    headers: buildRealtimeHeaders(input.apiKey)
   });
 
   ws.on("open", () => {
@@ -13,6 +10,16 @@ export function connectOpenAIRealtime(input: { apiKey: string; model: string; vo
   });
 
   return ws;
+}
+
+export function buildRealtimeUrl(model: string) {
+  return `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`;
+}
+
+export function buildRealtimeHeaders(apiKey: string) {
+  return {
+    Authorization: `Bearer ${apiKey}`
+  };
 }
 
 export function appendRealtimeAudio(ws: WebSocket, base64Audio: string) {
