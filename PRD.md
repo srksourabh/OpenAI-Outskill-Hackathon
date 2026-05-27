@@ -37,7 +37,7 @@ Operations teams often manage Excel or CSV sheets of provider, pickup-contact, o
 - Portal result table showing original uploaded columns plus call-result columns.
 - Configurable parallel outbound call batches so campaigns do not run one call at a time.
 - Retry scheduler for unanswered and not-connected calls.
-- Vercel deployment readiness.
+- Split deployment readiness: Vercel for dashboard/API/webhooks/cron, Railway or equivalent container hosting for the realtime voice bridge, and Supabase Postgres for persistence.
 - Simulated provider callback mode for demo resilience.
 
 ## Out of Scope
@@ -228,7 +228,7 @@ See `docs/api.md` for contracts.
 - Live speech quality may vary across providers and languages.
 - Open-ended voice agent behavior can reduce reliability; deterministic script branches should be preferred for MVP.
 - AI disposition extraction may need fallback rules and manual review when confidence is low.
-- Vercel serverless time limits may affect long-running tasks; calls should be provider-driven and webhook-based.
+- Vercel serverless time limits make it a poor fit for long-lived bidirectional audio streams; the realtime voice bridge should run on Railway or another always-on container host.
 
 ## Open Questions
 - Which legal entity or brand name should be used in the call greeting?

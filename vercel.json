@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/retry-unanswered",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-provider-status",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

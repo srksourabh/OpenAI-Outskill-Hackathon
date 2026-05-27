@@ -109,7 +109,7 @@ The MVP is a reliable campaign workflow with a deterministic demo fallback.
 - Retry eligibility for not-picked and not-connected calls.
 - Call detail with transcript, summary, language, recording URL, disposition, and audit timeline.
 - CSV export for confirmed pickup and follow-up rows with original uploaded columns plus call-result columns.
-- Vercel deployment readiness.
+- Split deployment readiness: Vercel for dashboard/API/webhooks/cron, Supabase for data, and Railway or equivalent always-on container hosting for the realtime voice bridge.
 
 ### Explicitly Out of MVP
 - Full multi-tenant roles and permissions.
@@ -213,6 +213,39 @@ These improve polish but should not block the demo.
 - More complete admin session management.
 
 ## Fast Execution Plan
+
+## Hosting, Distribution, and Shipping Plan
+
+### Recommended Hosting Split
+- **Vercel:** host the Next.js dashboard, upload/campaign APIs, Plivo answer/status/recording webhook routes, export routes, and cron retry/reconciliation routes.
+- **Railway:** host the Node WebSocket voice bridge because Plivo AudioStream and OpenAI Realtime need a persistent bidirectional connection that should not run in Vercel serverless functions.
+- **Supabase:** host Postgres tables, migrations, and optional storage for generated exports or uploaded source files.
+- **Plivo:** place outbound calls and call the Vercel answer URL; the answer XML then connects Plivo AudioStream to the Railway WebSocket URL.
+
+### Environment Routing
+- `APP_BASE_URL` points to the Vercel deployment URL.
+- `VOICE_BRIDGE_PUBLIC_WS_URL` points to the Railway WebSocket route, for example `wss://voice-bridge-production.up.railway.app/plivo/audio-stream`.
+- `VOICE_OUTCOME_SECRET` is shared between Vercel and Railway so the bridge can post final call outcomes back to `/api/voice/outcome`.
+- Plivo credentials live in Vercel for call creation and webhook validation. The bridge only needs OpenAI Realtime, outcome posting, and bridge runtime secrets.
+
+### Distribution
+- Use Vercel preview deployments for every branch or pull request once the repository is connected.
+- Use one Vercel production deployment for the admin portal and API.
+- Use one Railway production service for the voice bridge.
+- Use one Supabase project for MVP production data, with local or separate preview data only if time allows.
+- Point the customer-facing admin domain to Vercel. The Railway bridge can use its platform domain unless a custom subdomain is needed for trust or observability.
+
+### Shipping Checklist
+1. Run `scripts/verify.sh` locally once the stack exists.
+2. Deploy the Vercel preview and confirm `/api/health`.
+3. Deploy the Railway bridge and confirm its health or startup logs.
+4. Set Vercel env vars: app URL, database URL, Plivo keys, OpenAI key, cron secret, webhook secret, language settings, and bridge URL.
+5. Set Railway env vars: OpenAI key, realtime model/voice, outcome secret, app base URL, primary/supported languages, and bridge port.
+6. Apply Supabase migrations.
+7. Configure Plivo webhook URLs to the Vercel deployment.
+8. Start one simulated campaign and verify dashboard/export.
+9. Start one live Plivo test call and verify Plivo stream logs on Railway, final outcome on Vercel, and call result in the portal.
+10. Promote the same configuration to production after the demo smoke test passes.
 
 ## Day 1: Stack and Foundation
 

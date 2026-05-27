@@ -14,20 +14,21 @@
 - [x] Clarify Excel/CSV upload, enriched CSV export, portal result display, and parallel calling requirements. Spec: [bulk upload design](docs/superpowers/specs/2026-05-27-bulk-upload-parallel-calling-design.md). Plan: [bulk upload implementation plan](docs/superpowers/plans/2026-05-27-bulk-upload-parallel-calling.md).
 - [x] Set Hindi (`hi`) as the primary/default calling language, with English secondary and other Indian language packs configured.
 - [x] Run model council review across plan, design, UI/UX, architecture, and task tracking. Score: [88/100](docs/model-council-review-2026-05-27.md).
-- [ ] Initialize git repository if desired.
-- [ ] Scaffold Next.js App Router TypeScript project.
-- [ ] Add Tailwind CSS.
-- [ ] Add test framework and baseline test command.
-- [ ] Confirm `scripts/setup.sh` and `scripts/verify.sh` run in the target shell.
-- [ ] Confirm default implementation assumptions: Supabase, Plivo-first adapter, simulated callback fallback, simple admin auth, Vitest or equivalent test stack.
+- [x] Decide hosting split and document shipping plan: Vercel for web/API/cron, Railway for realtime voice bridge, Supabase for data. Plan: [hosting distribution and shipping](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md).
+- [x] Initialize git repository if desired.
+- [x] Scaffold Next.js App Router TypeScript project.
+- [x] Add Tailwind CSS.
+- [x] Add test framework and baseline test command.
+- [x] Confirm Windows `scripts/setup.ps1` and `scripts/verify.ps1` run in the target shell.
+- [x] Confirm default implementation assumptions: Supabase, Plivo-first adapter, simulated callback fallback, simple admin auth, Vitest or equivalent test stack.
 
 ## Phase 2: Core Architecture
-- [ ] Create config layer for environment variables.
-- [ ] Add simple admin auth gate for dashboard and write APIs.
+- [x] Create config layer for environment variables.
+- [x] Add simple admin auth gate for dashboard and write APIs.
 - [ ] Add provider webhook shared-secret or signature validation helper.
-- [ ] Add cron authorization helper using `CRON_SECRET`.
-- [ ] Define internal enums for campaign status, call status, disposition, and next action.
-- [ ] Define call state machine, terminal states, and retry eligibility rules.
+- [x] Add cron authorization helper using `CRON_SECRET`.
+- [x] Define internal enums for campaign status, call status, disposition, and next action.
+- [x] Define call state machine, terminal states, and retry eligibility rules.
 - [ ] Create provider adapter interface.
 - [ ] Add Plivo adapter skeleton.
 - [ ] Add Twilio adapter skeleton.
@@ -36,31 +37,31 @@
 - [ ] Document architecture updates in `docs/architecture.md`.
 
 ## Phase 3: Data Model
-- [ ] Choose Supabase or managed PostgreSQL.
-- [ ] Add SQL migration for `campaigns`.
-- [ ] Add SQL migration for `contacts`.
-- [ ] Add SQL migration for `calls`.
-- [ ] Add SQL migration for `call_events`.
-- [ ] Add SQL migration for `language_assets`.
-- [ ] Add SQL migration for `exports`.
+- [x] Choose Supabase or managed PostgreSQL.
+- [x] Add SQL migration for `campaigns`.
+- [x] Add SQL migration for `contacts`.
+- [x] Add SQL migration for `calls`.
+- [x] Add SQL migration for `call_events`.
+- [x] Add SQL migration for `language_assets`.
+- [x] Add SQL migration for `exports`.
 - [ ] Add seed language assets.
 - [ ] Add sample Excel template.
-- [ ] Add sample CSV template.
+- [x] Add sample CSV template.
 - [ ] Add data access tests for core queries.
 
 ## Phase 4: Contact Ingestion
-- [ ] Build spreadsheet upload UI for Excel and CSV.
-- [ ] Accept `.xlsx` and `.csv` uploads.
-- [ ] Parse Excel files server-side.
-- [ ] Parse CSV files server-side.
-- [ ] Validate required columns.
-- [ ] Preserve original uploaded row details, including extra business columns.
-- [ ] Normalize phone numbers.
-- [ ] Validate machine count as a positive integer.
-- [ ] Deduplicate by campaign, phone, and order ID.
-- [ ] Show import summary with invalid rows and duplicates.
-- [ ] Show preserved source columns in the import summary.
-- [ ] Add unit and integration tests for upload parsing.
+- [x] Build spreadsheet upload UI for Excel and CSV.
+- [x] Accept `.xlsx` and `.csv` uploads.
+- [x] Parse Excel files server-side.
+- [x] Parse CSV files server-side.
+- [x] Validate required columns.
+- [x] Preserve original uploaded row details, including extra business columns.
+- [x] Normalize phone numbers.
+- [x] Validate machine count as a positive integer.
+- [x] Deduplicate by campaign, phone, and order ID.
+- [x] Show import summary with invalid rows and duplicates.
+- [x] Show preserved source columns in the import summary.
+- [x] Add unit and integration tests for upload parsing.
 
 ### Acceptance Criteria
 - [ ] `POST /api/upload` rejects unsupported file types and missing required columns.
@@ -70,15 +71,15 @@
 
 ## Phase 5: Campaign Management
 - [ ] Build campaign creation API.
-- [ ] Build campaign dashboard page.
-- [ ] Add campaign stats query.
-- [ ] Add campaign start API.
-- [ ] Add campaign-level `concurrency_limit` with MVP default of 5.
-- [ ] Enqueue initial call rows for campaign contacts.
-- [ ] Dispatch outbound calls in bounded parallel batches.
-- [ ] Refill available call slots as active calls complete.
-- [ ] Add loading, empty, and error states.
-- [ ] Add tests for campaign creation and start behavior.
+- [x] Build campaign dashboard page.
+- [x] Add campaign stats query.
+- [x] Add campaign start API.
+- [x] Add campaign-level `concurrency_limit` with MVP default of 5.
+- [x] Enqueue initial call rows for campaign contacts.
+- [x] Dispatch outbound calls in bounded parallel batches.
+- [x] Refill available call slots as active calls complete.
+- [x] Add loading, empty, and error states.
+- [x] Add tests for campaign creation and start behavior.
 
 ### Acceptance Criteria
 - [ ] `POST /api/campaigns/:id/start` requires admin protection.
@@ -88,14 +89,14 @@
 
 ## Phase 6: Calling Provider Integration
 - [ ] Implement Plivo `createCall`.
-- [ ] Implement Plivo answer response builder.
-- [ ] Implement Plivo hangup webhook parser.
-- [ ] Implement Plivo recording webhook parser.
+- [x] Implement Plivo answer response builder.
+- [x] Implement Plivo hangup webhook parser.
+- [x] Implement Plivo recording webhook parser.
 - [ ] Persist provider call IDs.
 - [ ] Map provider statuses into internal statuses.
 - [ ] Save raw provider payloads in `call_events`.
 - [ ] Add idempotency tests for duplicate webhook events.
-- [ ] Add simulated callback route or test helper for demo mode.
+- [x] Add simulated callback route or test helper for demo mode.
 
 ### Acceptance Criteria
 - [ ] Provider webhooks validate signature or shared secret before state changes.
@@ -106,14 +107,14 @@
 - [ ] Create Hindi primary script pack.
 - [ ] Create English secondary script pack.
 - [ ] Add scripted language pack configuration for additional Indian languages.
-- [ ] Add language fallback rules: missing or unsupported `language_hint` falls back to Hindi.
-- [ ] Add deterministic yes/no/unclear classifier fallback.
+- [x] Add language fallback rules: missing or unsupported `language_hint` falls back to Hindi.
+- [x] Add deterministic yes/no/unclear classifier fallback.
 - [ ] Add AI helper for language detection.
 - [ ] Add AI helper for transcript summarization.
 - [ ] Add AI helper for disposition extraction.
 - [ ] Persist `confidence` internally or in metadata.
 - [ ] Route low-confidence calls to `manual_review`.
-- [ ] Add tests for disposition mapping and next-action rules.
+- [x] Add tests for disposition mapping and next-action rules.
 
 ### Acceptance Criteria
 - [ ] Simulated callbacks can include transcript text for classification.
@@ -123,9 +124,9 @@
 ## Phase 8: Retry and Reconciliation
 - [ ] Add retry policy model.
 - [ ] Implement `POST /api/calls/:id/retry`.
-- [ ] Implement `GET /api/cron/retry-unanswered`.
-- [ ] Implement `GET /api/cron/reconcile-provider-status`.
-- [ ] Protect cron routes with `CRON_SECRET`.
+- [x] Implement `GET /api/cron/retry-unanswered`.
+- [x] Implement `GET /api/cron/reconcile-provider-status`.
+- [x] Protect cron routes with `CRON_SECRET`.
 - [ ] Add tests for retry limits and terminal states.
 
 ### Acceptance Criteria
@@ -134,15 +135,15 @@
 - [ ] Completed, confirmed, declined, invalid, and manual-review calls are not retried automatically.
 
 ## Phase 9: Dashboard and Export
-- [ ] Build campaign list view.
-- [ ] Build campaign detail dashboard.
+- [x] Build campaign list view.
+- [x] Build campaign detail dashboard.
 - [ ] Build call result detail page.
-- [ ] Show original uploaded row details in the campaign results table.
+- [x] Show original uploaded row details in the campaign results table.
 - [ ] Add filters by status, disposition, and language.
 - [ ] Add recording and transcript display.
-- [ ] Add CSV export for all result rows, engineer-ready rows, and follow-up rows.
-- [ ] Ensure CSV export includes original uploaded columns plus call status, disposition, recording URL, transcript status, summary, next action, attempt number, last call time, and retry eligibility.
-- [ ] Add mobile responsive checks.
+- [x] Add CSV export for all result rows, engineer-ready rows, and follow-up rows.
+- [x] Ensure CSV export includes original uploaded columns plus call status, disposition, recording URL, transcript status, summary, next action, attempt number, last call time, and retry eligibility.
+- [x] Add mobile responsive checks.
 - [ ] Add e2e test for upload-to-export demo workflow.
 
 ### Acceptance Criteria
@@ -153,8 +154,8 @@
 
 ## Phase 10: Security and Reliability
 - [ ] Re-check provider webhook signatures or shared secrets where supported.
-- [ ] Add clear error responses without leaking secrets.
-- [ ] Ensure `.env` is never read directly outside config.
+- [x] Add clear error responses without leaking secrets.
+- [x] Ensure `.env` is never read directly outside config.
 - [ ] Re-check rate limits or basic admin protection for write routes.
 - [ ] Add audit events for meaningful state changes.
 - [ ] Add tests for invalid inputs and duplicate callbacks.
@@ -163,50 +164,56 @@
 
 ## Hackathon Golden Path Milestone
 - [ ] Add sample Excel file with 10 contacts.
-- [ ] Add sample CSV file with 10 contacts.
+- [x] Add sample CSV file with 10 contacts.
 - [ ] Upload sample file and create campaign.
 - [ ] Start campaign and queue calls.
-- [ ] Confirm multiple calls can be active simultaneously within the configured limit.
+- [x] Confirm multiple calls can be active simultaneously within the configured limit.
 - [ ] Simulate callbacks for at least 8 calls.
 - [ ] Classify at least 3 confirmed pickups, 2 follow-up needed, 1 invalid number, and 1 not picked.
 - [ ] Show dashboard status totals.
 - [ ] Open one completed call detail.
 - [ ] Export engineer-ready CSV.
-- [ ] Confirm exported CSV preserves uploaded details and includes status, recording link, summary, disposition, next action, and retry fields.
+- [x] Confirm exported CSV preserves uploaded details and includes status, recording link, summary, disposition, next action, and retry fields.
 
 ## Phase 11: Documentation
 - [x] Create `design.md` UI and UX design specification.
 - [x] Apply UI-UX-Pro-Max quality pass to `design.md`.
 - [x] Create [2026-05-26 progress summary](docs/daily-summary-2026-05-26.md).
 - [x] Create `Memory.md` crash-resume checkpoint for 2026-05-27.
-- [ ] Update `README.md` with final setup commands.
+- [x] Update `README.md` with final setup commands.
 - [ ] Update `README.md` with provider setup steps.
 - [ ] Update `docs/api.md` as route contracts change.
 - [ ] Record provider and stack decisions in `docs/decisions.md`.
-- [ ] Update `CHANGELOG.md` after each meaningful milestone.
+- [x] Update `CHANGELOG.md` after each meaningful milestone.
 
 ## Phase 12: Deployment Readiness
-- [ ] Add Vercel configuration for cron jobs.
-- [ ] Configure Supabase or database connection.
-- [ ] Configure provider webhook URLs.
-- [ ] Add deployment smoke test checklist.
-- [ ] Run `./scripts/verify.sh`.
+- [x] Add Vercel configuration for cron jobs.
+- [x] Add Railway service configuration for the Node WebSocket voice bridge.
+- [x] Configure Supabase or database connection.
+- [x] Configure provider webhook URLs.
+- [x] Configure `APP_BASE_URL`, `VOICE_BRIDGE_PUBLIC_WS_URL`, and `VOICE_OUTCOME_SECRET` across Vercel and Railway.
+- [x] Add local `/api/health` smoke test.
+- [ ] Add Railway bridge startup or health smoke test.
+- [x] Verify Plivo answer XML points AudioStream to the Railway `wss://` URL.
+- [x] Verify voice bridge can post final outcomes back to Vercel.
+- [x] Add deployment smoke test checklist.
+- [x] Run `.\scripts\verify.ps1`.
 - [ ] Perform demo rehearsal with seeded or live contacts.
 
 ## First Implementation Slice
-- [ ] Scaffold Next.js App Router TypeScript project with Tailwind and tests. Spec: [MVP scope](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#mvp-scope-for-tomorrow). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Add config layer with `.env.example` alignment. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 2 - Add Environment Validation](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-2-add-environment-validation). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Add minimal admin auth, webhook auth, and cron auth helpers. Spec: [API authentication](docs/api.md#authentication). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Add enums and pure domain helpers for statuses, dispositions, and next actions. Spec: [shared enums](docs/api.md#shared-enums). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Scaffold Next.js App Router TypeScript project with Tailwind and tests. Spec: [MVP scope](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#mvp-scope-for-tomorrow). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add config layer with `.env.example` alignment. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 2 - Add Environment Validation](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-2-add-environment-validation). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add minimal admin auth, webhook auth, and cron auth helpers. Spec: [API authentication](docs/api.md#authentication). Plan: [Task 1 - Scaffold Next.js and Verification](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-1-scaffold-nextjs-and-verification). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add enums and pure domain helpers for statuses, dispositions, and next actions. Spec: [shared enums](docs/api.md#shared-enums). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [ ] Build Plivo outbound call start API. Spec: [architecture](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#architecture). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Build Plivo answer URL that returns bidirectional AudioStream XML. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Build Node WebSocket voice bridge for Plivo AudioStream. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Plan: [Task 6 - Build Voice Bridge Plivo Side](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-6-build-voice-bridge-plivo-side). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Connect voice bridge to OpenAI Realtime with configurable voice. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 7 - Connect Voice Bridge to OpenAI Realtime](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-7-connect-voice-bridge-to-openai-realtime). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Add Hindi-first realtime agent prompt rules: start in Hindi, switch to English only when configured or requested, and use configured regional packs when available.
+- [x] Build Plivo answer URL that returns bidirectional AudioStream XML. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Build Node WebSocket voice bridge for Plivo AudioStream. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Plan: [Task 6 - Build Voice Bridge Plivo Side](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-6-build-voice-bridge-plivo-side). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Connect voice bridge to OpenAI Realtime with configurable voice. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 7 - Connect Voice Bridge to OpenAI Realtime](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-7-connect-voice-bridge-to-openai-realtime). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add Hindi-first realtime agent prompt rules: start in Hindi, switch to English only when configured or requested, and use configured regional packs when available.
 - [ ] Save realtime call transcript and outcome to database. Spec: [database outcome](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#database-outcome). Plan: [Task 8 - Save Final Voice Outcome](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-8-save-final-voice-outcome). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Show realtime call outcome in MVP dashboard. Spec: [acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria). Plan: [Task 9 - Add MVP Dashboard](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-9-add-mvp-dashboard). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Add unit tests for status and disposition mapping. Spec: [testing strategy](docs/architecture.md#testing-strategy). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [ ] Run verify script and update this checklist.
+- [x] Show realtime call outcome in MVP dashboard. Spec: [acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria). Plan: [Task 9 - Add MVP Dashboard](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-9-add-mvp-dashboard). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add unit tests for status and disposition mapping. Spec: [testing strategy](docs/architecture.md#testing-strategy). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Run verify script and update this checklist.
 
 ### First Implementation Slice Acceptance Criteria
 Source: [approved spec acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria) and [manual end-to-end plan](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-10-manual-end-to-end-test).

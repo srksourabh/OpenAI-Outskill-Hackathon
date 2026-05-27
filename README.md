@@ -17,7 +17,8 @@ Build a production-shaped hackathon MVP for an outbound AI calling agent for Ind
 - Next.js App Router with TypeScript.
 - Tailwind CSS for UI.
 - Supabase or PostgreSQL for persistence.
-- Vercel for deployment, webhooks, and scheduled retry jobs.
+- Vercel for the dashboard, API routes, provider webhooks, and scheduled retry jobs.
+- Railway or an equivalent always-on container host for the long-lived Plivo AudioStream to OpenAI Realtime voice bridge.
 - Plivo as the first provider adapter, with Twilio and Exotel adapters scaffolded.
 - OpenAI Realtime for the Hindi-first voice agent, with `marin` as the default voice and `cedar` as fallback.
 - OpenAI-powered helper functions for transcript summarization, disposition extraction, and language detection.
@@ -30,7 +31,11 @@ Run setup from the project root:
 ./scripts/setup.sh
 ```
 
-No application stack has been installed yet. After the stack is scaffolded, update this section with exact commands.
+On Windows PowerShell:
+
+```powershell
+.\scripts\setup.ps1
+```
 
 ## Development Commands
 Current project entry points:
@@ -40,14 +45,24 @@ Current project entry points:
 ./scripts/verify.sh
 ```
 
-Expected commands after the Next.js stack is added:
+Windows PowerShell:
+
+```powershell
+.\scripts\setup.ps1
+.\scripts\verify.ps1
+```
+
+Node commands:
 
 ```sh
 npm run dev
 npm run lint
 npm run test
 npm run build
+npm run voice:dev
 ```
+
+Open the local app at `http://localhost:3000/campaigns`.
 
 ## Testing
 Testing should be added in layers:
@@ -62,13 +77,28 @@ Run verification with:
 ./scripts/verify.sh
 ```
 
+On this Windows workspace, prefer:
+
+```powershell
+.\scripts\verify.ps1
+```
+
+The Bash script can fail under WSL if `node_modules` was installed for Windows because Rollup/Vitest optional native packages are platform-specific.
+
+## Demo Data
+Use [samples/demo-contacts.csv](samples/demo-contacts.csv) for the first upload demo. It contains 10 Hindi-first contacts, plus English and regional-language rows, and one unsupported language row that falls back to Hindi.
+
 ## Deployment Notes
-- Deploy the Next.js app to Vercel.
+- Deploy the Next.js dashboard and API to Vercel.
+- Deploy the Node WebSocket voice bridge to Railway, Fly.io, Render, Cloud Run, or another always-on container service. Railway is the recommended MVP choice because it can run a persistent Node process for Plivo AudioStream.
 - Use Supabase or managed PostgreSQL for the database.
-- Configure provider webhooks to point at deployed API routes.
+- Configure Plivo answer/status/recording webhooks to point at the Vercel app.
+- Configure Plivo AudioStream XML to point at the public Railway WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
 - Store real credentials only in local `.env` or Vercel environment variables.
+- Store voice bridge secrets in the Railway service environment as well.
 - Keep `.env.example` limited to placeholder variable names.
 - Add Vercel Cron routes for retry and provider status reconciliation.
+- Ship through preview deployments first, then promote one production Vercel deployment and one production Railway service after smoke tests pass.
 
 ## Key Docs
 - `PRD.md`: Product requirements.

@@ -1,0 +1,11 @@
+provider_name,phone,location,machine_count,order_id,language_hint,alternate_phone,address,custom_note
+Ravi Kumar,+919999999991,Mumbai,2,ORD-1001,hi,,Gate 2,Ready during business hours
+Anita Sharma,+919999999992,Delhi,1,ORD-1002,hi,,Sector 18,Ask for site supervisor
+Suresh Patel,+919999999993,Ahmedabad,3,ORD-1003,hi,,Warehouse Road,Needs loading dock
+Priya Nair,+919999999994,Kochi,1,ORD-1004,en,,Marine Drive,English preferred
+Gurpreet Singh,+919999999995,Ludhiana,4,ORD-1005,pa,,Industrial Area,Regional language demo
+Madhuri Deshmukh,+919999999996,Pune,2,ORD-1006,mr,,Hinjewadi Phase 2,Follow-up likely
+Arun Das,+919999999997,Kolkata,1,ORD-1007,bn,,Salt Lake,Invalid-number demo row
+Meena Iyer,+919999999998,Chennai,2,ORD-1008,ta,,T Nagar,Not-picked demo row
+Kiran Reddy,+919999999999,Hyderabad,5,ORD-1009,te,,Madhapur,Voicemail demo row
+Farah Khan,+919999999990,Bengaluru,1,ORD-1010,xx,,Whitefield,Unsupported language falls back to Hindi

@@ -8,6 +8,8 @@ Build a demo-ready outbound AI calling agent that can import Excel or CSV contac
 - Contacts arrive as Excel or CSV files with name, phone number, location, and business details.
 - Uploaded business columns must be preserved through dashboard display and CSV export.
 - Default database is Supabase Postgres.
+- Default web host is Vercel for dashboard, APIs, provider webhooks, and cron routes.
+- Default realtime bridge host is Railway or equivalent always-on container hosting.
 - First live provider is Plivo.
 - Simulated callback mode is required for the hackathon demo.
 - Hindi is the primary demo and production calling language.
@@ -133,6 +135,23 @@ Definition of done:
 - Export and portal show the same enriched result fields.
 - Demo can run with either live provider callbacks or simulated callbacks.
 
+### Slice 7: Hosting, Distribution, and Shipping
+Deliverables:
+- Vercel project for the Next.js dashboard and APIs.
+- Railway service for the Node WebSocket voice bridge.
+- Supabase project and migrations for MVP data.
+- Environment variable map for Vercel and Railway.
+- Plivo webhook routing checklist.
+- Preview and production smoke test checklist.
+
+Definition of done:
+- Vercel `/api/health` responds in preview and production.
+- Railway voice bridge starts and exposes the public `wss://` route.
+- `VOICE_BRIDGE_PUBLIC_WS_URL` on Vercel points to the Railway bridge.
+- `APP_BASE_URL` and `VOICE_OUTCOME_SECRET` on Railway point back to the Vercel app.
+- A simulated campaign works on the deployed portal.
+- A single live Plivo test call reaches the Railway bridge and posts an outcome back to Vercel.
+
 ## Suggested Implementation Order
 1. Scaffold Next.js and test tooling.
 2. Add config, enums, validation, and status mapping.
@@ -144,6 +163,8 @@ Definition of done:
 8. Add classification helpers and Hindi-first language packs.
 9. Add retry/reconcile cron routes.
 10. Add export and final demo polish.
+11. Deploy Vercel app, Railway bridge, and Supabase database.
+12. Run preview and production smoke tests before sharing the demo link.
 
 ## Council Scorecard Target
 The implementation plan should score at least 80 out of 100 across:

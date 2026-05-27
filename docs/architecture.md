@@ -25,7 +25,21 @@ Next.js on Vercel
     +-- PostgreSQL or Supabase
     +-- Call event audit log
     \-- Optional object storage for files
+
+Node voice bridge on Railway or equivalent always-on container host
++-- Plivo AudioStream WebSocket endpoint
++-- OpenAI Realtime WebSocket client
++-- Audio packet relay
+\-- Final outcome poster back to Vercel API
 ```
+
+## Hosting Topology
+- **Vercel:** Next.js app, admin portal, upload/campaign/export APIs, Plivo answer/status/recording webhooks, cron retry and reconciliation.
+- **Railway:** long-running Node WebSocket voice bridge for Plivo AudioStream and OpenAI Realtime sessions.
+- **Supabase:** Postgres database and optional object storage.
+- **Plivo:** outbound telephony. Plivo calls the Vercel answer URL, receives XML that points audio streaming to Railway, and sends status/recording callbacks back to Vercel.
+
+Vercel is not the primary host for the realtime audio bridge because serverless functions are not designed for long-lived bidirectional WebSocket audio sessions. The bridge must run as an always-on Node process.
 
 ## Folder Structure
 ```text
@@ -69,6 +83,8 @@ Next.js on Vercel
 
 ## MVP Defaults
 - Database: Supabase Postgres.
+- Web app host: Vercel.
+- Realtime voice bridge host: Railway or equivalent always-on container host.
 - First provider: Plivo adapter.
 - Demo fallback: simulated provider callbacks.
 - Primary calling language: Hindi (`hi`).
