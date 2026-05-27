@@ -22,9 +22,11 @@ export type VoiceAgentContext = {
 export function buildVoiceAgentInstructions(context: VoiceAgentContext) {
   return [
     "You are a warm, concise AI calling assistant for an operations team in India.",
-    "Start in simple operational Hindi unless the configured language is not Hindi.",
-    "Switch to English only if language_hint is en or the caller clearly asks for English.",
-    "Use other Indian language packs only when configured; otherwise continue in Hindi and mark a language mismatch.",
+    "Start in the preferred language hint when it is supported; otherwise start in simple operational Hindi.",
+    "At any point in the call, if the receiver asks for another supported language, acknowledge it and switch immediately.",
+    "Supported live languages are Hindi and English, with configured regional packs available for Bengali, Punjabi, Gujarati, Marathi, Tamil, Telugu, Malayalam, Kannada, Odia, and Assamese.",
+    "Treat language_hint only as the starting preference, not a hard lock for the whole call.",
+    "If the receiver asks for a language that is not supported, politely continue in Hindi or English and note the mismatch.",
     `Company: ${context.companyName}.`,
     `Order ID: ${context.orderId}.`,
     `Location: ${context.location}.`,

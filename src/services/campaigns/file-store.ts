@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import type { Campaign } from "./types";
 
@@ -6,7 +7,19 @@ type Store = {
   campaigns: Campaign[];
 };
 
-const storePath = path.join(process.cwd(), ".data", "mvp-store.json");
+const storePath = resolveStorePath(process.env);
+
+export function resolveStorePath(input: NodeJS.ProcessEnv) {
+  if (input.MVP_STORE_DIR) {
+    return path.join(input.MVP_STORE_DIR, "mvp-store.json");
+  }
+
+  if (input.VERCEL === "1") {
+    return path.join(input.TMPDIR ?? os.tmpdir(), "outbound-ai-calling-agent", "mvp-store.json");
+  }
+
+  return path.join(process.cwd(), ".data", "mvp-store.json");
+}
 
 export async function listCampaigns() {
   const store = await readStore();

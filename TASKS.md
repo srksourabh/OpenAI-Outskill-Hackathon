@@ -10,7 +10,7 @@
 - [x] Import outbound AI calling agent PRD into project docs.
 - [x] Create implementation plan and phased task list.
 - [x] Create focused MVP product and execution plan in `PLAN.md`.
-- [x] Create Superpowers realtime Plivo voice agent spec and implementation plan.
+- [x] Create Superpowers realtime Plivo voice agent spec and implementation plan. Spec: [realtime Plivo voice agent design](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md). Plan: [realtime Plivo voice agent implementation plan](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Clarify Excel/CSV upload, enriched CSV export, portal result display, and parallel calling requirements. Spec: [bulk upload design](docs/superpowers/specs/2026-05-27-bulk-upload-parallel-calling-design.md). Plan: [bulk upload implementation plan](docs/superpowers/plans/2026-05-27-bulk-upload-parallel-calling.md).
 - [x] Set Hindi (`hi`) as the primary/default calling language, with English secondary and other Indian language packs configured.
 - [x] Run model council review across plan, design, UI/UX, architecture, and task tracking. Score: [88/100](docs/model-council-review-2026-05-27.md).
@@ -54,6 +54,7 @@
 - [x] Accept `.xlsx` and `.csv` uploads.
 - [x] Parse Excel files server-side.
 - [x] Parse CSV files server-side.
+- [x] Support mobile-number-first uploads with common phone column aliases and sensible defaults.
 - [x] Validate required columns.
 - [x] Preserve original uploaded row details, including extra business columns.
 - [x] Normalize phone numbers.
@@ -61,6 +62,7 @@
 - [x] Deduplicate by campaign, phone, and order ID.
 - [x] Show import summary with invalid rows and duplicates.
 - [x] Show preserved source columns in the import summary.
+- [x] Add downloadable sample CSV for quick mobile-number uploads.
 - [x] Add unit and integration tests for upload parsing.
 
 ### Acceptance Criteria
@@ -74,6 +76,7 @@
 - [x] Build campaign dashboard page.
 - [x] Add campaign stats query.
 - [x] Add campaign start API.
+- [x] Surface live start errors in the dashboard instead of generic action failures.
 - [x] Add campaign-level `concurrency_limit` with MVP default of 5.
 - [x] Enqueue initial call rows for campaign contacts.
 - [x] Dispatch outbound calls in bounded parallel batches.
@@ -88,15 +91,16 @@
 - [ ] Starting an already-running campaign does not duplicate calls.
 
 ## Phase 6: Calling Provider Integration
-- [ ] Implement Plivo `createCall`.
+- [x] Implement Plivo `createCall`.
 - [x] Implement Plivo answer response builder.
 - [x] Implement Plivo hangup webhook parser.
 - [x] Implement Plivo recording webhook parser.
-- [ ] Persist provider call IDs.
+- [x] Persist provider call IDs in the local campaign store for outbound attempts.
 - [ ] Map provider statuses into internal statuses.
 - [ ] Save raw provider payloads in `call_events`.
 - [ ] Add idempotency tests for duplicate webhook events.
 - [x] Add simulated callback route or test helper for demo mode.
+- [x] Add live-call preflight validation for Plivo, public answer URL, voice bridge URL, and voice bridge OpenAI key.
 
 ### Acceptance Criteria
 - [ ] Provider webhooks validate signature or shared secret before state changes.
@@ -108,10 +112,11 @@
 - [ ] Create English secondary script pack.
 - [ ] Add scripted language pack configuration for additional Indian languages.
 - [x] Add language fallback rules: missing or unsupported `language_hint` falls back to Hindi.
+- [x] Strengthen voice-agent instructions so the caller can request a supported language switch mid-call.
 - [x] Add deterministic yes/no/unclear classifier fallback.
-- [ ] Add AI helper for language detection.
-- [ ] Add AI helper for transcript summarization.
-- [ ] Add AI helper for disposition extraction.
+- [x] Add AI helper for language detection.
+- [x] Add AI helper for transcript summarization.
+- [x] Add AI helper for disposition extraction.
 - [ ] Persist `confidence` internally or in metadata.
 - [ ] Route low-confidence calls to `manual_review`.
 - [x] Add tests for disposition mapping and next-action rules.
@@ -139,6 +144,8 @@
 - [x] Build campaign detail dashboard.
 - [ ] Build call result detail page.
 - [x] Show original uploaded row details in the campaign results table.
+- [x] Add a manual one-number quick-check flow in the dashboard.
+- [x] Replace the mobile results table with card-style rows to remove page-level horizontal scrolling.
 - [ ] Add filters by status, disposition, and language.
 - [ ] Add recording and transcript display.
 - [x] Add CSV export for all result rows, engineer-ready rows, and follow-up rows.
@@ -178,7 +185,7 @@
 ## Phase 11: Documentation
 - [x] Create `design.md` UI and UX design specification.
 - [x] Apply UI-UX-Pro-Max quality pass to `design.md`.
-- [x] Create [2026-05-26 progress summary](docs/daily-summary-2026-05-26.md).
+- [x] Create and link [2026-05-26 progress summary](docs/daily-summary-2026-05-26.md) in TASKS.md.
 - [x] Create `Memory.md` crash-resume checkpoint for 2026-05-27.
 - [x] Update `README.md` with final setup commands.
 - [ ] Update `README.md` with provider setup steps.
@@ -193,11 +200,13 @@
 - [x] Configure provider webhook URLs.
 - [x] Configure `APP_BASE_URL`, `VOICE_BRIDGE_PUBLIC_WS_URL`, and `VOICE_OUTCOME_SECRET` across Vercel and Railway.
 - [x] Add local `/api/health` smoke test.
-- [ ] Add Railway bridge startup or health smoke test.
-- [x] Verify Plivo answer XML points AudioStream to the Railway `wss://` URL.
-- [x] Verify voice bridge can post final outcomes back to Vercel.
-- [x] Add deployment smoke test checklist.
+- [ ] Add Railway bridge startup or health smoke test. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Verify Plivo answer XML points AudioStream to the Railway `wss://` URL. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Verify voice bridge can post final outcomes back to Vercel. Spec: [database outcome](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#database-outcome). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
+- [x] Add deployment smoke test checklist. Spec: [manual end-to-end plan](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-10-manual-end-to-end-test). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Run `.\scripts\verify.ps1`.
+- [x] Deploy the Vercel web app with Hobby-safe cron schedules and confirm `/api/health` responds.
+- [x] Move the demo file store to a writable temp directory on Vercel so uploads do not fail with `/var/task/.data` write errors.
 - [ ] Perform demo rehearsal with seeded or live contacts.
 
 ## First Implementation Slice
@@ -209,11 +218,11 @@
 - [x] Build Plivo answer URL that returns bidirectional AudioStream XML. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Plan: [Task 5 - Build Plivo Call Start and Answer XML](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-5-build-plivo-call-start-and-answer-xml). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Build Node WebSocket voice bridge for Plivo AudioStream. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Plan: [Task 6 - Build Voice Bridge Plivo Side](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-6-build-voice-bridge-plivo-side). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Connect voice bridge to OpenAI Realtime with configurable voice. Spec: [voice selection](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-selection). Plan: [Task 7 - Connect Voice Bridge to OpenAI Realtime](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-7-connect-voice-bridge-to-openai-realtime). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [x] Add Hindi-first realtime agent prompt rules: start in Hindi, switch to English only when configured or requested, and use configured regional packs when available.
+- [x] Add Hindi-first realtime agent prompt rules: start in Hindi, switch to English only when configured or requested, and use configured regional packs when available. Spec: [voice agent behavior](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#voice-agent-behavior). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [ ] Save realtime call transcript and outcome to database. Spec: [database outcome](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#database-outcome). Plan: [Task 8 - Save Final Voice Outcome](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-8-save-final-voice-outcome). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Show realtime call outcome in MVP dashboard. Spec: [acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria). Plan: [Task 9 - Add MVP Dashboard](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-9-add-mvp-dashboard). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Add unit tests for status and disposition mapping. Spec: [testing strategy](docs/architecture.md#testing-strategy). Plan: [Task 3 - Add Domain Types and Agent Instructions](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-3-add-domain-types-and-agent-instructions). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
-- [x] Run verify script and update this checklist.
+- [x] Run verify script and update this checklist. Plan: [Task 11 - Update Documentation and Tasks](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-11-update-documentation-and-tasks). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 
 ### First Implementation Slice Acceptance Criteria
 Source: [approved spec acceptance criteria](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#acceptance-criteria) and [manual end-to-end plan](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-10-manual-end-to-end-test).

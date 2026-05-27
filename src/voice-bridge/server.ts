@@ -1,5 +1,6 @@
 import { WebSocketServer } from "ws";
 import { buildVoiceAgentInstructions } from "../domain/voice-agent";
+import { analyzeTranscriptWithOpenAI } from "../services/ai/openai";
 import { connectOpenAIRealtime, appendRealtimeAudio } from "./openaiRealtime";
 import { postVoiceOutcome } from "./outcomeClient";
 import { parsePlivoEvent, sendAudioToPlivo } from "./plivoStream";
@@ -49,20 +50,16 @@ server.on("connection", (plivoWs, request) => {
 
   plivoWs.on("close", () => {
     realtimeWs.close();
-    void postVoiceOutcome({
-      appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:3000",
-      secret: process.env.VOICE_OUTCOME_SECRET ?? "",
-      callId,
-      transcriptText,
-      outcome: {
-        disposition: "manual_review",
-        next_action: "verify_data",
-        detected_language: "unknown",
-        summary_text: transcriptText || "Realtime call ended before structured classification completed.",
-        reason_code: "bridge_closed",
-        confidence: 0.3
-      }
-    }).catch((error) => console.error("Failed to post voice outcome", error));
+    void (async () => {
+      const outcome = await analyzeTranscriptWithOpenAI(transcriptText);
+      await postVoiceOutcome({
+        appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:3000",
+        secret: process.env.VOICE_OUTCOME_SECRET ?? "",
+        callId,
+        transcriptText,
+        outcome
+      });
+    })().catch((error) => console.error("Failed to post voice outcome", error));
   });
 });
 

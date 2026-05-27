@@ -1,0 +1,45 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]: Calling Ops
+      - paragraph [ref=e6]: Hindi-first outbound AI campaigns
+      - navigation [ref=e7]:
+        - link "Campaigns" [ref=e8] [cursor=pointer]:
+          - /url: /campaigns
+        - link "Health" [ref=e9] [cursor=pointer]:
+          - /url: /api/health
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - heading "Campaign command center" [level=1] [ref=e13]
+          - paragraph [ref=e14]: Upload Excel/CSV, run simultaneous calls, review evidence, export result CSV.
+        - generic [ref=e15]:
+          - button "Start campaign" [disabled] [ref=e16]
+          - button "Simulate callbacks" [disabled] [ref=e17]
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "New upload" [level=2] [ref=e20]
+          - paragraph [ref=e21]: "Accepted: `.xlsx` or `.csv`. Missing language defaults to Hindi."
+          - generic [ref=e22]:
+            - text: Campaign name
+            - textbox "Campaign name" [ref=e23]: Hindi pickup readiness demo
+          - generic [ref=e24]:
+            - text: Company name
+            - textbox "Company name" [ref=e25]: Demo Logistics
+          - generic [ref=e26]:
+            - text: Default language
+            - combobox "Default language" [ref=e27]:
+              - option "Hindi" [selected]
+              - option "English"
+              - option "Tamil"
+              - option "Bengali"
+          - generic [ref=e28]:
+            - text: Concurrency limit
+            - spinbutton "Concurrency limit" [ref=e29]: "5"
+          - generic [ref=e30]:
+            - text: Contact file
+            - button "Contact file" [ref=e31]
+          - button "Upload and validate" [ref=e32]
+        - generic [ref=e34]:
+          - heading "No campaign yet" [level=2] [ref=e35]
+          - paragraph [ref=e36]: Upload an Excel or CSV contact list to begin the demo workflow.

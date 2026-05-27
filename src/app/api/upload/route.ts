@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     const defaultLanguage = String(form.get("default_language") ?? env.primaryCallLanguage);
     const campaignName = String(form.get("campaign_name") ?? "Uploaded campaign");
     const companyName = String(form.get("company_name") ?? "Demo Logistics");
+    const requestedProvider = String(form.get("provider") ?? env.telephonyProvider ?? "simulated");
     const concurrencyLimit = Number(form.get("concurrency_limit") ?? 5);
     const content = Buffer.from(await file.arrayBuffer());
     const parsed = await parseContactFile({ fileName: file.name, content, defaultLanguage });
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       defaultLanguage,
       concurrencyLimit,
       contacts: parsed.validRows,
-      provider: "simulated"
+      provider: requestedProvider === "plivo" ? "plivo" : "simulated"
     });
 
     await saveCampaign(campaign);

@@ -1,0 +1,13 @@
+.env
+.env.*
+.data
+.data/
+node_modules
+node_modules/
+.next
+.next/
+coverage
+coverage/
+dist
+dist/
+tsconfig.tsbuildinfo

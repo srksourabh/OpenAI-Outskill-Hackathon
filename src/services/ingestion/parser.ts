@@ -3,7 +3,16 @@ import readXlsxFile from "read-excel-file/node";
 import { getEffectiveLanguage } from "@/domain/languages";
 import type { InvalidRow, ParseContactFileResult, ParsedContact, SourceRow } from "./types";
 
-const requiredColumns = ["provider_name", "phone", "location", "machine_count", "order_id"] as const;
+const fieldAliases = {
+  provider_name: ["provider_name", "provider", "name", "contact_name", "customer_name"],
+  phone: ["phone", "mobile", "mobile_number", "phone_number", "contact_number"],
+  location: ["location", "city", "site", "branch"],
+  machine_count: ["machine_count", "machines", "item_count", "quantity"],
+  order_id: ["order_id", "order", "reference_id", "job_id"],
+  language_hint: ["language_hint", "language", "lang"],
+  alternate_phone: ["alternate_phone", "alternate_mobile", "secondary_phone"],
+  address: ["address", "full_address"]
+} as const;
 
 type ParseInput = {
   fileName: string;
@@ -13,7 +22,15 @@ type ParseInput = {
 
 export async function parseContactFile(input: ParseInput): Promise<ParseContactFileResult> {
   const rows = await parseRows(input.fileName, input.content);
+  if (rows.length === 0) {
+    throw new Error("No contact rows found. Upload a CSV or Excel file with at least one phone number.");
+  }
+
   const sourceColumns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  if (!hasRecognizedPhoneColumn(sourceColumns)) {
+    throw new Error("Could not find a phone column. Use one of: phone, mobile, mobile_number, phone_number, contact_number.");
+  }
+
   const seen = new Set<string>();
   const validRows: ParsedContact[] = [];
   const invalidRows: InvalidRow[] = [];
@@ -79,13 +96,16 @@ function parseRows(fileName: string, content: Buffer): SourceRow[] | Promise<Sou
 
 function validateRow(row: SourceRow) {
   const errors: string[] = [];
-  for (const column of requiredColumns) {
-    if (!String(row[column] ?? "").trim()) {
-      errors.push(`${column} is required`);
-    }
+
+  const phone = getFieldValue(row, "phone");
+  if (!phone) {
+    errors.push("phone is required");
+  } else if (!isValidPhone(normalizePhone(phone))) {
+    errors.push("phone must be a valid mobile number");
   }
 
-  const machineCount = Number(row.machine_count);
+  const machineCountValue = getFieldValue(row, "machine_count");
+  const machineCount = Number(machineCountValue || "1");
   if (!Number.isInteger(machineCount) || machineCount <= 0) {
     errors.push("machine_count must be a positive integer");
   }
@@ -94,23 +114,54 @@ function validateRow(row: SourceRow) {
 }
 
 function toParsedContact(row: SourceRow, sourceRowNumber: number, defaultLanguage: string): ParsedContact {
+  const normalizedPhone = normalizePhone(getFieldValue(row, "phone"));
+  const generatedOrderId = `UPLOAD-${String(sourceRowNumber).padStart(3, "0")}`;
+
   return {
-    provider_name: String(row.provider_name).trim(),
-    phone: normalizePhone(String(row.phone).trim()),
-    location: String(row.location).trim(),
-    machine_count: Number(row.machine_count),
-    order_id: String(row.order_id).trim(),
-    language_hint: getEffectiveLanguage(row.language_hint, defaultLanguage),
-    alternate_phone: String(row.alternate_phone ?? "").trim(),
-    address: String(row.address ?? "").trim(),
+    provider_name: getFieldValue(row, "provider_name") || `Contact ${sourceRowNumber - 1}`,
+    phone: normalizedPhone,
+    location: getFieldValue(row, "location") || "Unknown",
+    machine_count: Number(getFieldValue(row, "machine_count") || "1"),
+    order_id: getFieldValue(row, "order_id") || generatedOrderId,
+    language_hint: getEffectiveLanguage(getFieldValue(row, "language_hint"), defaultLanguage),
+    alternate_phone: normalizeOptionalPhone(getFieldValue(row, "alternate_phone")),
+    address: getFieldValue(row, "address") || "",
     source_row_data: { ...row },
     source_row_number: sourceRowNumber
   };
 }
 
 function normalizePhone(phone: string) {
-  const compact = phone.replace(/[\s()-]/g, "");
-  if (compact.startsWith("+")) return compact;
-  if (compact.length === 10) return `+91${compact}`;
-  return compact;
+  const trimmed = phone.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return "";
+  if (trimmed.startsWith("+")) return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length >= 11 && digits.length <= 15) return `+${digits}`;
+  return trimmed.replace(/[\s()-]/g, "");
+}
+
+function normalizeOptionalPhone(phone: string) {
+  if (!phone.trim()) return "";
+  const normalized = normalizePhone(phone);
+  return isValidPhone(normalized) ? normalized : phone.trim();
+}
+
+function isValidPhone(phone: string) {
+  return /^\+[1-9]\d{9,14}$/.test(phone);
+}
+
+function hasRecognizedPhoneColumn(columns: string[]) {
+  return columns.some((column) => getCanonicalField(column) === "phone");
+}
+
+function getFieldValue(row: SourceRow, field: keyof typeof fieldAliases) {
+  const entry = Object.entries(row).find(([column]) => getCanonicalField(column) === field);
+  return String(entry?.[1] ?? "").trim();
+}
+
+function getCanonicalField(column: string) {
+  const normalized = column.trim().toLowerCase();
+  const aliasEntries = Object.entries(fieldAliases) as Array<[keyof typeof fieldAliases, readonly string[]]>;
+  return aliasEntries.find(([, aliases]) => aliases.includes(normalized))?.[0] ?? null;
 }

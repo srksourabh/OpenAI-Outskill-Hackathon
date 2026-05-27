@@ -1,0 +1,12 @@
+[     397ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3002/_next/static/css/f9aa8a27479f2647.css:0
+[     430ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3002/_next/static/chunks/app/campaigns/page-6c78a9ae4b8271d7.js:0
+[     491ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3002/favicon.ico:0
+[  120506ms] ChunkLoadError: Loading chunk 134 failed.
+(timeout: http://localhost:3002/_next/static/chunks/app/campaigns/page-6c78a9ae4b8271d7.js)
+    at r.f.j (http://localhost:3002/_next/static/chunks/webpack-9b1881fda15d01ff.js:1:2817)
+    at http://localhost:3002/_next/static/chunks/webpack-9b1881fda15d01ff.js:1:1138
+    at Array.reduce (<anonymous>)
+    at r.e (http://localhost:3002/_next/static/chunks/webpack-9b1881fda15d01ff.js:1:1117)
+    at c (http://localhost:3002/_next/static/chunks/255-4f84124391a7dac4.js:1:136606)
+    at http://localhost:3002/_next/static/chunks/255-4f84124391a7dac4.js:1:151371
+    at t (http://localhost:3002/_next/static/chunks/255-4f84124391a7dac4.js:1:152829)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Campaign = {
   id: string;
@@ -29,12 +29,28 @@ type CampaignResults = {
   stats: Record<string, number>;
 };
 
+type UploadIssue = {
+  source_row_number: number;
+  source_row_data: Record<string, string>;
+  errors: string[];
+};
+
+type UploadSummary = {
+  imported: number;
+  invalid: number;
+  duplicates: number;
+  source_columns: string[];
+  invalid_rows: UploadIssue[];
+  duplicate_rows: UploadIssue[];
+};
+
 export function CampaignWorkspace() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [results, setResults] = useState<CampaignResults | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [uploadSummary, setUploadSummary] = useState<UploadSummary | null>(null);
 
   const selected = useMemo(() => campaigns.find((campaign) => campaign.id === selectedId) ?? campaigns[0], [campaigns, selectedId]);
 
@@ -62,6 +78,7 @@ export function CampaignWorkspace() {
   async function uploadFile(formData: FormData) {
     setBusy(true);
     setMessage("Uploading and validating contacts...");
+    setUploadSummary(null);
     const response = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await response.json();
     setBusy(false);
@@ -69,6 +86,7 @@ export function CampaignWorkspace() {
       setMessage(data.error ?? "Upload failed");
       return;
     }
+    setUploadSummary(data.import_summary as UploadSummary);
     setMessage(`Imported ${data.import_summary.imported} contacts. Invalid: ${data.import_summary.invalid}. Duplicates: ${data.import_summary.duplicates}.`);
     await loadCampaigns();
     setSelectedId(data.campaign.id);
@@ -78,19 +96,19 @@ export function CampaignWorkspace() {
     if (!selected) return;
     setBusy(true);
     const response = await fetch(path, { method: "POST", body: JSON.stringify({ count: 8 }) });
+    const data = await response.json().catch(() => ({}));
     setBusy(false);
     if (!response.ok) {
-      setMessage("Action failed");
+      setMessage(data.error ?? "Action failed");
       return;
     }
-    const data = await response.json();
     setCampaigns((current) => current.map((campaign) => (campaign.id === data.campaign.id ? data.campaign : campaign)));
     setMessage("Campaign updated.");
     await loadResults(data.campaign.id);
   }
 
   return (
-    <main className="min-h-dvh bg-surface text-ink">
+    <main className="min-h-dvh overflow-x-hidden bg-surface text-ink">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-line bg-rail p-5 text-white lg:border-b-0 lg:border-r">
           <div className="text-lg font-semibold">Calling Ops</div>
@@ -101,7 +119,7 @@ export function CampaignWorkspace() {
           </nav>
         </aside>
 
-        <section className="p-4 sm:p-6">
+        <section className="min-w-0 p-4 sm:p-6">
           <header className="flex flex-col gap-4 border-b border-line pb-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <h1 className="text-2xl font-semibold">Campaign command center</h1>
@@ -130,11 +148,12 @@ export function CampaignWorkspace() {
             </div>
           </header>
 
-          <div className="mt-5 grid gap-5 xl:grid-cols-[360px_1fr]">
+          <div className="mt-5 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
             <UploadPanel busy={busy} onUpload={uploadFile} />
-            <div className="space-y-5">
+            <div className="min-w-0 space-y-5">
               <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={setSelectedId} />
               {message ? <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm">{message}</div> : null}
+              {uploadSummary ? <UploadSummaryPanel summary={uploadSummary} /> : null}
               {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
               {selected ? <ResultsTable rows={results?.rows ?? []} /> : null}
             </div>
@@ -146,46 +165,118 @@ export function CampaignWorkspace() {
 }
 
 function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: FormData) => void }) {
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualLanguage, setManualLanguage] = useState("hi");
+  const [manualProvider, setManualProvider] = useState("plivo");
+
+  function submitManualCheck(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!manualPhone.trim()) return;
+
+    const formData = new FormData();
+    formData.set("campaign_name", "Manual number check");
+    formData.set("company_name", "Demo Logistics");
+    formData.set("default_language", manualLanguage);
+    formData.set("concurrency_limit", "1");
+    formData.set("provider", manualProvider);
+    formData.set("file", buildManualUploadFile({ phone: manualPhone, language: manualLanguage }));
+    onUpload(formData);
+  }
+
   return (
-    <form
-      className="rounded-lg border border-line bg-panel p-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        onUpload(new FormData(form));
-      }}
-    >
-      <h2 className="text-lg font-semibold">New upload</h2>
-      <p className="mt-1 text-sm text-muted">Accepted: `.xlsx` or `.csv`. Missing language defaults to Hindi.</p>
-      <label className="mt-4 block text-sm font-medium">
-        Campaign name
-        <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" defaultValue="Hindi pickup readiness demo" />
-      </label>
-      <label className="mt-3 block text-sm font-medium">
-        Company name
-        <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" defaultValue="Demo Logistics" />
-      </label>
-      <label className="mt-3 block text-sm font-medium">
-        Default language
-        <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" defaultValue="hi">
-          <option value="hi">Hindi</option>
-          <option value="en">English</option>
-          <option value="ta">Tamil</option>
-          <option value="bn">Bengali</option>
-        </select>
-      </label>
-      <label className="mt-3 block text-sm font-medium">
-        Concurrency limit
-        <input className="mt-1 w-full rounded-md border border-line px-3 py-2" min={1} max={25} name="concurrency_limit" type="number" defaultValue={5} />
-      </label>
-      <label className="mt-3 block text-sm font-medium">
-        Contact file
-        <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
-      </label>
-      <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy}>
-        Upload and validate
-      </button>
-    </form>
+    <section className="rounded-lg border border-line bg-panel p-4">
+      <div>
+        <h2 className="text-lg font-semibold">New upload</h2>
+        <p className="mt-1 text-sm text-muted">
+          Upload `.xlsx` or `.csv`. Phone-only sheets work now if they include a header like `phone`, `mobile`, or `mobile_number`.
+        </p>
+        <a className="mt-3 inline-flex text-sm font-medium text-accent" href="/sample-mobile-upload.csv" download>
+          Download sample upload file
+        </a>
+      </div>
+
+      <form
+        className="mt-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          onUpload(new FormData(form));
+        }}
+      >
+        <label className="block text-sm font-medium">
+          Campaign name
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" defaultValue="Hindi pickup readiness demo" />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Company name
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" defaultValue="Demo Logistics" />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Calling mode
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider" defaultValue="plivo">
+            <option value="plivo">Plivo live call</option>
+            <option value="simulated">Simulated demo</option>
+          </select>
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Default language
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" defaultValue="hi">
+            <option value="hi">Hindi</option>
+            <option value="en">English</option>
+            <option value="ta">Tamil</option>
+            <option value="bn">Bengali</option>
+          </select>
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Concurrency limit
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" min={1} max={25} name="concurrency_limit" type="number" defaultValue={5} />
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          Contact file
+          <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
+        </label>
+        <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy}>
+          Upload and validate
+        </button>
+      </form>
+
+      <div className="my-5 border-t border-line" />
+
+      <form className="space-y-3" onSubmit={submitManualCheck}>
+        <div>
+          <h3 className="text-base font-semibold">Quick number check</h3>
+          <p className="mt-1 text-sm text-muted">Create a one-contact test campaign without preparing a spreadsheet.</p>
+        </div>
+        <label className="block text-sm font-medium">
+          Mobile number
+          <input
+            className="mt-1 w-full rounded-md border border-line px-3 py-2"
+            placeholder="+919876543210 or 9876543210"
+            value={manualPhone}
+            onChange={(event) => setManualPhone(event.target.value)}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Calling mode
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+            <option value="plivo">Plivo live call</option>
+            <option value="simulated">Simulated demo</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium">
+          Preferred language
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
+            <option value="hi">Hindi</option>
+            <option value="en">English</option>
+            <option value="ta">Tamil</option>
+            <option value="bn">Bengali</option>
+          </select>
+        </label>
+        <button className="w-full rounded-md border border-line bg-panel px-4 py-2 font-semibold disabled:opacity-50" disabled={busy || !manualPhone.trim()}>
+          Create quick-check campaign
+        </button>
+      </form>
+    </section>
   );
 }
 
@@ -244,7 +335,28 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
       <div className="border-b border-line p-4">
         <h2 className="text-lg font-semibold">Results and uploaded details</h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="space-y-3 p-4 md:hidden">
+        {rows.length === 0 ? <div className="py-4 text-center text-sm text-muted">Upload contacts to create the first campaign.</div> : null}
+        {rows.map((row) => (
+          <article className="rounded-md border border-line bg-surface p-3" key={String(row.contact_id)}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-semibold">{String(row.provider_name ?? "")}</div>
+                <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
+              </div>
+              <span className="rounded bg-panel px-2 py-1 text-xs">{row.call?.status ?? "not queued"}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <InfoField label="Location" value={String(row.location ?? "")} />
+              <InfoField label="Order" value={String(row.order_id ?? "")} />
+              <InfoField label="Language" value={String(row.language_hint ?? "")} />
+              <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
+            </div>
+            <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No summary yet."}</div>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-surface">
             <tr>
@@ -279,6 +391,53 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
   );
 }
 
+function UploadSummaryPanel({ summary }: { summary: UploadSummary }) {
+  return (
+    <section className="rounded-lg border border-line bg-panel p-4">
+      <div className="flex flex-wrap gap-2 text-xs">
+        {summary.source_columns.map((column) => (
+          <span className="rounded bg-surface px-2 py-1" key={column}>{column}</span>
+        ))}
+      </div>
+      {summary.invalid_rows.length > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold">Invalid rows</h3>
+          <div className="mt-2 space-y-2">
+            {summary.invalid_rows.slice(0, 5).map((row) => (
+              <div className="rounded-md border border-line bg-surface p-3 text-sm" key={`invalid-${row.source_row_number}`}>
+                <div className="font-medium">Row {row.source_row_number}</div>
+                <div className="mt-1 text-muted">{row.errors.join(", ")}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {summary.duplicate_rows.length > 0 ? (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold">Duplicate rows</h3>
+          <div className="mt-2 space-y-2">
+            {summary.duplicate_rows.slice(0, 5).map((row) => (
+              <div className="rounded-md border border-line bg-surface p-3 text-sm" key={`duplicate-${row.source_row_number}`}>
+                <div className="font-medium">Row {row.source_row_number}</div>
+                <div className="mt-1 text-muted">{row.errors.join(", ")}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted">{label}</div>
+      <div className="mt-1 break-words">{value}</div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <section className="rounded-lg border border-dashed border-line bg-panel p-8 text-center">
@@ -286,4 +445,27 @@ function EmptyState() {
       <p className="mt-2 text-sm text-muted">Upload an Excel or CSV contact list to begin the demo workflow.</p>
     </section>
   );
+}
+
+function buildManualUploadFile({ phone, language }: { phone: string; language: string }) {
+  const csv = [
+    "phone,language_hint,provider_name,location,machine_count,order_id",
+    [
+      escapeCsvValue(phone),
+      escapeCsvValue(language),
+      escapeCsvValue("Quick check contact"),
+      escapeCsvValue("Manual test"),
+      "1",
+      escapeCsvValue(`MANUAL-${Date.now()}`)
+    ].join(",")
+  ].join("\n");
+
+  return new File([csv], "manual-number-check.csv", { type: "text/csv" });
+}
+
+function escapeCsvValue(value: string) {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, "\"\"")}"`;
+  }
+  return value;
 }

@@ -21,7 +21,7 @@ Build a production-shaped hackathon MVP for an outbound AI calling agent for Ind
 - Railway or an equivalent always-on container host for the long-lived Plivo AudioStream to OpenAI Realtime voice bridge.
 - Plivo as the first provider adapter, with Twilio and Exotel adapters scaffolded.
 - OpenAI Realtime for the Hindi-first voice agent, with `marin` as the default voice and `cedar` as fallback.
-- OpenAI-powered helper functions for transcript summarization, disposition extraction, and language detection.
+- OpenAI Responses API for transcript summarization, disposition extraction, and language detection, with a local rule-based fallback when API analysis is unavailable.
 - Ultravox placeholders are kept as an optional managed voice-agent fallback, not the primary path.
 
 ## Setup
@@ -64,6 +64,18 @@ npm run voice:dev
 
 Open the local app at `http://localhost:3000/campaigns`.
 
+## Live Calling Prerequisites
+For a real Plivo outbound call, the app now requires all of the following before `Start campaign` will dial:
+
+- `provider=plivo` on the created campaign.
+- `APP_BASE_URL` must be a public URL that Plivo can reach, not `localhost`.
+- `VOICE_BRIDGE_PUBLIC_WS_URL` must point to the public `wss://` voice bridge endpoint.
+- `OPENAI_API_KEY` must be set for the voice bridge runtime.
+- `OPENAI_RESPONSES_MODEL` controls the text model used for transcript analysis. The checked-in default is `gpt-4.1-mini`.
+- `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` must be set.
+
+If any of these are missing, the dashboard now returns a clear error instead of pretending the live call started.
+
 ## Testing
 Testing should be added in layers:
 
@@ -88,6 +100,11 @@ The Bash script can fail under WSL if `node_modules` was installed for Windows b
 ## Demo Data
 Use [samples/demo-contacts.csv](samples/demo-contacts.csv) for the first upload demo. It contains 10 Hindi-first contacts, plus English and regional-language rows, and one unsupported language row that falls back to Hindi.
 
+For quick testing in the app:
+- Download `/sample-mobile-upload.csv` from the dashboard for a lightweight mobile-number template.
+- Uploads can now use common phone headers such as `phone`, `mobile`, `mobile_number`, `phone_number`, or `contact_number`.
+- The dashboard also includes a one-number quick-check form that creates a single-contact test campaign without a spreadsheet.
+
 ## Deployment Notes
 - Deploy the Next.js dashboard and API to Vercel.
 - Deploy the Node WebSocket voice bridge to Railway, Fly.io, Render, Cloud Run, or another always-on container service. Railway is the recommended MVP choice because it can run a persistent Node process for Plivo AudioStream.
@@ -95,9 +112,11 @@ Use [samples/demo-contacts.csv](samples/demo-contacts.csv) for the first upload 
 - Configure Plivo answer/status/recording webhooks to point at the Vercel app.
 - Configure Plivo AudioStream XML to point at the public Railway WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
 - Store real credentials only in local `.env` or Vercel environment variables.
+- The demo JSON file store now writes to a temp directory on Vercel instead of `/var/task/.data`, so serverless uploads can persist during a runtime instance without hitting the read-only filesystem.
 - Store voice bridge secrets in the Railway service environment as well.
 - Keep `.env.example` limited to placeholder variable names.
 - Add Vercel Cron routes for retry and provider status reconciliation.
+- The checked-in `vercel.json` currently uses once-daily cron schedules so Hobby deployments succeed. Upgrade to Vercel Pro and restore the higher-frequency retry cadence when you need `*/10` and `*/15` production jobs.
 - Ship through preview deployments first, then promote one production Vercel deployment and one production Railway service after smoke tests pass.
 
 ## Key Docs

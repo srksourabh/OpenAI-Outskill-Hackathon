@@ -2,11 +2,17 @@
   "crons": [
     {
       "path": "/api/cron/retry-unanswered",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/reconcile-provider-status",
-      "schedule": "*/15 * * * *"
+      "schedule": "30 0 * * *"
     }
-  ]
+  ],
+  "experimentalServices": {
+    "web": {
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
 }
