@@ -61,7 +61,7 @@ function updateRealtimeSession(ws: WebSocket, instructions: string, voice: strin
             turn_detection: {
               type: "semantic_vad",
               create_response: false,
-              interrupt_response: true
+              interrupt_response: false
             }
           },
           output: { format: { type: "audio/pcmu" }, voice }

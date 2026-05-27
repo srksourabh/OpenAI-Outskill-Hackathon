@@ -68,5 +68,5 @@ export function buildVoiceAgentInstructions(
 }
 
 export function buildOpeningLine(context: VoiceAgentContext) {
-  return `Hello sir, I am calling from ${context.companyName}. You have a POS machine and we have a de-installation request for order ${context.orderId}. Please tell me whether the machine is with you or not.`;
+  return `Hello sir, I am calling from ${context.companyName}. You have a POS machine and we have a de-installation request for order ${context.orderId}. Please tell me whether the machine is there with you or not.`;
 }

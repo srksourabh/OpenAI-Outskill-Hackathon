@@ -61,7 +61,10 @@ server.on("connection", (plivoWs, request) => {
 
     if (eventType === "session.updated" && !initialResponseRequested) {
       initialResponseRequested = true;
-      requestRealtimeResponse(realtimeWs, `${initialPrompt.instructions} First response wording to preserve: ${initialPrompt.openingLine}`);
+      requestRealtimeResponse(
+        realtimeWs,
+        `${initialPrompt.instructions} Speak the following first turn verbatim and complete the full sentence before waiting for the receiver: "${initialPrompt.openingLine}"`
+      );
       return;
     }
 

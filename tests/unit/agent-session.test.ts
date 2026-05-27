@@ -14,7 +14,7 @@ describe("voice bridge agent session", () => {
   it("creates an opening prompt with the required de-installation question", () => {
     const prompt = buildInitialAgentPrompt(context, createAgentSessionState("en"), ["en", "hi", "bn"]);
 
-    expect(prompt.openingLine).toContain("Please tell me whether the machine is with you or not");
+    expect(prompt.openingLine).toContain("Please tell me whether the machine is there with you or not");
     expect(prompt.instructions).toContain("Current stage: opening");
   });
 

@@ -25,6 +25,6 @@ describe("buildVoiceAgentInstructions", () => {
         machineCount: 2,
         languageHint: "en"
       })
-    ).toContain("Please tell me whether the machine is with you or not");
+    ).toContain("Please tell me whether the machine is there with you or not");
   });
 });
