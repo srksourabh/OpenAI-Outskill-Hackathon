@@ -17,6 +17,7 @@ Next.js on Vercel
 +-- Services
 |   +-- Contact ingestion
 |   +-- Campaign orchestration
+|   +-- Parallel call dispatch
 |   +-- Telephony adapters
 |   +-- AI classification
 |   \-- Export generation
@@ -55,21 +56,24 @@ Next.js on Vercel
 ```
 
 ## Data Flow
-1. Admin uploads Excel file.
-2. Upload route validates rows and creates campaign contacts.
+1. Admin uploads Excel or CSV file.
+2. Upload route validates rows, preserves original row details, and creates campaign contacts.
 3. Admin starts campaign.
 4. Campaign service creates queued call records.
-5. Provider adapter initiates outbound calls.
+5. Parallel dispatch service initiates outbound calls up to the campaign concurrency limit.
 6. Provider callbacks update call state and append `call_events`.
 7. Recording and transcript evidence is attached to the call.
 8. Classification service sets disposition, next action, reason code, language, and summary.
-9. Dashboard queries campaign stats and call results.
-10. Export service generates operations-ready CSV.
+9. Dashboard queries campaign stats, original uploaded fields, and call results.
+10. Export service generates operations-ready CSV with original uploaded columns plus result columns.
 
 ## MVP Defaults
 - Database: Supabase Postgres.
 - First provider: Plivo adapter.
 - Demo fallback: simulated provider callbacks.
+- Primary calling language: Hindi (`hi`).
+- Secondary calling language: English (`en`).
+- Missing or unsupported `language_hint` values fall back to Hindi.
 - Admin protection: simple admin-only gate before write APIs are exposed.
 - Test stack: Vitest for unit and integration tests unless the selected scaffold suggests a better local default.
 - AI/STT path: simulated transcripts first, provider recording/transcription integration second, OpenAI summarization and disposition extraction behind service functions.
@@ -78,9 +82,9 @@ Next.js on Vercel
 - `src/config/`: Validates and exposes environment variables. No direct `process.env` access outside this layer.
 - `src/domain/`: Pure enums, status mapping, disposition rules, validation schemas, and language pack definitions.
 - `src/providers/`: Provider adapter interface and provider-specific implementations.
-- `src/services/ingestion/`: Excel parsing, row normalization, and deduplication.
+- `src/services/ingestion/`: Excel and CSV parsing, row normalization, original row preservation, and deduplication.
 - `src/services/campaigns/`: Campaign creation, start, stats, and result queries.
-- `src/services/calls/`: Call orchestration, retry rules, and status transitions.
+- `src/services/calls/`: Call orchestration, bounded parallel dispatch, retry rules, and status transitions.
 - `src/services/ai/`: Language detection, transcript summarization, and disposition extraction.
 - `src/app/api/`: Next.js route handlers for upload, campaigns, webhooks, and cron.
 - `src/app/`: UI routes for upload, dashboard, call detail, and exports.
@@ -110,7 +114,16 @@ Important constraints:
 - Unique contact per `(campaign_id, phone, order_id)`.
 - Unique provider call per `(provider, provider_call_id)` when provider ID is present.
 - Index calls by campaign and status for dashboard performance.
+- Store original uploaded row data on each contact so extra business columns survive portal display and CSV export.
 - Store raw provider payloads for audit and reconciliation.
+
+Suggested `contacts` fields:
+- Canonical columns: `provider_name`, `phone`, `location`, `machine_count`, `order_id`, `language_hint`, `alternate_phone`, `address`.
+- Preserved upload payload: `source_row_data jsonb`.
+- Source metadata: `source_file_name`, `source_file_type`, `source_row_number`.
+
+Suggested `campaigns` field for parallel dispatch:
+- `concurrency_limit integer not null default 5`.
 
 ## Call State Machine
 
@@ -146,6 +159,15 @@ Duplicate webhook handling:
 - Apply state transitions inside a database transaction.
 - Ignore stale transitions that would move a terminal call back to a non-terminal state.
 
+## Parallel Call Dispatch
+Campaign execution must not call contacts one by one. The dispatcher should:
+- Select queued calls for a running campaign up to `concurrency_limit - active_call_count`.
+- Mark selected rows as `initiated` only after the provider accepts the call request.
+- Keep queued rows untouched when provider creation fails, unless the error proves an invalid number or permanent provider rejection.
+- Refill available slots as active calls move to terminal states.
+- Respect provider-level rate limits through a conservative per-campaign default of 5 active calls.
+- Keep the first demo configurable so the team can lower concurrency to 1 for debugging and raise it for normal campaign runs.
+
 ## Dependency Rules
 - Add dependencies only when required for the chosen stack or core MVP behavior.
 - Keep provider-specific SDK code behind adapters.
@@ -155,7 +177,7 @@ Duplicate webhook handling:
 
 ## Testing Strategy
 - Unit tests: enums, status mapping, contact validation, disposition rules, language pack selection.
-- Integration tests: Excel upload parsing, campaign creation, idempotent webhook ingestion, retry scheduler.
+- Integration tests: Excel and CSV upload parsing, campaign creation, parallel call dispatch limits, idempotent webhook ingestion, retry scheduler.
 - E2E tests: upload sample sheet, start campaign, simulate callbacks, inspect dashboard, export results.
 - Verification: `scripts/verify.sh` runs lint, tests, and build when those commands exist.
 
@@ -175,5 +197,5 @@ Duplicate webhook handling:
 ## Privacy and Data Access
 - Recordings and transcripts are sensitive operational data.
 - Only admin users should access recordings, transcripts, exports, and raw provider payloads.
-- Exports should include only fields needed for operations handoff.
+- Exports must preserve uploaded business details and append result columns, but must exclude raw provider payloads, secrets, and internal audit metadata.
 - Retention is not implemented in the hackathon MVP, but the decision must be recorded before production use.

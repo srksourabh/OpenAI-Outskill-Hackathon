@@ -4,7 +4,7 @@
 Outbound AI Calling Agent for pickup and de-installation readiness operations.
 
 ## Design Goal
-Create a production-ready operations workspace where an admin can upload an Excel contact list, create a campaign, start outbound calls, monitor call progress, inspect call evidence, and export confirmed pickup or follow-up rows with confidence.
+Create a production-ready operations workspace where an admin can upload an Excel or CSV contact list, create a Hindi-first campaign, start outbound calls, monitor call progress, inspect call evidence, and export confirmed pickup or follow-up rows with confidence.
 
 The experience should feel like an operations command center: calm, dense, reliable, and audit-friendly. It should avoid marketing-page patterns. The first screen after sign-in should be the actual campaign workspace, not a landing page.
 
@@ -173,12 +173,12 @@ Let admins see all campaign batches and quickly resume work.
 - Metrics become horizontal scroll chips.
 
 ### Empty State
-Show a direct action: "Create campaign" and a secondary "Download sample Excel" when sample data exists.
+Show a direct action: "Create campaign" and a secondary "Download sample Excel/CSV" when sample data exists.
 
 ## 3. New Campaign and Upload
 
 ### Purpose
-Convert an Excel sheet into a draft campaign with visible validation.
+Convert an Excel or CSV sheet into a draft campaign with visible validation.
 
 ### Stepper
 Use a 4-step horizontal stepper on desktop and compact vertical stepper on mobile:
@@ -192,7 +192,7 @@ Controls:
 - Drag-and-drop upload zone.
 - Browse file button.
 - Sample template download.
-- Accepted format text: `.xlsx` or `.csv` if CSV is later supported.
+- Accepted format text: `.xlsx` or `.csv`.
 
 Validation:
 - File missing
@@ -225,7 +225,7 @@ Fields:
 - Campaign name
 - Company name for call greeting
 - Telephony provider: Plivo, Twilio, Exotel, Simulated
-- Default language
+- Default language, preselected as Hindi (`hi`)
 - Retry limit
 - Calling window
 - Recording enabled toggle if provider supports it
@@ -259,7 +259,7 @@ Show campaign health, progress, and outcomes in one view.
 ### Header
 - Campaign name and status badge.
 - Provider badge.
-- Language default.
+- Hindi-first language default.
 - Start, pause, retry eligible, export actions.
 - Last event timestamp.
 
@@ -519,8 +519,8 @@ Never display full secrets. Use masked values and status checks:
 
 ### Language Picker
 Show full language name and code:
-- English `en`
 - Hindi `hi`
+- English `en`
 - Bengali `bn`
 - Punjabi `pa`
 - Gujarati `gu`
@@ -533,7 +533,8 @@ Show full language name and code:
 - Assamese `as`
 
 ### Language Support Labels
-- Full live: English, Hindi
+- Primary full live: Hindi
+- Secondary full live: English
 - Scripted + classify: other Indian language packs
 
 ### Language Mismatch
@@ -721,7 +722,7 @@ Use inline errors for form validation and failed API requests.
 The demo should be possible in under 5 minutes:
 1. Open Campaigns.
 2. Create campaign.
-3. Upload sample Excel with 10 contacts.
+3. Upload sample Excel or CSV with 10 contacts, mostly `language_hint=hi`.
 4. Review import summary.
 5. Select Plivo or Simulated provider.
 6. Start campaign.

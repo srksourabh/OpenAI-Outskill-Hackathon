@@ -27,7 +27,7 @@ By tomorrow, the MVP must show at least one real Plivo outbound call where a hum
 The demo must also preserve a fallback path: if live audio streaming fails during the presentation, simulated callbacks can still complete dashboard, classification, and export.
 
 ## Approved Product Direction
-Use Plivo for outbound calling and bidirectional audio streaming. Use OpenAI Realtime for the humanized speech-to-speech agent. Use the application database to store contacts, calls, transcripts, summaries, dispositions, next actions, and provider event audit rows.
+Use Plivo for outbound calling and bidirectional audio streaming. Use OpenAI Realtime for the humanized Hindi-first speech-to-speech agent. Use the application database to store contacts, calls, transcripts, summaries, dispositions, next actions, and provider event audit rows.
 
 ## Official Documentation Basis
 - Plivo Voice Quickstart: outbound call creation uses a Plivo number, destination number, and `answer_url`; when answered, Plivo fetches XML instructions.
@@ -116,6 +116,13 @@ The voice agent should sound warm, concise, and operationally useful. It should 
 5. End politely and briefly.
 6. Produce structured outcome fields.
 
+Language behavior:
+- Start calls in Hindi by default.
+- Use simple operational Hindi suitable for logistics and pickup confirmation.
+- Switch to English only when `language_hint` is `en` or the caller clearly asks for English.
+- Use another configured Indian language pack only when that language is explicitly available for the campaign or contact.
+- If a requested language is unsupported or unclear, continue in Hindi and mark the language mismatch for review.
+
 The agent must not:
 - Promise engineer arrival times unless provided.
 - Negotiate pricing, refunds, or support issues.
@@ -126,8 +133,10 @@ The agent must not:
 Select the voice in the OpenAI Realtime `session.update` payload before the first audio response.
 
 Initial recommendation:
-- Use `voice: "marin"` for the first demo because OpenAI documentation shows this voice in Realtime session examples.
+- Use `voice: "marin"` for the first demo.
+- Keep `voice: "cedar"` as the fallback voice.
 - Keep the voice configurable through `OPENAI_REALTIME_VOICE`.
+- Keep the fallback voice configurable through `OPENAI_REALTIME_FALLBACK_VOICE`.
 
 The UI can later expose a voice selector, but for tomorrow use an environment variable to avoid UI scope creep.
 
@@ -177,6 +186,7 @@ Must-have:
 - Answer URL returns bidirectional Stream XML.
 - Voice bridge connects Plivo to OpenAI Realtime.
 - Dynamic AI voice speaks to customer.
+- AI voice starts in Hindi by default.
 - Transcript fragments are captured.
 - Call outcome is saved to database.
 - Dashboard shows call row and outcome.

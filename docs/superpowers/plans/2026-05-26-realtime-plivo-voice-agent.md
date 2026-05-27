@@ -4,7 +4,7 @@
 
 **Goal:** Build a real outbound Plivo call that connects to an OpenAI Realtime voice agent, captures the conversation outcome, stores it in the database, and displays it in the app.
 
-**Architecture:** Next.js handles dashboard/API/database and returns Plivo answer XML. A separate Node WebSocket voice bridge handles long-lived Plivo AudioStream connections and OpenAI Realtime sessions. The voice bridge sends final structured outcomes back to the Next.js API.
+**Architecture:** Next.js handles dashboard/API/database and returns Plivo answer XML. A separate Node WebSocket voice bridge handles long-lived Plivo AudioStream connections and Hindi-first OpenAI Realtime sessions. The voice bridge sends final structured outcomes back to the Next.js API.
 
 **Tech Stack:** Next.js App Router, TypeScript, Tailwind CSS, Plivo Node SDK, OpenAI Realtime WebSocket, `ws`, PostgreSQL via `pg`, Vitest, Node `tsx` for the voice bridge.
 
@@ -69,8 +69,17 @@ PLIVO_AUTH_TOKEN=replace-with-plivo-auth-token
 PLIVO_NUMBER=replace-with-plivo-number
 
 OPENAI_API_KEY=replace-with-openai-api-key
-OPENAI_REALTIME_MODEL=gpt-realtime
+OPENAI_REALTIME_MODEL=gpt-realtime-2
 OPENAI_REALTIME_VOICE=marin
+OPENAI_REALTIME_FALLBACK_VOICE=cedar
+PRIMARY_CALL_LANGUAGE=hi
+SUPPORTED_CALL_LANGUAGES=hi,en,bn,pa,gu,mr,ta,te,ml,kn,or,as
+
+ULTRAVOX_API_KEY=replace-with-ultravox-api-key
+ULTRAVOX_BASE_URL=https://api.ultravox.ai/api
+ULTRAVOX_AGENT_ID=replace-with-ultravox-agent-id
+ULTRAVOX_VOICE_ID=replace-with-ultravox-voice-id
+ULTRAVOX_PLIVO_ENABLED=false
 ```
 
 ## Task 1: Scaffold Next.js and Verification
@@ -337,8 +346,17 @@ Append:
 ```env
 VOICE_BRIDGE_PUBLIC_WS_URL=wss://replace-with-voice-bridge-url/plivo/audio-stream
 VOICE_OUTCOME_SECRET=replace-with-outcome-secret
-OPENAI_REALTIME_MODEL=gpt-realtime
+OPENAI_REALTIME_MODEL=gpt-realtime-2
 OPENAI_REALTIME_VOICE=marin
+OPENAI_REALTIME_FALLBACK_VOICE=cedar
+PRIMARY_CALL_LANGUAGE=hi
+SUPPORTED_CALL_LANGUAGES=hi,en,bn,pa,gu,mr,ta,te,ml,kn,or,as
+
+ULTRAVOX_API_KEY=replace-with-ultravox-api-key
+ULTRAVOX_BASE_URL=https://api.ultravox.ai/api
+ULTRAVOX_AGENT_ID=replace-with-ultravox-agent-id
+ULTRAVOX_VOICE_ID=replace-with-ultravox-voice-id
+ULTRAVOX_PLIVO_ENABLED=false
 ```
 
 - [ ] **Step 2: Write env validation test**
@@ -360,11 +378,15 @@ describe("parseEnv", () => {
       PLIVO_AUTH_TOKEN: "token",
       PLIVO_NUMBER: "+919999999999",
       OPENAI_API_KEY: "sk-test",
-      OPENAI_REALTIME_MODEL: "gpt-realtime",
-      OPENAI_REALTIME_VOICE: "marin"
+      OPENAI_REALTIME_MODEL: "gpt-realtime-2",
+      OPENAI_REALTIME_VOICE: "marin",
+      OPENAI_REALTIME_FALLBACK_VOICE: "cedar",
+      PRIMARY_CALL_LANGUAGE: "hi",
+      SUPPORTED_CALL_LANGUAGES: "hi,en,bn,pa,gu,mr,ta,te,ml,kn,or,as"
     });
 
     expect(env.openaiRealtimeVoice).toBe("marin");
+    expect(env.primaryCallLanguage).toBe("hi");
     expect(env.voiceBridgePublicWsUrl).toContain("wss://");
   });
 });
@@ -377,6 +399,8 @@ Create `src/config/env.ts`:
 ```ts
 import { z } from "zod";
 
+const supportedLanguageCodes = ["hi", "en", "bn", "pa", "gu", "mr", "ta", "te", "ml", "kn", "or", "as"] as const;
+
 const envSchema = z.object({
   APP_BASE_URL: z.string().url(),
   VOICE_BRIDGE_PUBLIC_WS_URL: z.string().url(),
@@ -386,14 +410,22 @@ const envSchema = z.object({
   PLIVO_AUTH_TOKEN: z.string().min(1),
   PLIVO_NUMBER: z.string().min(8),
   OPENAI_API_KEY: z.string().min(1),
-  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
-  OPENAI_REALTIME_VOICE: z.string().default("marin")
+  OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime-2"),
+  OPENAI_REALTIME_VOICE: z.string().default("marin"),
+  OPENAI_REALTIME_FALLBACK_VOICE: z.string().default("cedar"),
+  PRIMARY_CALL_LANGUAGE: z.enum(supportedLanguageCodes).default("hi"),
+  SUPPORTED_CALL_LANGUAGES: z.string().default("hi,en,bn,pa,gu,mr,ta,te,ml,kn,or,as")
 });
 
 export type AppEnv = ReturnType<typeof parseEnv>;
 
 export function parseEnv(input: NodeJS.ProcessEnv | Record<string, string | undefined>) {
   const parsed = envSchema.parse(input);
+  const supportedCallLanguages = parsed.SUPPORTED_CALL_LANGUAGES.split(",")
+    .map((code) => code.trim())
+    .filter((code): code is (typeof supportedLanguageCodes)[number] =>
+      supportedLanguageCodes.includes(code as (typeof supportedLanguageCodes)[number])
+    );
 
   return {
     appBaseUrl: parsed.APP_BASE_URL,
@@ -405,7 +437,10 @@ export function parseEnv(input: NodeJS.ProcessEnv | Record<string, string | unde
     plivoNumber: parsed.PLIVO_NUMBER,
     openaiApiKey: parsed.OPENAI_API_KEY,
     openaiRealtimeModel: parsed.OPENAI_REALTIME_MODEL,
-    openaiRealtimeVoice: parsed.OPENAI_REALTIME_VOICE
+    openaiRealtimeVoice: parsed.OPENAI_REALTIME_VOICE,
+    openaiRealtimeFallbackVoice: parsed.OPENAI_REALTIME_FALLBACK_VOICE,
+    primaryCallLanguage: parsed.PRIMARY_CALL_LANGUAGE,
+    supportedCallLanguages: supportedCallLanguages.length > 0 ? supportedCallLanguages : ["hi"]
   };
 }
 
@@ -463,7 +498,7 @@ describe("buildVoiceAgentInstructions", () => {
       orderId: "ORD-1",
       location: "Mumbai Warehouse",
       machineCount: 3,
-      languageHint: "en"
+      languageHint: "hi"
     });
 
     expect(text).toContain("Acme Logistics");
@@ -565,6 +600,9 @@ export function buildVoiceAgentInstructions(context: VoiceAgentContext) {
     `Location: ${context.location}.`,
     `Machine or item count: ${context.machineCount}.`,
     `Preferred language hint: ${context.languageHint}.`,
+    "Start the call in simple operational Hindi unless the preferred language hint is a supported non-Hindi language.",
+    "Switch to English only if the preferred language hint is en or the caller clearly asks for English.",
+    "For other configured Indian languages, use that language pack when available. If it is unavailable, continue in Hindi and mark language mismatch for review.",
     "Goal: confirm whether the machines/items are ready for pickup or engineer de-installation.",
     "Speak naturally. Do not sound like a robotic IVR.",
     "Ask one question at a time.",
@@ -616,7 +654,7 @@ create table if not exists contacts (
   location text not null,
   machine_count integer not null,
   order_id text not null,
-  language_hint text not null default 'en',
+  language_hint text not null default 'hi',
   created_at timestamptz not null default now()
 );
 
@@ -1133,14 +1171,14 @@ server.on("connection", (plivoWs, request) => {
 
   const realtimeWs = connectOpenAIRealtime({
     apiKey: process.env.OPENAI_API_KEY ?? "",
-    model: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
+    model: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2",
     voice: process.env.OPENAI_REALTIME_VOICE ?? "marin",
     instructions: buildVoiceAgentInstructions({
       companyName: "Demo Logistics",
       orderId: "DEMO-ORDER",
       location: "Demo Location",
       machineCount: 1,
-      languageHint: "en"
+      languageHint: "hi"
     })
   });
 

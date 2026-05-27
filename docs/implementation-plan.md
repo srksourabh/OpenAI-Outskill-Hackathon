@@ -1,14 +1,17 @@
 # Implementation Plan
 
 ## Goal
-Build a demo-ready outbound AI calling agent that can import Excel contacts, start a provider-backed calling campaign, process provider callbacks, classify outcomes, and export operations-ready results.
+Build a demo-ready outbound AI calling agent that can import Excel or CSV contacts, start a bounded-parallel provider-backed calling campaign, process provider callbacks, classify outcomes, show enriched results in the portal, and export operations-ready CSV results.
 
 ## Product Assumptions
 - Primary geography is India.
+- Contacts arrive as Excel or CSV files with name, phone number, location, and business details.
+- Uploaded business columns must be preserved through dashboard display and CSV export.
 - Default database is Supabase Postgres.
 - First live provider is Plivo.
 - Simulated callback mode is required for the hackathon demo.
-- English and Hindi receive the most complete demo support.
+- Hindi is the primary demo and production calling language.
+- English is the secondary live calling language.
 - Other Indian languages are represented through visible script packs and classification configuration in the MVP.
 - Simple admin-only access is required for the hackathon.
 - Provider callbacks may be simulated for demo resilience if live telephony setup is blocked.
@@ -16,13 +19,13 @@ Build a demo-ready outbound AI calling agent that can import Excel contacts, sta
 ## Hackathon Demo Golden Path
 The default demo should be deterministic:
 
-1. Upload or seed 10 contacts.
+1. Upload or seed 10 contacts from Excel or CSV.
 2. Start one campaign.
-3. Queue one call per contact.
+3. Queue one call per contact and dispatch multiple calls at once within the concurrency limit.
 4. Process at least 8 simulated or live callbacks.
 5. Classify at least 3 confirmed pickups, 2 follow-up needed, 1 invalid number, and 1 not picked.
 6. Open a completed call detail showing transcript, summary, detected language, disposition, next action, and recording URL.
-7. Export engineer-ready CSV rows.
+7. Export engineer-ready CSV rows that preserve uploaded details and add call-result columns.
 
 Live Plivo calling is a bonus proof point. The simulated callback path is the required fallback that keeps the demo above the reliability bar.
 
@@ -47,28 +50,32 @@ Definition of done:
 ### Slice 2: Data and Ingestion
 Deliverables:
 - Database migrations for core tables.
-- Excel parser.
+- Excel and CSV parser.
 - Upload API.
 - Contact validation and deduplication.
 - Import summary UI.
-- Sample Excel template.
+- Sample Excel and CSV templates.
+- Original row preservation with `source_row_data`.
 
 Definition of done:
 - Invalid rows are reported.
 - Duplicate contacts are skipped deterministically.
+- Extra uploaded business columns appear in stored contact data.
 - Unit and integration tests cover required columns and row validation.
 
 ### Slice 3: Campaign Dashboard
 Deliverables:
 - Campaign creation API.
 - Campaign start API.
+- Bounded parallel call dispatch using campaign `concurrency_limit`.
 - Campaign list and detail dashboard.
 - Campaign stats query.
 - Empty, loading, and error states.
 
 Definition of done:
 - A campaign can move from draft to running.
-- Queued calls are visible in the dashboard.
+- Queued, active, completed, failed, and retry-eligible calls are visible in the dashboard.
+- Campaign start does not run calls one by one unless concurrency is explicitly set to 1 for debugging.
 - Dashboard works on desktop and mobile widths.
 
 ### Slice 4: Provider Integration
@@ -89,7 +96,8 @@ Definition of done:
 
 ### Slice 5: Conversation and Classification
 Deliverables:
-- English and Hindi scripts.
+- Hindi primary script pack.
+- English secondary script pack.
 - Script pack records for additional Indian languages.
 - Deterministic yes/no/unclear fallback classifier.
 - AI helper contracts for language detection, summary, and disposition.
@@ -108,19 +116,21 @@ Definition of done:
 - `POST /api/webhooks/simulated/call-event`: classifies supplied transcript and marks transcript source as `simulated`.
 - `GET /api/cron/retry-unanswered`: requires `CRON_SECRET` and respects retry limit.
 - Export route: returns only allowed operational fields and excludes raw payloads.
+- Export route: preserves original uploaded columns and appends call status, disposition, recording link, transcript status, summary, next action, attempt number, last call time, and retry eligibility.
 
 ### Slice 6: Retry, Export, and Demo Polish
 Deliverables:
 - Manual retry API.
 - Cron retry route.
 - Provider reconciliation route.
-- CSV export.
+- CSV export with original uploaded fields plus enriched result columns.
 - Call detail page with transcript, recording URL, summary, and next action.
 - Demo seed data and callback simulation path.
 
 Definition of done:
 - Retry limit is enforced.
 - Export includes engineer-ready and follow-up rows.
+- Export and portal show the same enriched result fields.
 - Demo can run with either live provider callbacks or simulated callbacks.
 
 ## Suggested Implementation Order
@@ -131,7 +141,7 @@ Definition of done:
 5. Build campaign dashboard and start flow.
 6. Implement provider adapter interface and Plivo path.
 7. Add webhooks and audit events.
-8. Add classification helpers and language packs.
+8. Add classification helpers and Hindi-first language packs.
 9. Add retry/reconcile cron routes.
 10. Add export and final demo polish.
 

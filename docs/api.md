@@ -20,16 +20,30 @@ Handlers should write the raw event and apply call state changes in one database
 - Simulated callbacks: require admin auth or a demo-only secret and must be disabled in production.
 
 ## `POST /api/upload`
-Uploads an Excel file, creates a campaign, parses contacts, validates rows, and skips duplicates.
+Uploads an Excel or CSV file, creates a campaign, parses contacts, validates rows, preserves original uploaded row details, and skips duplicates.
 
 Request:
 - Content-Type: `multipart/form-data`
 - Fields:
-  - `file`: Excel file.
+  - `file`: `.xlsx` or `.csv` file.
   - `company_name`: string.
   - `provider`: `plivo`, `twilio`, or `exotel`.
-  - `default_language`: optional language code.
+  - `default_language`: optional language code, default `hi`.
   - `retry_limit`: optional integer.
+  - `concurrency_limit`: optional integer, default `5`.
+
+Required file columns:
+- `provider_name`
+- `phone`
+- `location`
+- `machine_count`
+- `order_id`
+
+Optional file columns:
+- `language_hint`, defaulting to Hindi (`hi`) when missing or unsupported.
+- `alternate_phone`
+- `address`
+- Any additional business columns, which must be preserved as original row data.
 
 Response `200`:
 ```json
@@ -37,7 +51,17 @@ Response `200`:
   "campaign_id": "uuid",
   "imported": 120,
   "duplicates_skipped": 4,
-  "invalid_rows": 3
+  "invalid_rows": 3,
+  "accepted_file_type": "csv",
+  "preserved_source_columns": [
+    "provider_name",
+    "phone",
+    "location",
+    "machine_count",
+    "order_id",
+    "zone",
+    "sales_owner"
+  ]
 }
 ```
 
@@ -50,8 +74,9 @@ Request:
   "name": "May pickup batch",
   "company_name": "Acme Logistics",
   "provider": "plivo",
-  "default_language": "en",
-  "retry_limit": 2
+  "default_language": "hi",
+  "retry_limit": 2,
+  "concurrency_limit": 5
 }
 ```
 
@@ -71,9 +96,18 @@ Response `200`:
 {
   "campaign_id": "uuid",
   "status": "running",
-  "queued_calls": 120
+  "queued_calls": 120,
+  "concurrency_limit": 5,
+  "dispatch_mode": "bounded_parallel"
 }
 ```
+
+Behavior:
+- Queue one initial call row per valid contact.
+- Dispatch only up to the campaign `concurrency_limit` at once.
+- Refill available call slots as active calls complete or fail.
+- Do not duplicate queued calls when the endpoint is retried.
+- Use campaign `default_language`, defaulting to Hindi (`hi`), unless a supported contact `language_hint` overrides it.
 
 ## `GET /api/campaigns/:id`
 Returns campaign summary and aggregate stats.
@@ -119,12 +153,24 @@ Response `200`:
       "provider_name": "Vendor A",
       "phone": "+919999999999",
       "location": "Howrah Warehouse",
+      "source_row_data": {
+        "provider_name": "Vendor A",
+        "phone": "+919999999999",
+        "location": "Howrah Warehouse",
+        "machine_count": "3",
+        "order_id": "ORD-1001",
+        "zone": "East",
+        "sales_owner": "Priya"
+      },
       "status": "completed",
       "disposition": "confirmed_pickup",
       "detected_language": "hi",
       "recording_url": "https://example.com/recording.wav",
+      "recording_status": "available",
       "summary_text": "Customer confirmed pickup readiness for 3 machines.",
-      "next_action": "send_engineer"
+      "next_action": "send_engineer",
+      "attempt_no": 1,
+      "retry_eligible": false
     }
   ],
   "page": 1,
@@ -132,6 +178,36 @@ Response `200`:
   "total": 120
 }
 ```
+
+## `GET /api/campaigns/:id/export`
+Exports campaign results as CSV.
+
+Query params:
+- `disposition`: optional disposition filter.
+- `status`: optional technical status filter.
+- `include_all_results`: optional boolean, default `true`.
+
+Response `200`:
+- Content-Type: `text/csv`
+- Filename: `campaign-<id>-results.csv`
+
+CSV column rules:
+- Include every original uploaded column from `source_row_data` first, in upload order when known.
+- Append canonical normalized fields when they differ from uploaded values.
+- Append result columns:
+  - `call_status`
+  - `disposition`
+  - `next_action`
+  - `recording_url`
+  - `recording_status`
+  - `transcript_status`
+  - `summary_text`
+  - `reason_code`
+  - `detected_language`
+  - `attempt_no`
+  - `last_call_at`
+  - `retry_eligible`
+- Exclude raw provider payloads, secrets, webhook signatures, and internal audit metadata.
 
 ## `POST /api/calls/:id/retry`
 Retries a failed, not-picked, or not-connected call if retry limit allows it.
@@ -151,6 +227,7 @@ Returns provider-specific voice XML or response body for greeting, prompts, and 
 Behavior:
 - Resolve campaign and contact context.
 - Select language script.
+- Start in Hindi by default. Use English only when the configured language is `en` or the caller clearly requests English. Use other Indian language packs only when configured; otherwise fall back to Hindi and mark the mismatch for review.
 - Build voice response.
 - Append a `call_events` row.
 - Require provider signature or configured webhook secret.

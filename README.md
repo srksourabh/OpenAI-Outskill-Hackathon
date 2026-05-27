@@ -1,16 +1,17 @@
 # Outbound AI Calling Agent
 
 ## Purpose
-Build a production-shaped hackathon MVP for an outbound AI calling agent for India-focused operations teams. The app imports Excel contact lists, starts automated outbound calling campaigns, records and tracks calls, classifies outcomes, supports English and Hindi live flows, and exports structured pickup or de-installation readiness results.
+Build a production-shaped hackathon MVP for an outbound AI calling agent for India-focused operations teams. The app imports Excel or CSV contact lists, starts automated outbound calling campaigns, records and tracks calls, classifies outcomes, supports Hindi-first live flows with English secondary support, and exports structured pickup or de-installation readiness results.
 
 ## MVP Workflow
-1. Upload an Excel file with provider or pickup contact details.
+1. Upload an Excel or CSV file with provider or pickup contact details.
 2. Validate and deduplicate contacts.
 3. Create a campaign with provider, language, retry, and calling settings.
-4. Start outbound calls through a telephony provider adapter.
+4. Start bounded parallel outbound calls through a telephony provider adapter.
 5. Ingest provider webhooks for status and recording events.
 6. Classify call outcomes into operational dispositions.
-7. Monitor results in a dashboard and export confirmed pickup rows.
+7. Monitor original uploaded details plus enriched call results in a dashboard.
+8. Export CSV rows that preserve uploaded details and add status, disposition, recording links, summary, next action, and retry information.
 
 ## Target Stack
 - Next.js App Router with TypeScript.
@@ -18,7 +19,9 @@ Build a production-shaped hackathon MVP for an outbound AI calling agent for Ind
 - Supabase or PostgreSQL for persistence.
 - Vercel for deployment, webhooks, and scheduled retry jobs.
 - Plivo as the first provider adapter, with Twilio and Exotel adapters scaffolded.
+- OpenAI Realtime for the Hindi-first voice agent, with `marin` as the default voice and `cedar` as fallback.
 - OpenAI-powered helper functions for transcript summarization, disposition extraction, and language detection.
+- Ultravox placeholders are kept as an optional managed voice-agent fallback, not the primary path.
 
 ## Setup
 Run setup from the project root:

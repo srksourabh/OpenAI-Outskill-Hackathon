@@ -4,7 +4,7 @@
 Outbound AI Calling Agent for pickup and de-installation readiness operations.
 
 ## Problem
-Operations teams often manage Excel sheets of provider, pickup-contact, or site-contact phone numbers. They manually call each contact to confirm whether machines, products, or equipment are ready for pickup or engineer de-installation. This process is slow, inconsistent, difficult to audit, and hard to run across Indian languages.
+Operations teams often manage Excel or CSV sheets of provider, pickup-contact, or site-contact phone numbers. They manually call each contact to confirm whether machines, products, or equipment are ready for pickup or engineer de-installation. This process is slow, inconsistent, difficult to audit, and hard to run across Indian languages.
 
 ## Users
 - Logistics teams confirming pickup readiness.
@@ -13,27 +13,29 @@ Operations teams often manage Excel sheets of provider, pickup-contact, or site-
 - Founders and operations managers who need auditable call outcomes.
 
 ## Core Use Cases
-- Upload a sheet of provider names, phone numbers, locations, machine counts, order IDs, and optional language hints.
+- Upload a sheet of provider names, phone numbers, locations, machine counts, order IDs, and optional language hints from Excel or CSV.
 - Create and start an outbound calling campaign.
 - Monitor real-time campaign status and call outcomes.
 - Review recordings, transcripts, summaries, dispositions, and next actions.
 - Retry unanswered or not-connected calls automatically.
-- Export confirmed pickups and follow-up rows for operations handoff.
+- Export all uploaded row details plus enriched call results for operations handoff.
 
 ## MVP Scope
-- Excel upload and parsing.
+- Excel and CSV upload and parsing.
 - Contact validation, normalization, and deduplication.
-- Campaign creation with provider, default language, retry limit, and calling settings.
+- Campaign creation with provider, Hindi-first default language, retry limit, and calling settings.
 - Provider-agnostic telephony adapter interface.
 - Plivo adapter implemented first.
 - Twilio and Exotel adapter scaffolds.
 - Outbound call initiation.
 - Provider webhook ingestion for answer, status, hangup, and recording events.
 - Idempotent event handling with call event audit rows.
-- English and Hindi live scripted voice flow.
+- Hindi-first live scripted voice flow, with English as the secondary live language.
 - Language pack configuration for Bengali, Punjabi, Gujarati, Marathi, Tamil, Telugu, Malayalam, Kannada, Odia, and Assamese.
 - Transcript summarization, language detection, and disposition extraction.
 - Dashboard with campaign stats, call details, filters, and CSV export.
+- Portal result table showing original uploaded columns plus call-result columns.
+- Configurable parallel outbound call batches so campaigns do not run one call at a time.
 - Retry scheduler for unanswered and not-connected calls.
 - Vercel deployment readiness.
 - Simulated provider callback mode for demo resilience.
@@ -49,14 +51,18 @@ Operations teams often manage Excel sheets of provider, pickup-contact, or site-
 ## Functional Requirements
 
 ### Campaign Management
-- Create a campaign from an Excel upload.
+- Create a campaign from an Excel or CSV upload.
 - Configure provider selection: `plivo`, `twilio`, `exotel`, or future providers.
-- Configure calling window, retry policy, and default language.
+- Configure calling window, retry policy, and default language. Default language is Hindi (`hi`) unless explicitly overridden.
 - Start, monitor, and export a campaign.
 - Show progress, totals, completion rate, and disposition distribution.
 
 ### Contact Ingestion
-Required Excel columns:
+Accepted upload formats:
+- `.xlsx`
+- `.csv`
+
+Required upload columns:
 
 | Column | Required | Notes |
 |---|---|---|
@@ -65,9 +71,16 @@ Required Excel columns:
 | `location` | Yes | Pickup or machine location. |
 | `machine_count` | Yes | Integer quantity. |
 | `order_id` | Yes | Business reference. |
-| `language_hint` | No | Example: `hi`, `bn`, `ta`. |
+| `language_hint` | No | Optional per-row override. Missing or unsupported values fall back to Hindi (`hi`). Examples: `hi`, `en`, `bn`, `ta`. |
 | `alternate_phone` | No | Retry or fallback number. |
 | `address` | No | Extended location details. |
+
+Upload handling requirements:
+- Preserve every original uploaded column for each valid contact row, including extra business columns not known ahead of time.
+- Store normalized canonical fields separately from the original row payload.
+- Reject files that are not Excel or CSV.
+- Show row-level validation errors before campaign start.
+- Allow the portal and export to display both canonical fields and preserved original columns.
 
 ### Calling Workflow
 For each contact, the system should:
@@ -82,13 +95,24 @@ For each contact, the system should:
 9. Ask one follow-up question if declined or unclear.
 10. Save transcript, summary, reason code, recording URL, disposition, and next action.
 
+### Parallel Calling
+Campaigns must support simultaneous outbound calls.
+
+Requirements:
+- Campaign start should enqueue all valid contacts, then dispatch calls in bounded batches.
+- Default MVP concurrency limit: 5 active calls per campaign.
+- The concurrency limit must be configurable per campaign or environment before production use.
+- The call dispatcher must not exceed provider rate limits or configured campaign concurrency.
+- The dashboard must show active, queued, completed, failed, and retry-eligible counts so the user can see that calls are progressing in parallel.
+- Manual one-by-one calling is not an acceptable MVP workflow except for debugging a single call.
+
 ### Conversation Script
 - Greeting: `Hello, we are calling from {{company_name}} regarding order {{order_id}}.`
 - Context: `We see {{machine_count}} machines/items at {{location}} ready for pickup or de-installation.`
 - Question: `Can you confirm whether they are ready?`
 - If yes: mark `confirmed_pickup` and set `next_action` to `send_engineer`.
 - If no: ask for the reason and mark `declined` or `follow_up_needed`.
-- If language mismatch is detected: switch to Hindi or the configured language pack where available.
+- If language mismatch is detected: Hindi remains the safe fallback. Switch to English only if the caller asks for English or `language_hint` is `en`; switch to another configured language pack only when available.
 
 ### Business Outcomes
 - `not_picked`
@@ -100,12 +124,28 @@ For each contact, the system should:
 - `follow_up_needed`
 - `manual_review`
 
+### Portal Result Columns
+The campaign results portal must display:
+- Original uploaded columns, including extra business columns.
+- Canonical contact fields: provider name, phone, location, machine count, order ID, language hint.
+- Technical call status.
+- Business disposition.
+- Next action.
+- Recording URL or recording link status.
+- Transcript availability.
+- Summary text.
+- Reason code.
+- Detected language.
+- Attempt number.
+- Last call time.
+- Retry eligibility.
+
 ### Language Support
 
 | Language | Code | MVP Mode |
 |---|---|---|
-| English | `en` | Full live |
-| Hindi | `hi` | Full live |
+| Hindi | `hi` | Primary full live |
+| English | `en` | Secondary full live |
 | Bengali | `bn` | Scripted + classify |
 | Punjabi | `pa` | Scripted + classify |
 | Gujarati | `gu` | Scripted + classify |
@@ -143,7 +183,7 @@ See `docs/architecture.md` for the schema-oriented module plan.
 ## Hackathon Demo Golden Path
 The first demo should optimize for reliability over breadth:
 
-1. Upload a sample Excel file with 10 contacts.
+1. Upload a sample Excel or CSV file with 10 contacts.
 2. Create a campaign using the default assumed stack: Supabase, Plivo adapter, and simulated callback fallback.
 3. Start the campaign and queue 10 calls.
 4. Simulate or receive provider callbacks for at least 8 calls.
@@ -173,11 +213,14 @@ Primary routes:
 See `docs/api.md` for contracts.
 
 ## Success Metrics
-- Excel upload to campaign creation in under 2 minutes.
+- Excel or CSV upload to campaign creation in under 2 minutes.
 - First outbound batch starts in under 5 minutes.
 - Deterministic technical outcome classification accuracy above 85%.
 - Structured result is available for every completed answered call.
-- Demo-ready support for English and Hindi, with visible configuration for additional Indian language packs.
+- Excel or CSV upload supports name, phone number, location, and business details.
+- Results export preserves the uploaded details and adds status, disposition, recording link, summary, next action, and retry information.
+- Campaigns can run multiple calls simultaneously using a bounded concurrency setting.
+- Demo-ready Hindi-first calling, with English support and visible configuration for additional Indian language packs.
 - Hackathon demo can show upload, start campaign, callback updates, call detail, filtering, and export.
 
 ## Risks

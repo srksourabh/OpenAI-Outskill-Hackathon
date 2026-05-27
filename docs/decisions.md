@@ -145,3 +145,17 @@ Support simulated transcript input for the demo path first. Store recording URLs
 
 ### Consequences
 The MVP can demonstrate the AI value reliably while preserving a clean path to live transcription.
+
+## ADR-010: Hindi-First Calling Language
+
+- Date: 2026-05-27
+- Status: Accepted
+
+### Context
+The primary customer workflow is India-focused outbound calling. The demo and production path should start in the language most likely to work for broad India operations use while still allowing English and regional-language overrides.
+
+### Decision
+Use Hindi (`hi`) as the primary/default calling language. English (`en`) remains the secondary full-live language. Additional Indian languages are configured through script packs and `language_hint` values. Missing or unsupported language hints fall back to Hindi and should be surfaced for review.
+
+### Consequences
+Campaigns, uploads, voice prompts, sample data, and exports all treat Hindi as the default. The voice bridge starts in simple operational Hindi unless a supported override is present or the caller clearly asks for English. Full live quality for regional languages remains out of MVP scope until tested.

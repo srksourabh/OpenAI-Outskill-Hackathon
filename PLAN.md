@@ -5,7 +5,7 @@ Operations teams manage pickup or de-installation readiness through spreadsheets
 
 The MVP should prove one simple promise:
 
-> Upload a contact sheet, run an outbound calling campaign, classify the call outcomes, and export the rows that operations can act on.
+> Upload an Excel or CSV contact sheet, run a bounded-parallel outbound calling campaign, classify the call outcomes, and export the rows that operations can act on.
 
 The product should optimize for demo reliability and operational clarity, not for broad automation. If live telephony is blocked, the simulated callback path must still demonstrate the full workflow.
 
@@ -29,17 +29,17 @@ They need to:
 
 ```text
 1. Admin signs in
-2. Admin uploads Excel contact sheet
+2. Admin uploads Excel or CSV contact sheet
 3. App validates required columns and skips duplicates
 4. Admin configures campaign settings
 5. Admin starts campaign
-6. App queues calls
+6. App queues calls and dispatches multiple active calls within the campaign limit
 7. Provider or simulator sends call events
 8. App updates technical call status
 9. App classifies business disposition from transcript or simulated transcript
-10. Admin monitors dashboard
+10. Admin monitors uploaded details and enriched call results in the dashboard
 11. Admin opens call detail for evidence
-12. Admin exports confirmed pickup and follow-up rows
+12. Admin exports confirmed pickup and follow-up rows as CSV with original uploaded columns plus call-result columns
 ```
 
 ## User Flow
@@ -47,14 +47,14 @@ They need to:
 ### Flow 1: Upload to Draft Campaign
 1. User opens Campaigns.
 2. User selects New campaign.
-3. User uploads `.xlsx` file.
+3. User uploads `.xlsx` or `.csv` file.
 4. App validates required columns:
    - `provider_name`
    - `phone`
    - `location`
    - `machine_count`
    - `order_id`
-5. App reports imported rows, invalid rows, and duplicates.
+5. App reports imported rows, invalid rows, duplicates, and preserved source columns.
 6. User fixes file or continues with valid rows.
 7. App creates a draft campaign.
 
@@ -67,18 +67,20 @@ They need to:
 4. User reviews readiness checklist.
 5. User starts campaign.
 6. App queues one call attempt per valid contact.
+7. App dispatches multiple active calls up to the campaign concurrency limit.
 
 ### Flow 3: Monitor Results
 1. User opens campaign dashboard.
 2. User sees technical states: queued, ringing, answered, completed, failed, not picked, invalid number.
 3. User sees business outcomes: confirmed pickup, declined, follow-up needed, manual review.
 4. User filters by disposition, status, language, or retry eligibility.
-5. User opens a call detail to inspect transcript, summary, recording URL, next action, and audit timeline.
+5. User sees original uploaded columns alongside status, disposition, recording link, summary, next action, and retry eligibility.
+6. User opens a call detail to inspect transcript, summary, recording URL, next action, and audit timeline.
 
 ### Flow 4: Export Operations Rows
 1. User opens Export.
 2. User chooses confirmed pickup, follow-up needed, or filtered results.
-3. App previews included columns.
+3. App previews included uploaded columns and appended result columns.
 4. User generates CSV.
 5. Field team receives only operationally useful rows, not raw provider payloads or secrets.
 
@@ -88,22 +90,25 @@ The MVP is a reliable campaign workflow with a deterministic demo fallback.
 
 ### Included in MVP
 - Simple admin access.
-- Excel upload.
+- Excel and CSV upload.
 - Contact validation and deduplication.
+- Original uploaded column preservation for portal display and export.
 - Campaign creation and start.
+- Bounded parallel call dispatch with a default concurrency limit of 5 active calls.
 - Dashboard with campaign stats and call results.
 - Provider adapter interface.
 - Plivo-first adapter path.
 - Twilio and Exotel scaffolds.
 - Simulated callback mode.
 - Webhook ingestion with idempotent event handling.
-- English and Hindi scripted call flow.
+- Hindi-first scripted call flow.
+- English secondary scripted call flow.
 - Additional Indian language pack configuration.
 - Transcript-based or simulated-transcript classification.
 - Disposition and next-action mapping.
 - Retry eligibility for not-picked and not-connected calls.
 - Call detail with transcript, summary, language, recording URL, disposition, and audit timeline.
-- CSV export for confirmed pickup and follow-up rows.
+- CSV export for confirmed pickup and follow-up rows with original uploaded columns plus call-result columns.
 - Vercel deployment readiness.
 
 ### Explicitly Out of MVP
@@ -114,7 +119,7 @@ The MVP is a reliable campaign workflow with a deterministic demo fallback.
 - Automatic engineer assignment optimization.
 - Full legal consent workflow beyond placeholder copy and configuration.
 - Production retention/deletion automation for recordings and transcripts.
-- Full live multilingual conversation quality across all listed languages.
+- Full live multilingual conversation quality across all listed languages beyond Hindi and English.
 
 ## Must-Have Features
 
@@ -142,17 +147,19 @@ These are required to demo the core value.
    - Terminal-state rules.
 
 4. Contact ingestion
-   - Upload Excel file.
+   - Upload Excel or CSV file.
    - Validate required columns.
    - Normalize phone numbers.
    - Validate machine count.
    - Deduplicate by campaign, phone, and order ID.
+   - Preserve all original uploaded columns.
    - Show import summary.
 
 5. Campaign workflow
    - Create campaign.
    - Start campaign.
    - Queue calls once.
+   - Dispatch active calls in bounded parallel batches.
    - Prevent duplicate queueing.
 
 6. Demo-safe calling path
@@ -169,6 +176,7 @@ These are required to demo the core value.
 8. Dashboard and call detail
    - Campaign stats.
    - Results table.
+   - Original uploaded details displayed beside result fields.
    - Filters.
    - Call detail page.
    - Transcript, summary, recording URL, language, disposition, next action.
@@ -176,6 +184,7 @@ These are required to demo the core value.
 9. Export
    - Confirmed pickup CSV.
    - Follow-up CSV or filtered export.
+   - Original uploaded columns plus status, disposition, recording URL, summary, next action, attempt, and retry columns.
    - Exclude secrets and raw provider payloads.
 
 10. Verification
@@ -232,6 +241,7 @@ Tasks:
 - Choose Supabase Postgres or local Postgres-compatible migration path.
 - Add migrations for campaigns, contacts, calls, and call events.
 - Build Excel parser.
+- Build CSV parser using the same canonical validation contract.
 - Validate required columns.
 - Normalize phone numbers.
 - Deduplicate contacts.
@@ -251,6 +261,7 @@ Goal: show the full demo loop without relying on live telephony.
 Tasks:
 - Add campaign start API.
 - Queue one call per valid contact.
+- Add bounded parallel dispatch with a default concurrency limit of 5.
 - Build campaign list and campaign detail dashboard.
 - Build simulated callback route or helper.
 - Append call event audit rows.
@@ -268,12 +279,13 @@ Done when:
 Goal: make outcomes operationally useful.
 
 Tasks:
-- Add English and Hindi script packs.
+- Add Hindi primary script pack.
+- Add English secondary script pack.
 - Add language pack records for additional Indian languages.
 - Implement deterministic transcript classifier.
 - Add AI helper interfaces for later language detection, summary, and disposition extraction.
 - Build call detail page.
-- Build CSV export for confirmed pickup and follow-up rows.
+- Build CSV export for confirmed pickup and follow-up rows with original uploaded columns plus result columns.
 - Add tests for classification and export fields.
 
 Done when:
@@ -281,6 +293,7 @@ Done when:
 - At least 3 confirmed pickups and 2 follow-ups are classified.
 - One completed call shows transcript, summary, disposition, next action, language, and recording placeholder.
 - Confirmed pickup CSV downloads.
+- Exported CSV includes uploaded business details plus status, disposition, recording link, summary, and next action.
 
 ## Day 5: Polish, Reliability, and Demo Rehearsal
 
@@ -330,11 +343,12 @@ Done when:
 The MVP is successful when the demo can show:
 - Upload or seed 10 contacts.
 - Create and start one campaign.
-- Queue 10 calls.
+- Queue 10 calls and run multiple active calls at once within the configured limit.
 - Process at least 8 simulated or live callbacks.
 - Show dashboard totals with confirmed pickup, follow-up, invalid number, and not-picked outcomes.
 - Open one completed call detail with transcript, summary, language, disposition, next action, and recording URL or placeholder.
 - Export engineer-ready CSV rows for confirmed pickups.
+- Export includes the uploaded person/contact details plus new call-result columns.
 
 ## Immediate Next Task
 
