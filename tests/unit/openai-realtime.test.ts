@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRealtimeHeaders, buildRealtimeUrl } from "@/voice-bridge/openaiRealtime";
+import { buildRealtimeHeaders, buildRealtimeUrl, realtimeOutputModalities } from "@/voice-bridge/openaiRealtime";
 
 describe("OpenAI Realtime bridge config", () => {
   it("uses the GA realtime websocket URL", () => {
@@ -10,5 +10,9 @@ describe("OpenAI Realtime bridge config", () => {
     expect(buildRealtimeHeaders("test-key")).toEqual({
       Authorization: "Bearer test-key"
     });
+  });
+
+  it("uses audio-only output modalities for the GA realtime API", () => {
+    expect(realtimeOutputModalities).toEqual(["audio"]);
   });
 });

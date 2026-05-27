@@ -1,5 +1,7 @@
 import WebSocket from "ws";
 
+export const realtimeOutputModalities = ["audio"] as const;
+
 export function connectOpenAIRealtime(input: { apiKey: string; model: string; voice: string; instructions: string }) {
   const ws = new WebSocket(buildRealtimeUrl(input.model), {
     headers: buildRealtimeHeaders(input.apiKey)
@@ -39,7 +41,7 @@ export function requestRealtimeResponse(ws: WebSocket, instructions?: string) {
     JSON.stringify({
       type: "response.create",
       response: {
-        output_modalities: ["audio", "text"],
+        output_modalities: realtimeOutputModalities,
         instructions
       }
     })
@@ -53,7 +55,7 @@ function updateRealtimeSession(ws: WebSocket, instructions: string, voice: strin
       session: {
         type: "realtime",
         model,
-        output_modalities: ["audio", "text"],
+        output_modalities: realtimeOutputModalities,
         audio: {
           input: {
             format: { type: "audio/pcmu" },
