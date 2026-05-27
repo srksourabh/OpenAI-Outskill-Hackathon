@@ -111,6 +111,7 @@ For quick testing in the app:
 - Use Supabase or managed PostgreSQL for the database.
 - Configure Plivo answer/status/recording webhooks to point at the Vercel app.
 - Configure Plivo AudioStream XML to point at the public Render WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
+- The Plivo answer XML now starts background recording, keeps the call alive during bidirectional streaming, and sends ring, stream-status, hangup, and recording callbacks back to the app.
 - The voice bridge serves HTTP health checks on `/health` and accepts WebSocket upgrades on `/plivo/audio-stream`.
 - Store real credentials only in local `.env` or Vercel environment variables.
 - The demo JSON file store now writes to a temp directory on Vercel instead of `/var/task/.data`, so serverless uploads can persist during a runtime instance without hitting the read-only filesystem.

@@ -3,6 +3,8 @@ import { env } from "@/config/env";
 
 type CreatePlivoCallInput = {
   answerUrl: string;
+  ringUrl: string;
+  hangupUrl: string;
   to: string;
 };
 
@@ -13,7 +15,11 @@ export async function createPlivoCall(input: CreatePlivoCallInput) {
 
   const client = new plivo.Client(env.plivoAuthId, env.plivoAuthToken);
   return client.calls.create(env.plivoNumber, input.to, input.answerUrl, {
-    answerMethod: "GET"
+    answerMethod: "GET",
+    ringUrl: input.ringUrl,
+    ringMethod: "POST",
+    hangupUrl: input.hangupUrl,
+    hangupMethod: "POST"
   });
 }
 

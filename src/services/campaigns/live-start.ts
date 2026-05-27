@@ -49,12 +49,24 @@ export async function startCampaignLive(campaign: Campaign) {
         return call;
       }
 
-      const answerUrl = `${env.appBaseUrl}/api/plivo/answer?callId=${encodeURIComponent(call.id)}`;
+      const contact = findContact(campaign, call.contact_id);
+      const answerUrl = buildSignedCallbackUrl("/api/plivo/answer", call.id, {
+        companyName: campaign.company_name,
+        orderId: contact.order_id,
+        location: contact.location,
+        machineCount: String(contact.machine_count),
+        languageHint: contact.language_hint,
+        providerName: contact.provider_name
+      });
+      const ringUrl = buildSignedCallbackUrl("/api/plivo/ring", call.id);
+      const hangupUrl = buildSignedCallbackUrl("/api/plivo/hangup", call.id);
 
       try {
         const response = await createPlivoCall({
-          to: findContactPhone(campaign, call.contact_id),
-          answerUrl
+          to: contact.phone,
+          answerUrl,
+          ringUrl,
+          hangupUrl
         });
 
         return {
@@ -114,10 +126,25 @@ function isLocalUrl(value: string) {
   return /localhost|127\.0\.0\.1/i.test(value);
 }
 
-function findContactPhone(campaign: Campaign, contactId: string) {
+function findContact(campaign: Campaign, contactId: string) {
   const contact = campaign.contacts.find((item) => item.id === contactId);
   if (!contact) {
     throw new Error(`Contact ${contactId} was not found.`);
   }
-  return contact.phone;
+  return contact;
+}
+
+function buildSignedCallbackUrl(path: string, callId: string, extra: Record<string, string> = {}) {
+  const url = new URL(path, env.appBaseUrl);
+  url.searchParams.set("callId", callId);
+
+  if (env.plivoWebhookSecret && !env.plivoWebhookSecret.startsWith("replace-with")) {
+    url.searchParams.set("secret", env.plivoWebhookSecret);
+  }
+
+  for (const [key, value] of Object.entries(extra)) {
+    url.searchParams.set(key, value);
+  }
+
+  return url.toString();
 }

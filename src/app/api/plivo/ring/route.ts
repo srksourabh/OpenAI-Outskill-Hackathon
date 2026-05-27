@@ -4,7 +4,7 @@ import { listCampaigns, updateCampaign } from "@/services/campaigns/file-store";
 import { isAuthorizedPlivoWebhook, parsePlivoWebhookRequest } from "@/services/plivo/webhooks";
 
 export async function POST(request: Request) {
-  const { url, payload } = await parsePlivoWebhookRequest(request);
+  const { url } = await parsePlivoWebhookRequest(request);
   if (!isAuthorizedPlivoWebhook(url, env.plivoWebhookSecret ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -14,10 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing callId" }, { status: 400 });
   }
 
-  const recordingUrl = payload.RecordUrl ?? payload.recording_url ?? "";
-  const recordingDuration = payload.RecordingDuration ?? payload.recording_duration ?? "";
   const now = new Date().toISOString();
-
   const campaigns = await listCampaigns();
   for (const campaign of campaigns) {
     if (!campaign.calls.some((call) => call.id === callId)) continue;
@@ -27,10 +24,9 @@ export async function POST(request: Request) {
         call.id === callId
           ? {
               ...call,
-              recording_url: recordingUrl || call.recording_url,
-              summary_text: recordingDuration
-                ? `${call.summary_text || "Call updated."} Recording available (${recordingDuration}s).`
-                : call.summary_text || "Recording available.",
+              status: "ringing",
+              summary_text: "The receiver's line is ringing.",
+              last_call_time: call.last_call_time ?? now,
               updated_at: now
             }
           : call
@@ -38,5 +34,5 @@ export async function POST(request: Request) {
     }));
   }
 
-  return NextResponse.json({ ok: true, recording_url: recordingUrl });
+  return NextResponse.json({ ok: true });
 }

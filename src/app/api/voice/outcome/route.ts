@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         ...current,
         calls: current.calls.map((call) => {
           if (call.id !== body.call_id) return call;
-          const status = "completed";
+          const status = call.status === "invalid_number" || call.status === "not_connected" || call.status === "not_picked" ? call.status : "completed";
           saved = true;
           return {
             ...call,

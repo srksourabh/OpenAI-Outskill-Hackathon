@@ -9,21 +9,7 @@ export function connectOpenAIRealtime(input: { apiKey: string; model: string; vo
   });
 
   ws.on("open", () => {
-    ws.send(
-      JSON.stringify({
-        type: "session.update",
-        session: {
-          type: "realtime",
-          model: input.model,
-          output_modalities: ["audio", "text"],
-          audio: {
-            input: { format: { type: "audio/pcmu" }, turn_detection: { type: "semantic_vad" } },
-            output: { format: { type: "audio/pcmu" }, voice: input.voice }
-          },
-          instructions: input.instructions
-        }
-      })
-    );
+    updateRealtimeSession(ws, input.instructions, input.voice, input.model);
   });
 
   return ws;
@@ -32,4 +18,49 @@ export function connectOpenAIRealtime(input: { apiKey: string; model: string; vo
 export function appendRealtimeAudio(ws: WebSocket, base64Audio: string) {
   if (ws.readyState !== ws.OPEN) return;
   ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: base64Audio }));
+}
+
+export function updateRealtimeInstructions(ws: WebSocket, instructions: string, input: { voice: string; model: string }) {
+  if (ws.readyState !== ws.OPEN) return;
+  updateRealtimeSession(ws, instructions, input.voice, input.model);
+}
+
+export function requestRealtimeResponse(ws: WebSocket, instructions?: string) {
+  if (ws.readyState !== ws.OPEN) return;
+
+  ws.send(
+    JSON.stringify({
+      type: "response.create",
+      response: {
+        output_modalities: ["audio", "text"],
+        instructions
+      }
+    })
+  );
+}
+
+function updateRealtimeSession(ws: WebSocket, instructions: string, voice: string, model: string) {
+  ws.send(
+    JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "realtime",
+        model,
+        output_modalities: ["audio", "text"],
+        audio: {
+          input: {
+            format: { type: "audio/pcmu" },
+            transcription: { model: "whisper-1" },
+            turn_detection: {
+              type: "semantic_vad",
+              create_response: false,
+              interrupt_response: true
+            }
+          },
+          output: { format: { type: "audio/pcmu" }, voice }
+        },
+        instructions
+      }
+    })
+  );
 }

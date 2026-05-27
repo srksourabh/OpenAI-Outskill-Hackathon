@@ -14,9 +14,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing callId" }, { status: 400 });
   }
 
-  const recordingUrl = payload.RecordUrl ?? payload.recording_url ?? "";
-  const recordingDuration = payload.RecordingDuration ?? payload.recording_duration ?? "";
-  const now = new Date().toISOString();
+  const streamEvent = payload.Event ?? payload.event ?? payload.StreamEvent ?? payload.stream_event ?? "stream-event";
+  const streamId = payload.StreamID ?? payload.stream_id ?? payload.StreamId ?? payload.streamId ?? "";
+  const remark = streamId
+    ? `Audio stream ${streamEvent} (${streamId}).`
+    : `Audio stream ${streamEvent}.`;
 
   const campaigns = await listCampaigns();
   for (const campaign of campaigns) {
@@ -27,16 +29,14 @@ export async function POST(request: Request) {
         call.id === callId
           ? {
               ...call,
-              recording_url: recordingUrl || call.recording_url,
-              summary_text: recordingDuration
-                ? `${call.summary_text || "Call updated."} Recording available (${recordingDuration}s).`
-                : call.summary_text || "Recording available.",
-              updated_at: now
+              status: call.status === "initiated" || call.status === "ringing" ? "answered" : call.status,
+              summary_text: call.summary_text ? `${call.summary_text} ${remark}` : remark,
+              updated_at: new Date().toISOString()
             }
           : call
       )
     }));
   }
 
-  return NextResponse.json({ ok: true, recording_url: recordingUrl });
+  return NextResponse.json({ ok: true });
 }

@@ -166,7 +166,7 @@ export function CampaignWorkspace() {
 
 function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: FormData) => void }) {
   const [manualPhone, setManualPhone] = useState("");
-  const [manualLanguage, setManualLanguage] = useState("hi");
+  const [manualLanguage, setManualLanguage] = useState("en");
   const [manualProvider, setManualProvider] = useState("plivo");
 
   function submitManualCheck(event: FormEvent<HTMLFormElement>) {
@@ -220,9 +220,9 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
         </label>
         <label className="mt-3 block text-sm font-medium">
           Default language
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" defaultValue="hi">
-            <option value="hi">Hindi</option>
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" defaultValue="en">
             <option value="en">English</option>
+            <option value="hi">Hindi</option>
             <option value="ta">Tamil</option>
             <option value="bn">Bengali</option>
           </select>
@@ -266,8 +266,8 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
         <label className="block text-sm font-medium">
           Preferred language
           <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
-            <option value="hi">Hindi</option>
             <option value="en">English</option>
+            <option value="hi">Hindi</option>
             <option value="ta">Tamil</option>
             <option value="bn">Bengali</option>
           </select>
@@ -350,9 +350,12 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
               <InfoField label="Location" value={String(row.location ?? "")} />
               <InfoField label="Order" value={String(row.order_id ?? "")} />
               <InfoField label="Language" value={String(row.language_hint ?? "")} />
+              <InfoField label="Detected" value={row.call?.detected_language ?? "-"} />
               <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
+              <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
             </div>
-            <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No summary yet."}</div>
+            <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
+            <div className="mt-3 text-sm">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>Open recording</a> : "Recording pending"}</div>
           </article>
         ))}
       </div>
@@ -360,7 +363,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-surface">
             <tr>
-              {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Recording", "Summary"].map((header) => (
+              {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "Next", "Recording", "Remarks"].map((header) => (
                 <th className="border-b border-line px-3 py-2 font-semibold" key={header}>{header}</th>
               ))}
             </tr>
@@ -375,13 +378,15 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                 <td className="px-3 py-2">{String(row.language_hint ?? "")}</td>
                 <td className="px-3 py-2">{row.call?.status ?? "not queued"}</td>
                 <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
+                <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
+                <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
                 <td className="px-3 py-2">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>link</a> : "none"}</td>
                 <td className="max-w-[280px] px-3 py-2">{row.call?.summary_text ?? ""}</td>
               </tr>
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-muted" colSpan={9}>Upload contacts to create the first campaign.</td>
+                <td className="px-3 py-8 text-center text-muted" colSpan={11}>Upload contacts to create the first campaign.</td>
               </tr>
             ) : null}
           </tbody>

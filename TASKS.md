@@ -26,7 +26,7 @@
 ## Phase 2: Core Architecture
 - [x] Create config layer for environment variables.
 - [x] Add simple admin auth gate for dashboard and write APIs.
-- [ ] Add provider webhook shared-secret or signature validation helper.
+- [x] Add provider webhook shared-secret or signature validation helper.
 - [x] Add cron authorization helper using `CRON_SECRET`.
 - [x] Define internal enums for campaign status, call status, disposition, and next action.
 - [x] Define call state machine, terminal states, and retry eligibility rules.
@@ -97,7 +97,7 @@
 - [x] Implement Plivo hangup webhook parser.
 - [x] Implement Plivo recording webhook parser.
 - [x] Persist provider call IDs in the local campaign store for outbound attempts.
-- [ ] Map provider statuses into internal statuses.
+- [x] Map provider statuses into internal statuses.
 - [ ] Save raw provider payloads in `call_events`.
 - [ ] Add idempotency tests for duplicate webhook events.
 - [x] Add simulated callback route or test helper for demo mode.
@@ -110,8 +110,8 @@
 
 ## Phase 7: Conversation and AI Classification
 - [ ] Create Hindi primary script pack.
-- [ ] Create English secondary script pack.
-- [ ] Add scripted language pack configuration for additional Indian languages.
+- [x] Create English secondary script pack.
+- [x] Add scripted language pack configuration for additional Indian languages.
 - [x] Add language fallback rules: missing or unsupported `language_hint` falls back to Hindi.
 - [x] Strengthen voice-agent instructions so the caller can request a supported language switch mid-call.
 - [x] Add deterministic yes/no/unclear classifier fallback.
@@ -124,7 +124,7 @@
 
 ### Acceptance Criteria
 - [ ] Simulated callbacks can include transcript text for classification.
-- [ ] Live provider path stores recording URL and transcript source metadata.
+- [x] Live provider path stores recording URL and transcript source metadata.
 - [ ] Low-confidence AI output becomes `manual_review`.
 
 ## Phase 8: Retry and Reconciliation
@@ -202,6 +202,7 @@
 - [x] Configure provider webhook URLs.
 - [x] Configure `APP_BASE_URL`, `VOICE_BRIDGE_PUBLIC_WS_URL`, and `VOICE_OUTCOME_SECRET` across Vercel and Railway.
 - [x] Add local `/api/health` smoke test.
+- [x] Add Render bridge speech-first flow, stream-status handling, and recording callback persistence for live Plivo calls.
 - [ ] Add Railway bridge startup or health smoke test. Spec: [service boundary](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#service-boundary). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Verify Plivo answer XML points AudioStream to the Railway `wss://` URL. Spec: [audio format](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#audio-format). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Verify voice bridge can post final outcomes back to Vercel. Spec: [database outcome](docs/superpowers/specs/2026-05-26-realtime-plivo-voice-agent-design.md#database-outcome). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).

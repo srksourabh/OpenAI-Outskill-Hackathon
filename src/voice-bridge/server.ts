@@ -1,9 +1,11 @@
 import { createServer } from "node:http";
+import { mapDispositionToNextAction } from "@/domain/calls";
+import { env } from "@/config/env";
 import { WebSocketServer } from "ws";
-import { buildVoiceAgentInstructions } from "../domain/voice-agent";
 import { analyzeTranscriptWithOpenAI } from "../services/ai/openai";
+import { buildInitialAgentPrompt, createAgentSessionState, normalizeSupportedLanguages, planAgentTurn } from "./agent-session";
 import { getBridgeRequestInfo, isVoiceBridgeHealthPath, isVoiceBridgeUpgradePath, voiceBridgePath } from "./http";
-import { connectOpenAIRealtime, appendRealtimeAudio } from "./openaiRealtime";
+import { appendRealtimeAudio, connectOpenAIRealtime, requestRealtimeResponse, updateRealtimeInstructions } from "./openaiRealtime";
 import { postVoiceOutcome } from "./outcomeClient";
 import { parsePlivoEvent, sendAudioToPlivo } from "./plivoStream";
 
@@ -31,27 +33,76 @@ server.on("connection", (plivoWs, request) => {
     return;
   }
 
-  let transcriptText = "";
+  const context = {
+    companyName: searchParams.get("companyName") ?? "Demo Logistics",
+    orderId: searchParams.get("orderId") ?? "Realtime call",
+    location: searchParams.get("location") ?? "Uploaded location",
+    machineCount: Number(searchParams.get("machineCount") ?? "1") || 1,
+    languageHint: searchParams.get("languageHint") ?? env.primaryCallLanguage,
+    contactName: searchParams.get("providerName") ?? "sir/ma'am"
+  };
+  const supportedLanguages = normalizeSupportedLanguages(env.supportedCallLanguages);
+  let sessionState = createAgentSessionState(context.languageHint);
+  const transcriptEntries: string[] = [];
+  let currentAssistantLine = "";
+  let initialResponseRequested = false;
+  const initialPrompt = buildInitialAgentPrompt(context, sessionState, supportedLanguages);
+
   const realtimeWs = connectOpenAIRealtime({
-    apiKey: process.env.OPENAI_API_KEY ?? "",
-    model: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2",
-    voice: process.env.OPENAI_REALTIME_VOICE ?? "marin",
-    instructions: buildVoiceAgentInstructions({
-      companyName: "Demo Logistics",
-      orderId: "Realtime call",
-      location: "Uploaded location",
-      machineCount: 1,
-      languageHint: process.env.PRIMARY_CALL_LANGUAGE ?? "hi"
-    })
+    apiKey: env.openaiApiKey ?? "",
+    model: env.openaiRealtimeModel,
+    voice: env.openaiRealtimeVoice,
+    instructions: initialPrompt.instructions
   });
 
   realtimeWs.on("message", (data) => {
-    const event = JSON.parse(data.toString());
-    if (typeof event.delta === "string" && String(event.type).includes("transcript")) {
-      transcriptText += event.delta;
+    const event = JSON.parse(data.toString()) as Record<string, unknown>;
+    const eventType = String(event.type ?? "");
+
+    if (eventType === "session.updated" && !initialResponseRequested) {
+      initialResponseRequested = true;
+      requestRealtimeResponse(realtimeWs, `${initialPrompt.instructions} First response wording to preserve: ${initialPrompt.openingLine}`);
+      return;
     }
+
     if ((event.type === "response.output_audio.delta" || event.type === "response.audio.delta") && typeof event.delta === "string") {
       sendAudioToPlivo(plivoWs, event.delta);
+      return;
+    }
+
+    if ((eventType === "response.output_audio_transcript.delta" || eventType === "response.output_text.delta") && typeof event.delta === "string") {
+      currentAssistantLine += event.delta;
+      return;
+    }
+
+    if (eventType === "response.output_audio_transcript.done" || eventType === "response.output_text.done") {
+      const line = String(event.transcript ?? event.text ?? currentAssistantLine).trim();
+      if (line) {
+        transcriptEntries.push(`Agent: ${line}`);
+      }
+      currentAssistantLine = "";
+      return;
+    }
+
+    if (eventType === "conversation.item.input_audio_transcription.completed") {
+      const receiverText = String(event.transcript ?? "").trim();
+      if (!receiverText) return;
+
+      transcriptEntries.push(`Receiver: ${receiverText}`);
+      const turn = planAgentTurn(receiverText, context, sessionState, supportedLanguages);
+      sessionState = turn.state;
+      updateRealtimeInstructions(realtimeWs, turn.instructions, {
+        voice: env.openaiRealtimeVoice,
+        model: env.openaiRealtimeModel
+      });
+      if (turn.plan.shouldRespond) {
+        requestRealtimeResponse(realtimeWs, turn.instructions);
+      }
+      return;
+    }
+
+    if (eventType === "error") {
+      console.error("OpenAI Realtime error", event);
     }
   });
 
@@ -66,10 +117,20 @@ server.on("connection", (plivoWs, request) => {
   plivoWs.on("close", () => {
     realtimeWs.close();
     void (async () => {
-      const outcome = await analyzeTranscriptWithOpenAI(transcriptText);
+      const transcriptText = transcriptEntries.join("\n").trim();
+      const analyzedOutcome = await analyzeTranscriptWithOpenAI(transcriptText);
+      const outcome =
+        sessionState.dispositionHint && analyzedOutcome.disposition === "manual_review"
+          ? {
+              ...analyzedOutcome,
+              disposition: sessionState.dispositionHint,
+              next_action: mapDispositionToNextAction(sessionState.dispositionHint),
+              summary_text: analyzedOutcome.summary_text || "Call completed with a deterministic fallback disposition."
+            }
+          : analyzedOutcome;
       await postVoiceOutcome({
-        appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:3000",
-        secret: process.env.VOICE_OUTCOME_SECRET ?? "",
+        appBaseUrl: env.appBaseUrl,
+        secret: env.voiceOutcomeSecret,
         callId,
         transcriptText,
         outcome
