@@ -62,6 +62,12 @@ npm run build
 npm run voice:dev
 ```
 
+Voice bridge smoke test:
+
+```powershell
+.\scripts\smoke-voice-bridge.ps1
+```
+
 Open the local app at `http://localhost:3000/campaigns`.
 
 ## Live Calling Prerequisites
@@ -75,6 +81,15 @@ For a real Plivo outbound call, the app now requires all of the following before
 - `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` must be set.
 
 If any of these are missing, the dashboard now returns a clear error instead of pretending the live call started.
+
+## Provider Setup
+1. Create or reuse a Plivo application and verified outbound number.
+2. Set `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` in the dashboard/API environment.
+3. Set `APP_BASE_URL` to the public Vercel URL that Plivo can reach.
+4. Deploy the voice bridge and set `VOICE_BRIDGE_PUBLIC_WS_URL` to its public `wss://.../plivo/audio-stream` URL.
+5. Set the same `VOICE_OUTCOME_SECRET` in the web app and voice bridge environments.
+6. Optional but recommended: set `PLIVO_WEBHOOK_SECRET`; generated callback URLs include it and webhook routes reject mismatches.
+7. Start with simulated campaigns for rehearsal, then switch campaign provider to `plivo` for live calls.
 
 ## Testing
 Testing should be added in layers:
@@ -99,6 +114,7 @@ The Bash script can fail under WSL if `node_modules` was installed for Windows b
 
 ## Demo Data
 Use [samples/demo-contacts.csv](samples/demo-contacts.csv) for the first upload demo. It contains 10 Hindi-first contacts, plus English and regional-language rows, and one unsupported language row that falls back to Hindi.
+Use [samples/demo-contacts.xlsx](samples/demo-contacts.xlsx) when you need the same demo flow as an Excel upload.
 
 For quick testing in the app:
 - Download `/sample-mobile-upload.csv` from the dashboard for a lightweight mobile-number template.

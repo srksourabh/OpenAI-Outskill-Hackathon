@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { env } from "@/config/env";
+import { canApplyProviderEvent, createCallEvent, hasProviderEvent } from "@/services/campaigns/audit";
 import { listCampaigns, updateCampaign } from "@/services/campaigns/file-store";
 import { isAuthorizedPlivoWebhook, parsePlivoWebhookRequest } from "@/services/plivo/webhooks";
 
 export async function POST(request: Request) {
-  const { url } = await parsePlivoWebhookRequest(request);
+  const { url, payload } = await parsePlivoWebhookRequest(request);
   if (!isAuthorizedPlivoWebhook(url, env.plivoWebhookSecret ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -18,10 +19,19 @@ export async function POST(request: Request) {
   const campaigns = await listCampaigns();
   for (const campaign of campaigns) {
     if (!campaign.calls.some((call) => call.id === callId)) continue;
+    const event = createCallEvent({
+      campaignId: campaign.id,
+      callId,
+      provider: "plivo",
+      eventType: "ring",
+      providerEventId: payload.EventUUID ?? payload.event_uuid ?? payload.CallUUID ?? payload.call_uuid ?? null,
+      payload
+    });
     await updateCampaign(campaign.id, (current) => ({
       ...current,
+      call_events: hasProviderEvent(current, event) ? current.call_events : [...current.call_events, event],
       calls: current.calls.map((call) =>
-        call.id === callId
+        call.id === callId && !hasProviderEvent(current, event) && canApplyProviderEvent(call, "ringing")
           ? {
               ...call,
               status: "ringing",

@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
+import { buildQuickCheckFormData, resolveQuickCheckDefaults } from "./quick-check";
+import { filterResultRows } from "./results-filter";
 
 type AgentSettings = {
   voice_preset: "indian_female_natural" | "indian_male_natural" | "openai_custom";
@@ -216,7 +218,7 @@ export function CampaignWorkspace() {
           </header>
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <UploadPanel busy={busy} onUpload={uploadFile} />
+            <UploadPanel busy={busy} campaignDefaults={selected} onUpload={uploadFile} />
             <div className="min-w-0 space-y-5">
               <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={setSelectedId} />
               {message ? <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm">{message}</div> : null}
@@ -232,37 +234,46 @@ export function CampaignWorkspace() {
   );
 }
 
-function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: FormData) => void }) {
+function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; campaignDefaults?: Campaign; onUpload: (formData: FormData) => void }) {
+  const quickCheckDefaults = useMemo(() => resolveQuickCheckDefaults(campaignDefaults), [campaignDefaults]);
   const [manualPhone, setManualPhone] = useState("");
-  const [manualLanguage, setManualLanguage] = useState("en");
-  const [manualProvider, setManualProvider] = useState("plivo");
-  const [manualCompanyName, setManualCompanyName] = useState(defaultPromptConfig.companyName);
-  const [manualAssetLabel, setManualAssetLabel] = useState(defaultPromptConfig.assetLabel);
-  const [manualReferenceLabel, setManualReferenceLabel] = useState(defaultPromptConfig.referenceLabel);
-  const [manualAccountLabel, setManualAccountLabel] = useState(defaultPromptConfig.accountLabel);
-  const [manualAccountName, setManualAccountName] = useState(defaultPromptConfig.accountName);
+  const [manualLanguage, setManualLanguage] = useState(quickCheckDefaults.language);
+  const [manualProvider, setManualProvider] = useState(quickCheckDefaults.provider);
+  const [manualCompanyName, setManualCompanyName] = useState(quickCheckDefaults.companyName);
+  const [manualAssetLabel, setManualAssetLabel] = useState(quickCheckDefaults.promptConfig.asset_label);
+  const [manualReferenceLabel, setManualReferenceLabel] = useState(quickCheckDefaults.promptConfig.reference_label);
+  const [manualAccountLabel, setManualAccountLabel] = useState(quickCheckDefaults.promptConfig.account_label);
+  const [manualAccountName, setManualAccountName] = useState(quickCheckDefaults.promptConfig.account_name);
+
+  useEffect(() => {
+    setManualLanguage(quickCheckDefaults.language);
+    setManualProvider(quickCheckDefaults.provider);
+    setManualCompanyName(quickCheckDefaults.companyName);
+    setManualAssetLabel(quickCheckDefaults.promptConfig.asset_label);
+    setManualReferenceLabel(quickCheckDefaults.promptConfig.reference_label);
+    setManualAccountLabel(quickCheckDefaults.promptConfig.account_label);
+    setManualAccountName(quickCheckDefaults.promptConfig.account_name);
+  }, [quickCheckDefaults]);
 
   function submitManualCheck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!manualPhone.trim()) return;
 
-    const formData = new FormData();
-    formData.set("campaign_name", "Manual number check");
-    formData.set("company_name", manualCompanyName);
-    formData.set("asset_label", manualAssetLabel);
-    formData.set("reference_label", manualReferenceLabel);
-    formData.set("account_label", manualAccountLabel);
-    formData.set("account_name", manualAccountName);
-    formData.set("voice_preset", defaultAgentSettings.voice_preset);
-    formData.set("voice_id", defaultAgentSettings.voice_id);
-    formData.set("tone", defaultAgentSettings.tone);
-    formData.set("prompt_enhancement", defaultAgentSettings.prompt_enhancement);
-    formData.set("self_improve_enabled", String(defaultAgentSettings.self_improve_enabled));
-    formData.set("default_language", manualLanguage);
-    formData.set("concurrency_limit", "1");
-    formData.set("provider", manualProvider);
-    formData.set("file", buildManualUploadFile({ phone: manualPhone, language: manualLanguage }));
-    onUpload(formData);
+    onUpload(
+      buildQuickCheckFormData({
+        phone: manualPhone,
+        language: manualLanguage,
+        provider: manualProvider,
+        companyName: manualCompanyName,
+        promptConfig: {
+          asset_label: manualAssetLabel,
+          reference_label: manualReferenceLabel,
+          account_label: manualAccountLabel,
+          account_name: manualAccountName
+        },
+        agentSettings: quickCheckDefaults.agentSettings
+      })
+    );
   }
 
   return (
@@ -593,14 +604,73 @@ function AgentSettingsPanel({
 }
 
 function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dispositionFilter, setDispositionFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState("all");
+  const filteredRows = useMemo(
+    () => filterResultRows(rows, { status: statusFilter, disposition: dispositionFilter, language: languageFilter }),
+    [rows, statusFilter, dispositionFilter, languageFilter]
+  );
+
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel">
       <div className="border-b border-line p-4">
         <h2 className="text-lg font-semibold">Results and uploaded details</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <label className="text-sm font-medium">
+            Status
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="not_queued">Not queued</option>
+              <option value="queued">Queued</option>
+              <option value="ringing">Ringing</option>
+              <option value="answered">Answered</option>
+              <option value="completed">Completed</option>
+              <option value="not_picked">Not picked</option>
+              <option value="not_connected">Not connected</option>
+              <option value="invalid_number">Invalid number</option>
+              <option value="voicemail">Voicemail</option>
+              <option value="failed">Failed</option>
+            </select>
+          </label>
+          <label className="text-sm font-medium">
+            Disposition
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={dispositionFilter} onChange={(event) => setDispositionFilter(event.target.value)}>
+              <option value="all">All dispositions</option>
+              <option value="confirmed_pickup">Confirmed pickup</option>
+              <option value="follow_up_needed">Follow-up needed</option>
+              <option value="declined">Declined</option>
+              <option value="manual_review">Manual review</option>
+              <option value="not_picked">Not picked</option>
+              <option value="not_connected">Not connected</option>
+              <option value="invalid_number">Invalid number</option>
+              <option value="voicemail">Voicemail</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+          <label className="text-sm font-medium">
+            Language
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={languageFilter} onChange={(event) => setLanguageFilter(event.target.value)}>
+              <option value="all">All languages</option>
+              <option value="hi">Hindi</option>
+              <option value="en">English</option>
+              <option value="bn">Bengali</option>
+              <option value="pa">Punjabi</option>
+              <option value="gu">Gujarati</option>
+              <option value="mr">Marathi</option>
+              <option value="ta">Tamil</option>
+              <option value="te">Telugu</option>
+              <option value="ml">Malayalam</option>
+              <option value="kn">Kannada</option>
+              <option value="or">Odia</option>
+              <option value="as">Assamese</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div className="space-y-3 p-4 md:hidden">
-        {rows.length === 0 ? <div className="py-4 text-center text-sm text-muted">Upload contacts to create the first campaign.</div> : null}
-        {rows.map((row) => (
+        {filteredRows.length === 0 ? <div className="py-4 text-center text-sm text-muted">No results match the current filters.</div> : null}
+        {filteredRows.map((row) => (
           <article className="rounded-md border border-line bg-surface p-3" key={String(row.contact_id)}>
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -619,7 +689,10 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
               <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
             </div>
             <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
-            <div className="mt-3 text-sm">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>Open recording</a> : "Recording pending"}</div>
+            <div className="mt-3 text-sm">
+              {row.call ? <a className="mr-3 text-accent" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+              {row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>Open recording</a> : "Recording pending"}
+            </div>
             {row.call ? <CallHistoryDetails call={row.call} /> : null}
           </article>
         ))}
@@ -634,7 +707,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <Fragment key={String(row.contact_id)}>
                 <tr className="border-b border-line">
                   <td className="px-3 py-2">{String(row.provider_name ?? "")}</td>
@@ -646,7 +719,10 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                   <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
                   <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
                   <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
-                  <td className="px-3 py-2">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>link</a> : "none"}</td>
+                  <td className="px-3 py-2">
+                    {row.call ? <a className="mr-2 text-accent" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
+                    {row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>recording</a> : "none"}
+                  </td>
                   <td className="max-w-[280px] px-3 py-2">{row.call?.summary_text ?? ""}</td>
                 </tr>
                 {row.call ? (
@@ -658,9 +734,9 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                 ) : null}
               </Fragment>
             ))}
-            {rows.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-muted" colSpan={11}>Upload contacts to create the first campaign.</td>
+                <td className="px-3 py-8 text-center text-muted" colSpan={11}>No results match the current filters.</td>
               </tr>
             ) : null}
           </tbody>
@@ -766,27 +842,4 @@ function EmptyState() {
       <p className="mt-2 text-sm text-muted">Upload an Excel or CSV contact list to begin the demo workflow.</p>
     </section>
   );
-}
-
-function buildManualUploadFile({ phone, language }: { phone: string; language: string }) {
-  const csv = [
-    "phone,language_hint,provider_name,location,machine_count,order_id",
-    [
-      escapeCsvValue(phone),
-      escapeCsvValue(language),
-      escapeCsvValue("Quick check contact"),
-      escapeCsvValue("Manual test"),
-      "1",
-      escapeCsvValue(`MANUAL-${Date.now()}`)
-    ].join(",")
-  ].join("\n");
-
-  return new File([csv], "manual-number-check.csv", { type: "text/csv" });
-}
-
-function escapeCsvValue(value: string) {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, "\"\"")}"`;
-  }
-  return value;
 }

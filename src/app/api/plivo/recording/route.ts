@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { env } from "@/config/env";
+import { createCallEvent, hasProviderEvent } from "@/services/campaigns/audit";
 import { listCampaigns, updateCampaign } from "@/services/campaigns/file-store";
 import { isAuthorizedPlivoWebhook, parsePlivoWebhookRequest } from "@/services/plivo/webhooks";
 
@@ -21,10 +22,19 @@ export async function POST(request: Request) {
   const campaigns = await listCampaigns();
   for (const campaign of campaigns) {
     if (!campaign.calls.some((call) => call.id === callId)) continue;
+    const event = createCallEvent({
+      campaignId: campaign.id,
+      callId,
+      provider: "plivo",
+      eventType: "recording",
+      providerEventId: payload.RecordingID ?? payload.recording_id ?? payload.RecordUrl ?? payload.recording_url ?? null,
+      payload
+    });
     await updateCampaign(campaign.id, (current) => ({
       ...current,
+      call_events: hasProviderEvent(current, event) ? current.call_events : [...current.call_events, event],
       calls: current.calls.map((call) =>
-        call.id === callId
+        call.id === callId && !hasProviderEvent(current, event)
           ? {
               ...call,
               recording_url: recordingUrl || call.recording_url,

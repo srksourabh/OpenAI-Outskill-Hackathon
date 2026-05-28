@@ -95,10 +95,22 @@ export async function analyzeTranscriptWithOpenAI(
     const outputText = extractOutputText(payload);
     const rawOutcome = openAIOutcomeSchema.parse(JSON.parse(outputText));
 
-    return {
+    const outcome = {
       ...rawOutcome,
       next_action: mapDispositionToNextAction(rawOutcome.disposition)
     };
+
+    if (outcome.confidence < 0.6) {
+      return {
+        ...outcome,
+        disposition: "manual_review",
+        next_action: "verify_data",
+        reason_code: outcome.reason_code ?? "low_confidence",
+        summary_text: outcome.summary_text || "Low-confidence transcript analysis needs manual review."
+      };
+    }
+
+    return outcome;
   } catch (error) {
     console.warn("OpenAI transcript analysis failed, using fallback classifier.", error);
     return fallbackOutcome;

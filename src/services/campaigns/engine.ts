@@ -54,7 +54,8 @@ export function createCampaignFromContacts(input: CreateCampaignInput): Campaign
     concurrency_limit: Math.max(1, Math.min(input.concurrencyLimit || 5, 25)),
     created_at: now,
     contacts,
-    calls: []
+    calls: [],
+    call_events: []
   };
 }
 
@@ -76,6 +77,7 @@ export function startCampaign(campaign: Campaign): Campaign {
       transcript_status: "missing",
       summary_text: "",
       reason_code: null,
+      confidence: 0,
       detected_language: contact.language_hint,
       recording_url: "",
       retry_eligible: false,
@@ -93,7 +95,12 @@ export function startCampaign(campaign: Campaign): Campaign {
   };
 }
 
-export function simulateCallOutcomes(campaign: Campaign, count = campaign.calls.length): Campaign {
+export function simulateCallOutcomes(
+  campaign: Campaign,
+  options: number | { count?: number; transcripts?: string[] } = campaign.calls.length
+): Campaign {
+  const count = typeof options === "number" ? options : options.count ?? campaign.calls.length;
+  const transcripts = typeof options === "number" ? demoTranscripts : options.transcripts ?? demoTranscripts;
   let completed = 0;
   const now = new Date().toISOString();
   const calls = campaign.calls.map((call, index) => {
@@ -112,7 +119,7 @@ export function simulateCallOutcomes(campaign: Campaign, count = campaign.calls.
       return finishTerminal(call, "voicemail", "voicemail", "retry", "Reached voicemail.", now);
     }
 
-    const transcript = demoTranscripts[index % demoTranscripts.length];
+    const transcript = transcripts[index % transcripts.length] ?? "";
     const outcome = classifyTranscript(transcript);
     return {
       ...call,
@@ -123,6 +130,7 @@ export function simulateCallOutcomes(campaign: Campaign, count = campaign.calls.
       transcript_status: "simulated",
       summary_text: outcome.summary_text,
       reason_code: outcome.reason_code,
+      confidence: outcome.confidence,
       detected_language: outcome.detected_language,
       recording_url: `https://recordings.example.com/${call.id}.mp3`,
       retry_eligible: isRetryEligible("completed", outcome.disposition),
@@ -178,6 +186,7 @@ function finishTerminal(
     next_action: nextAction,
     summary_text: summary,
     transcript_status: "simulated",
+    confidence: 1,
     retry_eligible: isRetryEligible(status, disposition),
     receiver_attitude: "unknown",
     improvement_note: "",

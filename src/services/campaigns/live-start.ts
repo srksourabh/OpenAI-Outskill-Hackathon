@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { env } from "@/config/env";
 import { isRetryEligible } from "@/domain/calls";
-import { createPlivoCall, getProviderCallId } from "@/services/plivo/client";
+import { plivoAdapter } from "@/services/providers";
 import type { CallRecord, Campaign } from "./types";
 import { buildCallAgentSnapshot, buildStatusHistory } from "./engine";
 
@@ -35,6 +35,7 @@ export async function startCampaignLive(campaign: Campaign) {
       transcript_status: "missing",
       summary_text: "",
       reason_code: null,
+      confidence: 0,
       detected_language: contact.language_hint,
       recording_url: "",
       retry_eligible: false,
@@ -75,7 +76,7 @@ export async function startCampaignLive(campaign: Campaign) {
       const hangupUrl = buildSignedCallbackUrl("/api/plivo/hangup", call.id);
 
       try {
-        const response = await createPlivoCall({
+        const response = await plivoAdapter.createCall({
           to: contact.phone,
           answerUrl,
           ringUrl,
@@ -85,7 +86,7 @@ export async function startCampaignLive(campaign: Campaign) {
         return {
           ...call,
           status: "initiated",
-          provider_call_id: getProviderCallId(response),
+          provider_call_id: response.provider_call_id,
           status_history: [...call.status_history, { status: "initiated", at: now, note: "Provider call created." }],
           last_call_time: now,
           updated_at: now

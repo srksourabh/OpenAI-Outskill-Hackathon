@@ -73,4 +73,14 @@ describe("parseContactFile", () => {
     expect(result.invalidRows).toHaveLength(1);
     expect(result.invalidRows[0].errors).toContain("phone must be a valid mobile number");
   });
+
+  it("rejects unsupported file types", async () => {
+    await expect(
+      parseContactFile({
+        fileName: "contacts.txt",
+        content: Buffer.from("phone\n9876543210"),
+        defaultLanguage: "hi"
+      })
+    ).rejects.toThrow("Unsupported file type");
+  });
 });

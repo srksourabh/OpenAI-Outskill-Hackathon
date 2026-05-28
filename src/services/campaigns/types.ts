@@ -29,6 +29,7 @@ export type CallRecord = {
   transcript_status: "missing" | "simulated" | "realtime";
   summary_text: string;
   reason_code: string | null;
+  confidence: number;
   detected_language: string;
   recording_url: string;
   retry_eligible: boolean;
@@ -48,6 +49,17 @@ export type CallRecord = {
   updated_at: string;
 };
 
+export type CallEventRecord = {
+  id: string;
+  campaign_id: string;
+  call_id: string;
+  provider: Campaign["provider"];
+  event_type: string;
+  provider_event_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
 export type Campaign = {
   id: string;
   name: string;
@@ -63,6 +75,7 @@ export type Campaign = {
   created_at: string;
   contacts: ContactRecord[];
   calls: CallRecord[];
+  call_events: CallEventRecord[];
 };
 
 export type CampaignStats = {

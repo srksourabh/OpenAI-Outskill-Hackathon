@@ -9,8 +9,6 @@ type Store = {
   campaigns: Campaign[];
 };
 
-const storePath = resolveStorePath(process.env);
-
 export function resolveStorePath(input: NodeJS.ProcessEnv) {
   if (input.MVP_STORE_DIR) {
     return path.join(input.MVP_STORE_DIR, "mvp-store.json");
@@ -52,7 +50,7 @@ export async function updateCampaign(id: string, updater: (campaign: Campaign) =
 
 async function readStore(): Promise<Store> {
   try {
-    const raw = await readFile(storePath, "utf8");
+    const raw = await readFile(resolveStorePath(process.env), "utf8");
     return JSON.parse(raw) as Store;
   } catch {
     return { campaigns: [] };
@@ -60,6 +58,7 @@ async function readStore(): Promise<Store> {
 }
 
 async function writeStore(store: Store) {
+  const storePath = resolveStorePath(process.env);
   await mkdir(path.dirname(storePath), { recursive: true });
   await writeFile(storePath, JSON.stringify(store, null, 2));
 }
@@ -71,8 +70,10 @@ function normalizeCampaign(campaign: Campaign): Campaign {
     prompt_config: getPromptConfig(campaign.prompt_config),
     agent_settings: agentSettings,
     self_improvement_notes: campaign.self_improvement_notes ?? "",
+    call_events: campaign.call_events ?? [],
     calls: campaign.calls.map((call) => ({
       ...call,
+      confidence: call.confidence ?? 0,
       ...("voice_preset_snapshot" in call
         ? {}
         : buildCallAgentSnapshot({

@@ -83,6 +83,50 @@ Request:
 Response `201`:
 ```json
 {
+  "campaign": {
+    "id": "uuid",
+    "status": "draft",
+    "contacts": []
+  }
+}
+```
+
+## `POST /api/calls/:id/retry`
+Queues one retry for a retry-eligible call. The route is admin-protected when `ADMIN_API_KEY` is configured.
+
+Rules:
+- Retries only failed, not-picked, and not-connected calls.
+- Does not retry confirmed, declined, invalid-number, or manual-review calls.
+- Does not exceed the campaign `retry_limit`.
+
+Response `200`:
+```json
+{
+  "campaign": {},
+  "stats": {
+    "queued": 1,
+    "retryEligible": 0
+  }
+}
+```
+
+## `GET /api/cron/retry-unanswered`
+Requires `CRON_SECRET` through bearer authorization or `?secret=...`. Requeues eligible failed, not-picked, and not-connected calls while respecting retry limits.
+
+Response `200`:
+```json
+{
+  "ok": true,
+  "retried": 2
+}
+```
+
+## Plivo Callback Audit Behavior
+Plivo ring, stream-status, recording, and hangup webhooks accept JSON, form-data, or URL-encoded payloads. When `PLIVO_WEBHOOK_SECRET` is configured, callbacks must include a matching `secret` query parameter. Raw provider payloads are stored in `call_events`; duplicate provider events are ignored for effective state updates; terminal states are not moved back to active states.
+
+Response `201`:
+```json
+{
   "id": "uuid",
   "status": "draft"
 }

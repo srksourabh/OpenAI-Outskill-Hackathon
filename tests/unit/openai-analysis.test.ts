@@ -58,4 +58,31 @@ describe("analyzeTranscriptWithOpenAI", () => {
     expect(result.disposition).toBe("manual_review");
     expect(result.next_action).toBe("verify_data");
   });
+
+  it("routes low-confidence OpenAI outcomes to manual review", async () => {
+    const fetchImpl: typeof fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            disposition: "confirmed_pickup",
+            detected_language: "en",
+            summary_text: "Possibly ready, but the transcript is weak.",
+            reason_code: null,
+            confidence: 0.42
+          })
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    const result = await analyzeTranscriptWithOpenAI("Maybe yes maybe no", {
+      apiKey: "sk-test",
+      model: "gpt-4.1-mini",
+      fetchImpl
+    });
+
+    expect(result.disposition).toBe("manual_review");
+    expect(result.next_action).toBe("verify_data");
+    expect(result.confidence).toBe(0.42);
+  });
 });

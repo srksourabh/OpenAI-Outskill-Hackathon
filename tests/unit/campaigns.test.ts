@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCampaignFromContacts, startCampaign } from "@/services/campaigns/engine";
+import { createCampaignFromContacts, simulateCallOutcomes, startCampaign } from "@/services/campaigns/engine";
 import type { ParsedContact } from "@/services/ingestion/types";
 
 const contacts: ParsedContact[] = Array.from({ length: 7 }, (_, index) => ({
@@ -103,5 +103,26 @@ describe("campaign engine", () => {
     expect(edited.calls[0].voice_id_snapshot).toBe("marin");
     expect(edited.calls[0].tone_snapshot).toBe("warm");
     expect(edited.calls[0].prompt_enhancement_snapshot).toBe("First version.");
+  });
+
+  it("accepts custom simulated transcripts and stores classification confidence", () => {
+    const campaign = createCampaignFromContacts({
+      name: "Demo",
+      companyName: "UDS",
+      defaultLanguage: "hi",
+      concurrencyLimit: 2,
+      contacts
+    });
+
+    const simulated = startCampaign(campaign);
+    const completed = simulateCallOutcomes(simulated, {
+      count: 2,
+      transcripts: ["Haan, pickup ready hai.", "Maybe later, I am not sure."]
+    });
+
+    expect(completed.calls[0].disposition).toBe("confirmed_pickup");
+    expect(completed.calls[0].confidence).toBeGreaterThan(0.8);
+    expect(completed.calls[1].disposition).toBe("manual_review");
+    expect(completed.calls[1].confidence).toBeLessThan(0.5);
   });
 });

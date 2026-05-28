@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { env } from "@/config/env";
+import { canApplyProviderEvent, createCallEvent, hasProviderEvent } from "@/services/campaigns/audit";
 import { listCampaigns, updateCampaign } from "@/services/campaigns/file-store";
 import { mapPlivoHangup, isAuthorizedPlivoWebhook, parsePlivoWebhookRequest } from "@/services/plivo/webhooks";
 
@@ -20,10 +21,20 @@ export async function POST(request: Request) {
   const campaigns = await listCampaigns();
   for (const campaign of campaigns) {
     if (!campaign.calls.some((call) => call.id === callId)) continue;
+    const event = createCallEvent({
+      campaignId: campaign.id,
+      callId,
+      provider: "plivo",
+      eventType: "hangup",
+      providerEventId: payload.EventUUID ?? payload.event_uuid ?? payload.CallUUID ?? payload.call_uuid ?? null,
+      payload
+    });
     await updateCampaign(campaign.id, (current) => ({
       ...current,
+      call_events: hasProviderEvent(current, event) ? current.call_events : [...current.call_events, event],
       calls: current.calls.map((call) => {
         if (call.id !== callId) return call;
+        if (hasProviderEvent(current, event) || !canApplyProviderEvent(call, mapped.status)) return call;
 
         if (call.transcript_status === "realtime" && call.disposition !== "unknown") {
           return {

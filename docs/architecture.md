@@ -117,6 +117,8 @@ export interface TelephonyAdapter {
 }
 ```
 
+Current implementation note: `src/services/providers` exposes the shared adapter contract plus Plivo, Twilio, and Exotel adapter entries. Plivo is wired into live campaign start. Twilio and Exotel are intentionally scaffolded and throw until their provider-specific call creation and webhook contracts are implemented.
+
 ## Data Model
 Core tables:
 - `campaigns`: Campaign configuration and lifecycle state.
@@ -175,6 +177,8 @@ Duplicate webhook handling:
 - Apply state transitions inside a database transaction.
 - Ignore stale transitions that would move a terminal call back to a non-terminal state.
 
+MVP file-store behavior mirrors this contract by appending raw callback payloads to `call_events`, deduplicating provider events by provider/event/id, and blocking terminal-state rewinds before mutating the call record.
+
 ## Parallel Call Dispatch
 Campaign execution must not call contacts one by one. The dispatcher should:
 - Select queued calls for a running campaign up to `concurrency_limit - active_call_count`.
@@ -214,4 +218,4 @@ Campaign execution must not call contacts one by one. The dispatcher should:
 - Recordings and transcripts are sensitive operational data.
 - Only admin users should access recordings, transcripts, exports, and raw provider payloads.
 - Exports must preserve uploaded business details and append result columns, but must exclude raw provider payloads, secrets, and internal audit metadata.
-- Retention is not implemented in the hackathon MVP, but the decision must be recorded before production use.
+- See `docs/security-data-policy.md` for the MVP access, audit, and retention decision.

@@ -43,6 +43,7 @@ export async function POST(request: Request) {
             transcript_status: "realtime",
             summary_text: body.outcome.summary_text,
             reason_code: body.outcome.reason_code,
+            confidence: body.outcome.confidence,
             detected_language: body.outcome.detected_language,
             retry_eligible: isRetryEligible(status, body.outcome.disposition),
             receiver_attitude: receiverAttitude,

@@ -48,6 +48,8 @@ Create one internal telephony adapter interface and keep provider-specific behav
 ### Consequences
 The MVP can demo with one provider while preserving a clear path to additional India-focused providers. Extra abstraction is limited to the provider boundary, where the variation is real.
 
+Implementation status: Plivo is wired through `src/services/providers`. Twilio and Exotel are scaffolded behind the same interface and return explicit not-implemented errors until their account-specific APIs are configured.
+
 ## ADR-003: Prefer Webhook-Driven Call State
 
 - Date: 2026-05-26
