@@ -169,6 +169,12 @@
 - [x] Ensure CSV export includes original uploaded columns plus call status, disposition, recording URL, transcript status, summary, next action, attempt number, last call time, and retry eligibility.
 - [x] Add mobile responsive checks.
 - [x] Add e2e test for upload-to-export demo workflow.
+- [x] Add authenticated login experience with test admin and user accounts for workspace access.
+- [x] Add front-page product landing, SEO metadata, privacy page, and sitemap output.
+- [x] Add health dashboard page with component readiness status (store, OpenAI, Plivo, voice bridge, auth).
+- [x] Add explicit campaign draft creation panel with connected agent/prompt defaults.
+- [x] Capture callback request datetime/remarks plus missed-call notes and surface them in UI and exports.
+- [x] Add Excel-compatible results export alongside CSV export.
 - [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
 - [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
 - [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.

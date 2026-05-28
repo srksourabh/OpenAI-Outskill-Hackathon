@@ -73,6 +73,9 @@ describe("campaign engine", () => {
     expect(started.calls[0].qa_language_status).toBe("warn");
     expect(started.calls[0].qa_tone_status).toBe("warn");
     expect(started.calls[0].qa_notes).toContain("has not produced transcript evidence");
+    expect(started.calls[0].callback_requested_at).toBeNull();
+    expect(started.calls[0].callback_remarks).toBe("");
+    expect(started.calls[0].missed_call_note).toBe("");
     expect(started.calls[0].status_history.at(-1)?.status).toBe("ringing");
   });
 
@@ -129,5 +132,25 @@ describe("campaign engine", () => {
     expect(completed.calls[0].receiver_attitude_confidence).toBeGreaterThan(0);
     expect(completed.calls[1].disposition).toBe("manual_review");
     expect(completed.calls[1].confidence).toBeLessThan(0.5);
+  });
+
+  it("captures callback schedule metadata for follow-up outcomes", () => {
+    const campaign = createCampaignFromContacts({
+      name: "Demo",
+      companyName: "UDS",
+      defaultLanguage: "hi",
+      concurrencyLimit: 2,
+      contacts
+    });
+
+    const simulated = startCampaign(campaign);
+    const completed = simulateCallOutcomes(simulated, {
+      count: 1,
+      transcripts: ["Not ready now, please call back after 2 days at 5 pm."]
+    });
+
+    expect(completed.calls[0].disposition).toBe("follow_up_needed");
+    expect(completed.calls[0].callback_requested_at).toBeTruthy();
+    expect(completed.calls[0].callback_remarks).toContain("call back");
   });
 });

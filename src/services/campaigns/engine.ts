@@ -30,6 +30,11 @@ type BehaviorVerificationResult = {
   qa_notes: string;
 };
 
+type CallbackSchedule = {
+  callback_requested_at: string | null;
+  callback_remarks: string;
+};
+
 const demoTranscripts = [
   "Haan, machine pickup ke liye ready hai.",
   "Yes, pickup is ready.",
@@ -134,6 +139,7 @@ export function simulateCallOutcomes(
 
     const transcript = transcripts[index % transcripts.length] ?? "";
     const outcome = classifyTranscript(transcript);
+    const callbackSchedule = extractCallbackSchedule(transcript, now);
     const attitudeMatch = classifyReceiverAttitude(transcript);
     const qaResult = evaluateCallBehaviorQuality({
       transcriptText: transcript,
@@ -157,6 +163,9 @@ export function simulateCallOutcomes(
       retry_eligible: isRetryEligible("completed", outcome.disposition),
       receiver_attitude: attitudeMatch.attitude,
       receiver_attitude_confidence: attitudeMatch.confidence,
+      callback_requested_at: outcome.disposition === "follow_up_needed" ? callbackSchedule.callback_requested_at : null,
+      callback_remarks: outcome.disposition === "follow_up_needed" ? callbackSchedule.callback_remarks : "",
+      missed_call_note: "",
       improvement_note: campaign.agent_settings.self_improve_enabled ? buildImprovementNoteFromAttitude(attitudeMatch.attitude) : "",
       ...qaResult,
       status_history: [...call.status_history, { status: "completed", at: now, note: "Simulated callback completed." }],
@@ -213,6 +222,9 @@ function finishTerminal(
     retry_eligible: isRetryEligible(status, disposition),
     receiver_attitude: "unknown",
     receiver_attitude_confidence: 0,
+    callback_requested_at: null,
+    callback_remarks: "",
+    missed_call_note: status === "not_picked" || status === "not_connected" || status === "voicemail" ? summary : "",
     improvement_note: "",
     qa_language_status: "warn",
     qa_tone_status: "warn",
@@ -248,6 +260,9 @@ export function buildCallAgentSnapshot(campaign: Pick<Campaign, "agent_settings"
     qa_tone_status: "warn" as const,
     qa_score: 0,
     qa_notes: "Call has not produced transcript evidence yet.",
+    callback_requested_at: null,
+    callback_remarks: "",
+    missed_call_note: "",
     improvement_note: ""
   };
 }
@@ -347,5 +362,53 @@ export function evaluateCallBehaviorQuality({
     qa_tone_status: toneStatus,
     qa_score: score,
     qa_notes: `${notes}.`
+  };
+}
+
+export function extractCallbackSchedule(transcript: string, nowIso = new Date().toISOString()): CallbackSchedule {
+  const normalized = transcript.trim();
+  if (!normalized) {
+    return { callback_requested_at: null, callback_remarks: "" };
+  }
+
+  const lower = normalized.toLowerCase();
+  const callbackRequested = /(call back|callback|later|tomorrow|kal|after|next week|follow up|follow-up|day after)/.test(lower);
+  if (!callbackRequested) {
+    return { callback_requested_at: null, callback_remarks: "" };
+  }
+
+  const base = new Date(nowIso);
+  let scheduled = new Date(base);
+
+  if (/day after tomorrow/.test(lower)) {
+    scheduled.setDate(scheduled.getDate() + 2);
+  } else if (/tomorrow|kal/.test(lower)) {
+    scheduled.setDate(scheduled.getDate() + 1);
+  } else if (/next week/.test(lower)) {
+    scheduled.setDate(scheduled.getDate() + 7);
+  }
+
+  const afterDaysMatch = lower.match(/after\s+(\d+)\s+day|in\s+(\d+)\s+day/);
+  const numericDays = Number(afterDaysMatch?.[1] ?? afterDaysMatch?.[2] ?? NaN);
+  if (Number.isFinite(numericDays) && numericDays > 0) {
+    scheduled = new Date(base);
+    scheduled.setDate(scheduled.getDate() + Math.min(30, numericDays));
+  }
+
+  const timeMatch = lower.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  if (timeMatch) {
+    const hours = Number(timeMatch[1] ?? 0);
+    const minutes = Number(timeMatch[2] ?? 0);
+    const meridiem = timeMatch[3];
+    let hour24 = hours % 12;
+    if (meridiem === "pm") hour24 += 12;
+    scheduled.setHours(hour24, minutes, 0, 0);
+  } else {
+    scheduled.setHours(base.getHours(), base.getMinutes(), 0, 0);
+  }
+
+  return {
+    callback_requested_at: scheduled.toISOString(),
+    callback_remarks: normalized
   };
 }

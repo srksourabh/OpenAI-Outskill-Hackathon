@@ -85,6 +85,9 @@ function normalizeCampaign(campaign: Campaign): Campaign {
       qa_tone_status: call.qa_tone_status ?? "warn",
       qa_score: call.qa_score ?? 0,
       qa_notes: call.qa_notes ?? "No verification summary available yet.",
+      callback_requested_at: call.callback_requested_at ?? null,
+      callback_remarks: call.callback_remarks ?? "",
+      missed_call_note: call.missed_call_note ?? "",
       improvement_note: call.improvement_note ?? "",
       status_history: call.status_history?.length ? call.status_history : buildStatusHistory(call.status, call.updated_at)
     }))

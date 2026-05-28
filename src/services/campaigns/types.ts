@@ -45,6 +45,9 @@ export type CallRecord = {
   qa_tone_status: BehaviorQaStatus;
   qa_score: number;
   qa_notes: string;
+  callback_requested_at: string | null;
+  callback_remarks: string;
+  missed_call_note: string;
   improvement_note: string;
   status_history: Array<{
     status: CallStatus;

@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const authError = requireAdmin(request);
+    const authError = await requireAdmin(request);
     if (authError) return authError;
 
     const body = (await request.json()) as {
@@ -24,8 +24,30 @@ export async function POST(request: Request) {
       default_language?: string;
       concurrency_limit?: number;
       provider?: "simulated" | "plivo";
+      prompt_config?: {
+        asset_label?: string;
+        reference_label?: string;
+        account_label?: string;
+        account_name?: string;
+      };
+      agent_settings?: {
+        voice_preset?: string;
+        voice_id?: string;
+        tone?: string;
+        prompt_enhancement?: string;
+        self_improve_enabled?: boolean;
+      };
       contacts?: ParsedContact[];
     };
+
+    const promptConfig = body.prompt_config
+      ? {
+          asset_label: String(body.prompt_config.asset_label ?? "POS machine"),
+          reference_label: String(body.prompt_config.reference_label ?? "POS machine number"),
+          account_label: String(body.prompt_config.account_label ?? "company/bank"),
+          account_name: String(body.prompt_config.account_name ?? "")
+        }
+      : undefined;
 
     const campaign = createCampaignFromContacts({
       name: body.name ?? "Draft campaign",
@@ -33,7 +55,9 @@ export async function POST(request: Request) {
       defaultLanguage: body.default_language ?? env.primaryCallLanguage,
       concurrencyLimit: Number(body.concurrency_limit ?? 5),
       provider: body.provider === "plivo" ? "plivo" : "simulated",
-      contacts: Array.isArray(body.contacts) ? body.contacts : []
+      contacts: Array.isArray(body.contacts) ? body.contacts : [],
+      promptConfig,
+      agentSettings: body.agent_settings
     });
 
     await saveCampaign(campaign);

@@ -38,6 +38,9 @@ describe("buildResultsCsv", () => {
     expect(csv).toContain("custom_note");
     expect(csv).toContain("call_status");
     expect(csv).toContain("recording_url");
+    expect(csv).toContain("callback_requested_at");
+    expect(csv).toContain("callback_remarks");
+    expect(csv).toContain("missed_call_note");
     expect(csv).toContain("Gate 2");
   });
 });

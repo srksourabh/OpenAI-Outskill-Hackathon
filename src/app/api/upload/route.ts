@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const authError = requireAdmin(request);
+    const authError = await requireAdmin(request);
     if (authError) return authError;
 
     const form = await request.formData();

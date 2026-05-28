@@ -4,7 +4,7 @@ import { env } from "@/config/env";
 import { jsonError } from "@/lib/http";
 import { isRetryEligible } from "@/domain/calls";
 import { callOutcomeSchema } from "@/domain/voice-agent";
-import { buildImprovementNoteFromAttitude, classifyReceiverAttitude, evaluateCallBehaviorQuality } from "@/services/campaigns/engine";
+import { buildImprovementNoteFromAttitude, classifyReceiverAttitude, evaluateCallBehaviorQuality, extractCallbackSchedule } from "@/services/campaigns/engine";
 import { updateCampaign } from "@/services/campaigns/file-store";
 import type { CallRecord } from "@/services/campaigns/types";
 
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
           const attitudeMatch = classifyReceiverAttitude(body.transcript_text);
           const improvementNote = current.agent_settings.self_improve_enabled ? buildImprovementNoteFromAttitude(attitudeMatch.attitude) : "";
           if (improvementNote) nextSelfImprovementNotes = improvementNote;
+          const callbackSchedule = extractCallbackSchedule(body.transcript_text, now);
           const status: CallRecord["status"] =
             call.status === "invalid_number" || call.status === "not_connected" || call.status === "not_picked" ? call.status : "completed";
           const qaResult = evaluateCallBehaviorQuality({
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
             retry_eligible: isRetryEligible(status, body.outcome.disposition),
             receiver_attitude: attitudeMatch.attitude,
             receiver_attitude_confidence: attitudeMatch.confidence,
+            callback_requested_at: body.outcome.disposition === "follow_up_needed" ? callbackSchedule.callback_requested_at : null,
+            callback_remarks: body.outcome.disposition === "follow_up_needed" ? callbackSchedule.callback_remarks : "",
+            missed_call_note:
+              status === "not_picked" || status === "not_connected" || body.outcome.disposition === "voicemail"
+                ? body.outcome.summary_text
+                : "",
             ...qaResult,
             improvement_note: improvementNote,
             status_history: [...call.status_history, { status, at: now, note: "Realtime voice outcome saved." }],

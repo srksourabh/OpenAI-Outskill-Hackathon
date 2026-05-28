@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { env } from "@/config/env";
+import { getSessionRole } from "@/lib/session";
 
-export function requireAdmin(request: Request) {
+export async function requireAdmin(request: Request) {
   const configuredKey = process.env.ADMIN_API_KEY;
-  if (!configuredKey || configuredKey.startsWith("replace-with")) return null;
+  const role = await getSessionRole();
+  if (role === "admin") return null;
+
+  if (!configuredKey || configuredKey.startsWith("replace-with")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const suppliedKey = request.headers.get("x-admin-key");
   if (suppliedKey === configuredKey) return null;

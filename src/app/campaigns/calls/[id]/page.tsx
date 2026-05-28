@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSessionRole } from "@/lib/session";
 import { listCampaigns } from "@/services/campaigns/file-store";
 
 export const runtime = "nodejs";
 
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const role = await getSessionRole();
+  if (!role) redirect("/login");
+
   const { id } = await params;
   const campaigns = await listCampaigns();
   const campaign = campaigns.find((item) => item.calls.some((call) => call.id === id));
@@ -43,6 +48,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           <Info label="Confidence" value={String(call.confidence)} />
           <Info label="Receiver attitude" value={call.receiver_attitude ?? "unknown"} />
           <Info label="Attitude confidence" value={String(call.receiver_attitude_confidence ?? 0)} />
+          <Info label="Callback requested at" value={formatDateTime(call.callback_requested_at)} />
+          <Info label="Callback remarks" value={call.callback_remarks || "-"} />
+          <Info label="Missed call note" value={call.missed_call_note || "-"} />
           <Info label="Attempt" value={String(call.attempt_number)} />
         </div>
         <div className="mt-5 rounded-md border border-line bg-surface p-4">
@@ -70,6 +78,13 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
       </section>
     </main>
   );
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
 }
 
 function Info({ label, value }: { label: string; value: string }) {

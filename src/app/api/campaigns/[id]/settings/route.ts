@@ -7,7 +7,7 @@ import { mergeCampaignAgentSettings } from "@/services/campaigns/engine";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authError = requireAdmin(request);
+    const authError = await requireAdmin(request);
     if (authError) return authError;
 
     const { id } = await params;
