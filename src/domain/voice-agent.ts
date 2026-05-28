@@ -10,6 +10,9 @@ export type AgentTone = (typeof agentTones)[number];
 export const receiverAttitudes = ["unknown", "rude", "polite", "busy", "confused", "cooperative", "suspicious"] as const;
 export type ReceiverAttitude = (typeof receiverAttitudes)[number];
 
+export const behaviorQaStatuses = ["pass", "warn", "fail"] as const;
+export type BehaviorQaStatus = (typeof behaviorQaStatuses)[number];
+
 export type AgentSettings = {
   voice_preset: VoicePreset;
   voice_id: string;
@@ -52,6 +55,14 @@ export type VoiceAgentContext = {
 };
 
 export type VoiceAgentStage = "opening" | "readiness_question" | "follow_up" | "closing";
+
+export type PromptStudioPreviewInput = {
+  companyName: string;
+  defaultLanguage: string;
+  promptConfig?: Partial<PromptConfig> | null;
+  agentSettings?: AgentSettingsInput;
+  selfImprovementNotes?: string;
+};
 
 export function buildVoiceAgentInstructions(
   context: VoiceAgentContext,
@@ -160,4 +171,28 @@ export function resolveRealtimeVoice(settings: AgentSettings): RealtimeVoice {
   }
 
   return settings.voice_id;
+}
+
+export function buildPromptStudioPreview(input: PromptStudioPreviewInput) {
+  const language = input.defaultLanguage.trim() || "hi";
+  return buildVoiceAgentInstructions(
+    {
+      companyName: input.companyName,
+      orderId: "DEMO-1001",
+      location: "Sample location",
+      machineCount: 1,
+      languageHint: language,
+      promptConfig: input.promptConfig ?? undefined,
+      agentSettings: input.agentSettings,
+      selfImprovementNotes: input.selfImprovementNotes
+    },
+    {
+      selectedLanguage: language,
+      stage: "opening",
+      responseGoal: "Introduce and verify pickup or de-installation readiness.",
+      latestReceiverReply: "",
+      agentSettings: input.agentSettings,
+      selfImprovementNotes: input.selfImprovementNotes
+    }
+  );
 }

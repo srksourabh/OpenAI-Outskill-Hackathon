@@ -1,6 +1,6 @@
 import type { CallStatus, Disposition, NextAction } from "@/domain/calls";
 import type { LanguageCode } from "@/domain/languages";
-import type { AgentSettings, AgentTone, ReceiverAttitude, VoicePreset } from "@/domain/voice-agent";
+import type { AgentSettings, AgentTone, BehaviorQaStatus, ReceiverAttitude, VoicePreset } from "@/domain/voice-agent";
 import type { ParsedContact } from "@/services/ingestion/types";
 
 export type CampaignStatus = "draft" | "running" | "completed";
@@ -40,6 +40,11 @@ export type CallRecord = {
   tone_snapshot: AgentTone;
   prompt_enhancement_snapshot: string;
   receiver_attitude: ReceiverAttitude;
+  receiver_attitude_confidence: number;
+  qa_language_status: BehaviorQaStatus;
+  qa_tone_status: BehaviorQaStatus;
+  qa_score: number;
+  qa_notes: string;
   improvement_note: string;
   status_history: Array<{
     status: CallStatus;

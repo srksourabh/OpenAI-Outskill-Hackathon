@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildQuickCheckFormData, resolveQuickCheckDefaults } from "@/app/campaigns/quick-check";
+import { buildManualUploadFile, buildQuickCheckFormData, parsePhoneList, resolveQuickCheckDefaults } from "@/app/campaigns/quick-check";
 
 describe("quick check defaults", () => {
   it("copies the selected campaign agent settings into quick-check form data", () => {
@@ -40,5 +40,48 @@ describe("quick check defaults", () => {
     expect(formData.get("tone")).toBe("patient");
     expect(formData.get("prompt_enhancement")).toBe("Ask for callback timing when the receiver is busy.");
     expect(formData.get("self_improve_enabled")).toBe("true");
+  });
+
+  it("supports number-list quick check uploads with configurable concurrency", async () => {
+    const formData = buildQuickCheckFormData({
+      phones: ["9876543210", "  +919876543211 ", "9876543210"],
+      language: "en",
+      provider: "simulated",
+      companyName: "UDS",
+      promptConfig: {
+        asset_label: "POS machine",
+        reference_label: "POS machine number",
+        account_label: "company/bank",
+        account_name: ""
+      },
+      agentSettings: {
+        voice_preset: "indian_male_natural",
+        voice_id: "ignored",
+        tone: "warm",
+        prompt_enhancement: "",
+        self_improve_enabled: false
+      },
+      concurrencyLimit: 2
+    });
+
+    const uploadedFile = formData.get("file");
+    expect(uploadedFile).toBeInstanceOf(File);
+    const csv = await (uploadedFile as File).text();
+    expect(csv).toContain("9876543210");
+    expect(csv).toContain("+919876543211");
+    expect(formData.get("concurrency_limit")).toBe("2");
+    expect(formData.get("voice_id")).toBe("cedar");
+  });
+
+  it("parses phone-list input from textarea lines and commas", () => {
+    expect(parsePhoneList("9876543210,\n +91 9876543211 ;9876543212")).toEqual(["9876543210", "+919876543211", "9876543212"]);
+  });
+
+  it("builds a single-row CSV file for one-number quick checks", async () => {
+    const file = buildManualUploadFile({ phone: "9876543210", language: "hi" });
+    const csv = await file.text();
+    expect(csv.split("\n")).toHaveLength(2);
+    expect(csv).toContain("9876543210");
+    expect(csv).toContain("hi");
   });
 });

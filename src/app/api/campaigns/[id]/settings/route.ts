@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { buildPromptStudioPreview } from "@/domain/voice-agent";
 import { jsonError } from "@/lib/http";
 import { getCampaign, updateCampaign } from "@/services/campaigns/file-store";
 import { mergeCampaignAgentSettings } from "@/services/campaigns/engine";
@@ -24,8 +25,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         self_improve_enabled: Boolean(body.self_improve_enabled)
       })
     );
+    if (!campaign) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
 
-    return NextResponse.json({ campaign });
+    return NextResponse.json({
+      campaign,
+      prompt_studio: {
+        blended_preview: buildPromptStudioPreview({
+          companyName: campaign.company_name,
+          defaultLanguage: campaign.default_language,
+          promptConfig: campaign.prompt_config,
+          agentSettings: campaign.agent_settings,
+          selfImprovementNotes: campaign.self_improvement_notes
+        })
+      }
+    });
   } catch (error) {
     return jsonError(error);
   }

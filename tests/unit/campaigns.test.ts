@@ -70,6 +70,9 @@ describe("campaign engine", () => {
     expect(started.calls[0].tone_snapshot).toBe("patient");
     expect(started.calls[0].prompt_enhancement_snapshot).toBe("Ask for callback timing if the receiver is busy.");
     expect(started.calls[0].receiver_attitude).toBe("unknown");
+    expect(started.calls[0].qa_language_status).toBe("warn");
+    expect(started.calls[0].qa_tone_status).toBe("warn");
+    expect(started.calls[0].qa_notes).toContain("has not produced transcript evidence");
     expect(started.calls[0].status_history.at(-1)?.status).toBe("ringing");
   });
 
@@ -122,6 +125,8 @@ describe("campaign engine", () => {
 
     expect(completed.calls[0].disposition).toBe("confirmed_pickup");
     expect(completed.calls[0].confidence).toBeGreaterThan(0.8);
+    expect(completed.calls[0].qa_score).toBeGreaterThan(50);
+    expect(completed.calls[0].receiver_attitude_confidence).toBeGreaterThan(0);
     expect(completed.calls[1].disposition).toBe("manual_review");
     expect(completed.calls[1].confidence).toBeLessThan(0.5);
   });

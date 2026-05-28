@@ -41,7 +41,18 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           <Info label="Detected language" value={call.detected_language} />
           <Info label="Transcript status" value={call.transcript_status} />
           <Info label="Confidence" value={String(call.confidence)} />
+          <Info label="Receiver attitude" value={call.receiver_attitude ?? "unknown"} />
+          <Info label="Attitude confidence" value={String(call.receiver_attitude_confidence ?? 0)} />
           <Info label="Attempt" value={String(call.attempt_number)} />
+        </div>
+        <div className="mt-5 rounded-md border border-line bg-surface p-4">
+          <h2 className="text-sm font-semibold">Behavior Verification</h2>
+          <div className="mt-3 grid gap-4 md:grid-cols-4">
+            <Info label="Language QA" value={call.qa_language_status ?? "warn"} />
+            <Info label="Tone QA" value={call.qa_tone_status ?? "warn"} />
+            <Info label="QA score" value={String(call.qa_score ?? 0)} />
+            <Info label="QA notes" value={call.qa_notes ?? "No QA notes yet."} />
+          </div>
         </div>
         <Evidence title="Summary" value={call.summary_text || "No summary yet."} />
         <Evidence title="Transcript" value={call.transcript_text || "Transcript pending."} />

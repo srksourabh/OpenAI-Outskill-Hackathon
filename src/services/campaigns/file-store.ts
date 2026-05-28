@@ -80,6 +80,11 @@ function normalizeCampaign(campaign: Campaign): Campaign {
             agent_settings: agentSettings
           })),
       receiver_attitude: call.receiver_attitude ?? "unknown",
+      receiver_attitude_confidence: call.receiver_attitude_confidence ?? 0,
+      qa_language_status: call.qa_language_status ?? "warn",
+      qa_tone_status: call.qa_tone_status ?? "warn",
+      qa_score: call.qa_score ?? 0,
+      qa_notes: call.qa_notes ?? "No verification summary available yet.",
       improvement_note: call.improvement_note ?? "",
       status_history: call.status_history?.length ? call.status_history : buildStatusHistory(call.status, call.updated_at)
     }))

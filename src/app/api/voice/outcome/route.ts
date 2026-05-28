@@ -4,8 +4,9 @@ import { env } from "@/config/env";
 import { jsonError } from "@/lib/http";
 import { isRetryEligible } from "@/domain/calls";
 import { callOutcomeSchema } from "@/domain/voice-agent";
-import { buildImprovementNote, detectReceiverAttitude } from "@/services/campaigns/engine";
+import { buildImprovementNoteFromAttitude, classifyReceiverAttitude, evaluateCallBehaviorQuality } from "@/services/campaigns/engine";
 import { updateCampaign } from "@/services/campaigns/file-store";
+import type { CallRecord } from "@/services/campaigns/types";
 
 const bodySchema = z.object({
   call_id: z.string(),
@@ -25,16 +26,24 @@ export async function POST(request: Request) {
     const campaigns = await import("@/services/campaigns/file-store").then((module) => module.listCampaigns());
     for (const campaign of campaigns) {
       if (!campaign.calls.some((call) => call.id === body.call_id)) continue;
-      const receiverAttitude = detectReceiverAttitude(body.transcript_text);
-      const improvementNote = campaign.agent_settings.self_improve_enabled ? buildImprovementNote(body.transcript_text) : "";
-      await updateCampaign(campaign.id, (current) => ({
-        ...current,
-        self_improvement_notes: improvementNote || current.self_improvement_notes,
-        calls: current.calls.map((call) => {
+      await updateCampaign(campaign.id, (current) => {
+        let nextSelfImprovementNotes = current.self_improvement_notes;
+        const calls = current.calls.map((call) => {
           if (call.id !== body.call_id) return call;
-          const status = call.status === "invalid_number" || call.status === "not_connected" || call.status === "not_picked" ? call.status : "completed";
+          const attitudeMatch = classifyReceiverAttitude(body.transcript_text);
+          const improvementNote = current.agent_settings.self_improve_enabled ? buildImprovementNoteFromAttitude(attitudeMatch.attitude) : "";
+          if (improvementNote) nextSelfImprovementNotes = improvementNote;
+          const status: CallRecord["status"] =
+            call.status === "invalid_number" || call.status === "not_connected" || call.status === "not_picked" ? call.status : "completed";
+          const qaResult = evaluateCallBehaviorQuality({
+            transcriptText: body.transcript_text,
+            expectedLanguage: call.detected_language || current.default_language,
+            detectedLanguage: body.outcome.detected_language,
+            tone: call.tone_snapshot,
+            receiverAttitude: attitudeMatch.attitude
+          });
           saved = true;
-          return {
+          const updatedCall: CallRecord = {
             ...call,
             status,
             disposition: body.outcome.disposition,
@@ -46,13 +55,22 @@ export async function POST(request: Request) {
             confidence: body.outcome.confidence,
             detected_language: body.outcome.detected_language,
             retry_eligible: isRetryEligible(status, body.outcome.disposition),
-            receiver_attitude: receiverAttitude,
+            receiver_attitude: attitudeMatch.attitude,
+            receiver_attitude_confidence: attitudeMatch.confidence,
+            ...qaResult,
             improvement_note: improvementNote,
             status_history: [...call.status_history, { status, at: now, note: "Realtime voice outcome saved." }],
             updated_at: now
           };
-        })
-      }));
+          return updatedCall;
+        });
+
+        return {
+          ...current,
+          self_improvement_notes: nextSelfImprovementNotes,
+          calls
+        };
+      });
     }
     return NextResponse.json({ ok: saved });
   } catch (error) {

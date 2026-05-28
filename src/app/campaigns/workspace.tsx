@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
-import { buildQuickCheckFormData, resolveQuickCheckDefaults } from "./quick-check";
+import { buildPromptStudioPreview } from "@/domain/voice-agent";
+import { buildQuickCheckFormData, parsePhoneList, resolveQuickCheckDefaults } from "./quick-check";
 import { filterResultRows } from "./results-filter";
 
 type AgentSettings = {
@@ -46,6 +47,11 @@ type Campaign = {
     tone_snapshot: string;
     prompt_enhancement_snapshot: string;
     receiver_attitude: string;
+    receiver_attitude_confidence: number;
+    qa_language_status: "pass" | "warn" | "fail";
+    qa_tone_status: "pass" | "warn" | "fail";
+    qa_score: number;
+    qa_notes: string;
     improvement_note: string;
     status_history: Array<{ status: string; at: string; note: string }>;
     retry_eligible: boolean;
@@ -93,6 +99,29 @@ const defaultAgentSettings: AgentSettings = {
   prompt_enhancement: "",
   self_improve_enabled: false
 };
+
+const productName = "CallPilot Ops";
+const openAiBuiltInVoices = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
+const languageOptions = [
+  ["hi", "Hindi"],
+  ["en", "English"],
+  ["bn", "Bengali"],
+  ["pa", "Punjabi"],
+  ["gu", "Gujarati"],
+  ["mr", "Marathi"],
+  ["ta", "Tamil"],
+  ["te", "Telugu"],
+  ["ml", "Malayalam"],
+  ["kn", "Kannada"],
+  ["or", "Odia"],
+  ["as", "Assamese"]
+] as const;
+
+function resolveVoiceId(voicePreset: AgentSettings["voice_preset"], voiceId: string) {
+  if (voicePreset === "indian_female_natural") return "marin";
+  if (voicePreset === "indian_male_natural") return "cedar";
+  return voiceId.trim() || "marin";
+}
 
 export function CampaignWorkspace() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -180,8 +209,9 @@ export function CampaignWorkspace() {
     <main className="min-h-dvh overflow-x-hidden bg-surface text-ink">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-line bg-rail p-5 text-white lg:border-b-0 lg:border-r">
-          <div className="text-lg font-semibold">Calling Ops</div>
-          <p className="mt-2 text-sm text-white/70">Multilingual outbound AI campaigns</p>
+          <div className="text-xs font-semibold uppercase tracking-wide text-white/70">Hackathon Build</div>
+          <div className="mt-2 text-xl font-semibold">{productName}</div>
+          <p className="mt-2 text-sm text-white/70">Multilingual outbound AI campaigns with synced agent controls</p>
           <nav className="mt-8 space-y-2 text-sm">
             <a className="block rounded-md bg-white/10 px-3 py-2" href="/campaigns">Campaigns</a>
             <a className="block rounded-md px-3 py-2 text-white/75" href="/api/health">Health</a>
@@ -191,8 +221,8 @@ export function CampaignWorkspace() {
         <section className="min-w-0 p-4 sm:p-6">
           <header className="flex flex-col gap-4 border-b border-line pb-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold">Campaign command center</h1>
-              <p className="mt-1 text-sm text-muted">Upload Excel/CSV, run simultaneous calls, review evidence, export result CSV.</p>
+              <h1 className="text-2xl font-semibold">{productName} Command Center</h1>
+              <p className="mt-1 text-sm text-muted">Single number, number list, or CSV upload with mirrored agent configuration and campaign controls.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -224,6 +254,7 @@ export function CampaignWorkspace() {
               {message ? <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm">{message}</div> : null}
               {uploadSummary ? <UploadSummaryPanel summary={uploadSummary} /> : null}
               {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
+              {selected ? <PromptStudioPanel busy={busy} campaign={selected} onSave={saveAgentSettings} /> : null}
               {selected ? <AgentSettingsPanel busy={busy} campaign={selected} onSave={saveAgentSettings} /> : null}
               {selected ? <ResultsTable rows={results?.rows ?? []} /> : null}
             </div>
@@ -236,7 +267,11 @@ export function CampaignWorkspace() {
 
 function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; campaignDefaults?: Campaign; onUpload: (formData: FormData) => void }) {
   const quickCheckDefaults = useMemo(() => resolveQuickCheckDefaults(campaignDefaults), [campaignDefaults]);
+  const [intakeMode, setIntakeMode] = useState<"single" | "list" | "file">("single");
+  const [manualCampaignName, setManualCampaignName] = useState("Manual number check");
+  const [fileCampaignName, setFileCampaignName] = useState("Hindi pickup readiness demo");
   const [manualPhone, setManualPhone] = useState("");
+  const [manualPhoneList, setManualPhoneList] = useState("");
   const [manualLanguage, setManualLanguage] = useState(quickCheckDefaults.language);
   const [manualProvider, setManualProvider] = useState(quickCheckDefaults.provider);
   const [manualCompanyName, setManualCompanyName] = useState(quickCheckDefaults.companyName);
@@ -244,6 +279,12 @@ function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; camp
   const [manualReferenceLabel, setManualReferenceLabel] = useState(quickCheckDefaults.promptConfig.reference_label);
   const [manualAccountLabel, setManualAccountLabel] = useState(quickCheckDefaults.promptConfig.account_label);
   const [manualAccountName, setManualAccountName] = useState(quickCheckDefaults.promptConfig.account_name);
+  const [manualVoicePreset, setManualVoicePreset] = useState<AgentSettings["voice_preset"]>(quickCheckDefaults.agentSettings.voice_preset);
+  const [manualVoiceId, setManualVoiceId] = useState(quickCheckDefaults.agentSettings.voice_id);
+  const [manualTone, setManualTone] = useState<AgentSettings["tone"]>(quickCheckDefaults.agentSettings.tone);
+  const [manualPromptEnhancement, setManualPromptEnhancement] = useState(quickCheckDefaults.agentSettings.prompt_enhancement);
+  const [manualSelfImprove, setManualSelfImprove] = useState(quickCheckDefaults.agentSettings.self_improve_enabled);
+  const [manualConcurrency, setManualConcurrency] = useState(5);
 
   useEffect(() => {
     setManualLanguage(quickCheckDefaults.language);
@@ -253,17 +294,27 @@ function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; camp
     setManualReferenceLabel(quickCheckDefaults.promptConfig.reference_label);
     setManualAccountLabel(quickCheckDefaults.promptConfig.account_label);
     setManualAccountName(quickCheckDefaults.promptConfig.account_name);
+    setManualVoicePreset(quickCheckDefaults.agentSettings.voice_preset);
+    setManualVoiceId(quickCheckDefaults.agentSettings.voice_id);
+    setManualTone(quickCheckDefaults.agentSettings.tone);
+    setManualPromptEnhancement(quickCheckDefaults.agentSettings.prompt_enhancement);
+    setManualSelfImprove(quickCheckDefaults.agentSettings.self_improve_enabled);
+    setManualConcurrency(5);
   }, [quickCheckDefaults]);
 
   function submitManualCheck(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!manualPhone.trim()) return;
+    const phones = intakeMode === "single" ? [manualPhone.trim()] : parsePhoneList(manualPhoneList);
+    if (phones.length === 0) return;
 
     onUpload(
       buildQuickCheckFormData({
-        phone: manualPhone,
+        campaignName: manualCampaignName,
+        phone: phones[0],
+        phones,
         language: manualLanguage,
         provider: manualProvider,
+        concurrencyLimit: manualConcurrency,
         companyName: manualCompanyName,
         promptConfig: {
           asset_label: manualAssetLabel,
@@ -271,7 +322,13 @@ function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; camp
           account_label: manualAccountLabel,
           account_name: manualAccountName
         },
-        agentSettings: quickCheckDefaults.agentSettings
+        agentSettings: {
+          voice_preset: manualVoicePreset,
+          voice_id: resolveVoiceId(manualVoicePreset, manualVoiceId),
+          tone: manualTone,
+          prompt_enhancement: manualPromptEnhancement,
+          self_improve_enabled: manualSelfImprove
+        }
       })
     );
   }
@@ -279,160 +336,320 @@ function UploadPanel({ busy, campaignDefaults, onUpload }: { busy: boolean; camp
   return (
     <section className="rounded-lg border border-line bg-panel p-4">
       <div>
-        <h2 className="text-lg font-semibold">New upload</h2>
-        <p className="mt-1 text-sm text-muted">
-          Upload `.xlsx` or `.csv`. Phone-only sheets work now if they include a header like `phone`, `mobile`, or `mobile_number`.
-        </p>
+        <h2 className="text-lg font-semibold">Intake and agent setup</h2>
+        <p className="mt-1 text-sm text-muted">Use one number, a list of numbers, or spreadsheet upload. Agent options here mirror the campaign Agent Settings panel.</p>
         <a className="mt-3 inline-flex text-sm font-medium text-accent" href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>
       </div>
-
-      <form
-        className="mt-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const form = event.currentTarget;
-          onUpload(new FormData(form));
-        }}
-      >
-        <label className="block text-sm font-medium">
-          Campaign name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" defaultValue="Hindi pickup readiness demo" />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Company name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" defaultValue={defaultPromptConfig.companyName} />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Asset label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" defaultValue={defaultPromptConfig.assetLabel} />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Reference label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" defaultValue={defaultPromptConfig.referenceLabel} />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Account label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_label" defaultValue={defaultPromptConfig.accountLabel} />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Account name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_name" defaultValue={defaultPromptConfig.accountName} placeholder="HDFC Bank, SBI, Pine Labs, etc." />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Calling mode
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider" defaultValue="plivo">
-            <option value="plivo">Plivo live call</option>
-            <option value="simulated">Simulated demo</option>
-          </select>
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Default language
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" defaultValue="en">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="ta">Tamil</option>
-            <option value="bn">Bengali</option>
-          </select>
-        </label>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-medium">
-            Voice preset
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="voice_preset" defaultValue={defaultAgentSettings.voice_preset}>
-              <option value="indian_female_natural">Indian female natural</option>
-              <option value="indian_male_natural">Indian male natural</option>
-              <option value="openai_custom">OpenAI custom voice</option>
-            </select>
-          </label>
-          <label className="block text-sm font-medium">
-            Tone
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="tone" defaultValue={defaultAgentSettings.tone}>
-              <option value="warm">Warm</option>
-              <option value="polite">Polite</option>
-              <option value="direct">Direct</option>
-              <option value="patient">Patient</option>
-              <option value="assertive_respectful">Assertive but respectful</option>
-            </select>
-          </label>
-        </div>
-        <input name="voice_id" type="hidden" value={defaultAgentSettings.voice_id} readOnly />
-        <input name="prompt_enhancement" type="hidden" value={defaultAgentSettings.prompt_enhancement} readOnly />
-        <input name="self_improve_enabled" type="hidden" value={String(defaultAgentSettings.self_improve_enabled)} readOnly />
-        <label className="mt-3 block text-sm font-medium">
-          Concurrency limit
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" min={1} max={25} name="concurrency_limit" type="number" defaultValue={5} />
-        </label>
-        <label className="mt-3 block text-sm font-medium">
-          Contact file
-          <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
-        </label>
-        <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy}>
-          Upload and validate
+      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border border-line bg-surface p-1 text-sm">
+        <button
+          className={`rounded px-2 py-2 font-medium ${intakeMode === "single" ? "bg-panel shadow-sm" : "text-muted"}`}
+          type="button"
+          onClick={() => setIntakeMode("single")}
+        >
+          Single number
         </button>
-      </form>
-
-      <div className="my-5 border-t border-line" />
-
-      <form className="space-y-3" onSubmit={submitManualCheck}>
-        <div>
-          <h3 className="text-base font-semibold">Quick number check</h3>
-          <p className="mt-1 text-sm text-muted">Create a one-contact test campaign without preparing a spreadsheet.</p>
-        </div>
-        <label className="block text-sm font-medium">
-          Mobile number
-          <input
-            className="mt-1 w-full rounded-md border border-line px-3 py-2"
-            placeholder="+919876543210 or 9876543210"
-            value={manualPhone}
-            onChange={(event) => setManualPhone(event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium">
-          Company name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
-        </label>
-        <label className="block text-sm font-medium">
-          Asset label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
-        </label>
-        <label className="block text-sm font-medium">
-          Reference label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
-        </label>
-        <label className="block text-sm font-medium">
-          Account label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
-        </label>
-        <label className="block text-sm font-medium">
-          Account name
-          <input
-            className="mt-1 w-full rounded-md border border-line px-3 py-2"
-            placeholder="Optional bank or company name"
-            value={manualAccountName}
-            onChange={(event) => setManualAccountName(event.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium">
-          Calling mode
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
-            <option value="plivo">Plivo live call</option>
-            <option value="simulated">Simulated demo</option>
-          </select>
-        </label>
-        <label className="block text-sm font-medium">
-          Preferred language
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="ta">Tamil</option>
-            <option value="bn">Bengali</option>
-          </select>
-        </label>
-        <button className="w-full rounded-md border border-line bg-panel px-4 py-2 font-semibold disabled:opacity-50" disabled={busy || !manualPhone.trim()}>
-          Create quick-check campaign
+        <button
+          className={`rounded px-2 py-2 font-medium ${intakeMode === "list" ? "bg-panel shadow-sm" : "text-muted"}`}
+          type="button"
+          onClick={() => setIntakeMode("list")}
+        >
+          Number list
         </button>
-      </form>
+        <button
+          className={`rounded px-2 py-2 font-medium ${intakeMode === "file" ? "bg-panel shadow-sm" : "text-muted"}`}
+          type="button"
+          onClick={() => setIntakeMode("file")}
+        >
+          CSV/XLSX upload
+        </button>
+      </div>
+
+      {intakeMode === "file" ? (
+        <form
+          className="mt-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+            formData.set("voice_id", resolveVoiceId(manualVoicePreset, manualVoiceId));
+            onUpload(formData);
+          }}
+        >
+          <label className="block text-sm font-medium">
+            Campaign name
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" value={fileCampaignName} onChange={(event) => setFileCampaignName(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Company name
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Asset label
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Reference label
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Account label
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_label" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Account name
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              name="account_name"
+              placeholder="HDFC Bank, SBI, Pine Labs, etc."
+              value={manualAccountName}
+              onChange={(event) => setManualAccountName(event.target.value)}
+            />
+          </label>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Calling mode
+              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+                <option value="plivo">Plivo live call</option>
+                <option value="simulated">Simulated demo</option>
+              </select>
+            </label>
+            <label className="block text-sm font-medium">
+              Default language
+              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
+                {languageOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3 rounded-md border border-line bg-surface p-3">
+            <h3 className="text-sm font-semibold">Agent options (mirrors Agent Settings)</h3>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Voice preset
+                <select
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  name="voice_preset"
+                  value={manualVoicePreset}
+                  onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}
+                >
+                  <option value="indian_female_natural">Indian female natural</option>
+                  <option value="indian_male_natural">Indian male natural</option>
+                  <option value="openai_custom">OpenAI custom voice</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Tone
+                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="tone" value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
+                  <option value="warm">Warm</option>
+                  <option value="polite">Polite</option>
+                  <option value="direct">Direct</option>
+                  <option value="patient">Patient</option>
+                  <option value="assertive_respectful">Assertive but respectful</option>
+                </select>
+              </label>
+            </div>
+            {manualVoicePreset === "openai_custom" ? (
+              <label className="mt-3 block text-sm font-medium">
+                OpenAI custom voice ID
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
+              </label>
+            ) : null}
+            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}.</p>
+            <label className="mt-3 block text-sm font-medium">
+              Prompt enhancement
+              <textarea
+                className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
+                maxLength={1200}
+                name="prompt_enhancement"
+                value={manualPromptEnhancement}
+                onChange={(event) => setManualPromptEnhancement(event.target.value)}
+              />
+            </label>
+            <label className="mt-3 flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" checked={manualSelfImprove} onChange={(event) => setManualSelfImprove(event.target.checked)} />
+              Self-improve future calls from short call notes
+            </label>
+          </div>
+          <input name="voice_id" type="hidden" value={resolveVoiceId(manualVoicePreset, manualVoiceId)} readOnly />
+          <input name="self_improve_enabled" type="hidden" value={String(manualSelfImprove)} readOnly />
+          <label className="mt-3 block text-sm font-medium">
+            Concurrency limit
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              min={1}
+              max={25}
+              name="concurrency_limit"
+              type="number"
+              value={manualConcurrency}
+              onChange={(event) => {
+                const nextValue = Number(event.target.value);
+                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
+              }}
+            />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Contact file
+            <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
+          </label>
+          <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy}>
+            Upload and validate
+          </button>
+        </form>
+      ) : (
+        <form className="mt-4 space-y-3" onSubmit={submitManualCheck}>
+          <div>
+            <h3 className="text-base font-semibold">{intakeMode === "single" ? "Quick number check" : "Quick number-list check"}</h3>
+            <p className="mt-1 text-sm text-muted">
+              {intakeMode === "single"
+                ? "Create a one-contact test campaign without preparing a spreadsheet."
+                : "Paste multiple numbers separated by new lines, commas, or semicolons."}
+            </p>
+          </div>
+          <label className="block text-sm font-medium">
+            Campaign name
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCampaignName} onChange={(event) => setManualCampaignName(event.target.value)} />
+          </label>
+          {intakeMode === "single" ? (
+            <label className="block text-sm font-medium">
+              Mobile number
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                placeholder="+919876543210 or 9876543210"
+                value={manualPhone}
+                onChange={(event) => setManualPhone(event.target.value)}
+              />
+            </label>
+          ) : (
+            <label className="block text-sm font-medium">
+              Mobile numbers
+              <textarea
+                className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+                placeholder={"+919876543210\n9876543211\n9876543212"}
+                value={manualPhoneList}
+                onChange={(event) => setManualPhoneList(event.target.value)}
+              />
+            </label>
+          )}
+          <label className="block text-sm font-medium">
+            Company name
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+          </label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Asset label
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+            </label>
+            <label className="block text-sm font-medium">
+              Reference label
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Account label
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
+            </label>
+            <label className="block text-sm font-medium">
+              Account name
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                placeholder="Optional bank or company name"
+                value={manualAccountName}
+                onChange={(event) => setManualAccountName(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
+              Calling mode
+              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+                <option value="plivo">Plivo live call</option>
+                <option value="simulated">Simulated demo</option>
+              </select>
+            </label>
+            <label className="block text-sm font-medium">
+              Preferred language
+              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
+                {languageOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="rounded-md border border-line bg-surface p-3">
+            <h3 className="text-sm font-semibold">Agent options (mirrors Agent Settings)</h3>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Voice preset
+                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualVoicePreset} onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
+                  <option value="indian_female_natural">Indian female natural</option>
+                  <option value="indian_male_natural">Indian male natural</option>
+                  <option value="openai_custom">OpenAI custom voice</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Tone
+                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
+                  <option value="warm">Warm</option>
+                  <option value="polite">Polite</option>
+                  <option value="direct">Direct</option>
+                  <option value="patient">Patient</option>
+                  <option value="assertive_respectful">Assertive but respectful</option>
+                </select>
+              </label>
+            </div>
+            {manualVoicePreset === "openai_custom" ? (
+              <label className="mt-3 block text-sm font-medium">
+                OpenAI custom voice ID
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
+              </label>
+            ) : null}
+            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}.</p>
+            <label className="mt-3 block text-sm font-medium">
+              Prompt enhancement
+              <textarea
+                className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
+                maxLength={1200}
+                value={manualPromptEnhancement}
+                onChange={(event) => setManualPromptEnhancement(event.target.value)}
+              />
+            </label>
+            <label className="mt-3 flex items-center gap-2 text-sm font-medium">
+              <input checked={manualSelfImprove} type="checkbox" onChange={(event) => setManualSelfImprove(event.target.checked)} />
+              Self-improve future calls from short call notes
+            </label>
+          </div>
+          <label className="block text-sm font-medium">
+            Concurrency limit
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              min={1}
+              max={25}
+              type="number"
+              value={manualConcurrency}
+              onChange={(event) => {
+                const nextValue = Number(event.target.value);
+                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
+              }}
+            />
+          </label>
+          <button
+            className="w-full rounded-md border border-line bg-panel px-4 py-2 font-semibold disabled:opacity-50"
+            disabled={
+              busy || (intakeMode === "single" ? !manualPhone.trim() : parsePhoneList(manualPhoneList).length === 0)
+            }
+          >
+            {intakeMode === "single" ? "Create quick-check campaign" : "Create list-check campaign"}
+          </button>
+        </form>
+      )}
     </section>
   );
 }
@@ -489,6 +706,92 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
   );
 }
 
+function PromptStudioPanel({
+  busy,
+  campaign,
+  onSave
+}: {
+  busy: boolean;
+  campaign: Campaign;
+  onSave: (campaignId: string, settings: AgentSettings & { default_language: string }) => void;
+}) {
+  const settings = campaign.agent_settings ?? defaultAgentSettings;
+  const [promptEnhancement, setPromptEnhancement] = useState(settings.prompt_enhancement);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setPromptEnhancement((campaign.agent_settings ?? defaultAgentSettings).prompt_enhancement);
+    setCopied(false);
+  }, [campaign.id, campaign.agent_settings]);
+
+  const blendedPromptPreview = useMemo(
+    () =>
+      buildPromptStudioPreview({
+        companyName: campaign.company_name,
+        defaultLanguage: campaign.default_language,
+        promptConfig: campaign.prompt_config,
+        agentSettings: {
+          ...campaign.agent_settings,
+          prompt_enhancement: promptEnhancement
+        },
+        selfImprovementNotes: campaign.self_improvement_notes
+      }),
+    [campaign.company_name, campaign.default_language, campaign.prompt_config, campaign.agent_settings, campaign.self_improvement_notes, promptEnhancement]
+  );
+
+  async function copyPreview() {
+    await navigator.clipboard.writeText(blendedPromptPreview);
+    setCopied(true);
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSave(campaign.id, {
+      default_language: campaign.default_language,
+      voice_preset: settings.voice_preset,
+      voice_id: settings.voice_id,
+      tone: settings.tone,
+      prompt_enhancement: promptEnhancement,
+      self_improve_enabled: settings.self_improve_enabled
+    });
+  }
+
+  return (
+    <section className="rounded-lg border border-line bg-panel p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Prompt Studio</h2>
+          <p className="text-sm text-muted">Edit your operator prompt and preview the blended system prompt for future calls.</p>
+        </div>
+        <button className="rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium disabled:opacity-50" disabled={busy} onClick={copyPreview} type="button">
+          {copied ? "Copied" : "Copy preview"}
+        </button>
+      </div>
+      <form className="mt-4 space-y-3" onSubmit={submit}>
+        <label className="block text-sm font-medium">
+          Prompt window
+          <textarea
+            className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+            maxLength={1200}
+            placeholder="Add operational guidance that should blend into the system prompt."
+            value={promptEnhancement}
+            onChange={(event) => setPromptEnhancement(event.target.value)}
+          />
+        </label>
+        <div className="rounded-md border border-line bg-surface p-3">
+          <div className="text-xs text-muted">Blended system prompt preview</div>
+          <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap font-sans text-sm">{blendedPromptPreview}</pre>
+        </div>
+        <div className="flex justify-end">
+          <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy}>
+            Save prompt window
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 function AgentSettingsPanel({
   busy,
   campaign,
@@ -521,7 +824,7 @@ function AgentSettingsPanel({
     onSave(campaign.id, {
       default_language: language,
       voice_preset: voicePreset,
-      voice_id: voicePreset === "indian_male_natural" ? "cedar" : voicePreset === "indian_female_natural" ? "marin" : voiceId,
+      voice_id: resolveVoiceId(voicePreset, voiceId),
       tone,
       prompt_enhancement: promptEnhancement,
       self_improve_enabled: selfImprove
@@ -549,18 +852,11 @@ function AgentSettingsPanel({
         <label className="block text-sm font-medium">
           Default language
           <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={language} onChange={(event) => setLanguage(event.target.value)}>
-            <option value="hi">Hindi</option>
-            <option value="en">English</option>
-            <option value="bn">Bengali</option>
-            <option value="pa">Punjabi</option>
-            <option value="gu">Gujarati</option>
-            <option value="mr">Marathi</option>
-            <option value="ta">Tamil</option>
-            <option value="te">Telugu</option>
-            <option value="ml">Malayalam</option>
-            <option value="kn">Kannada</option>
-            <option value="or">Odia</option>
-            <option value="as">Assamese</option>
+            {languageOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
         {voicePreset === "openai_custom" ? (
@@ -569,6 +865,7 @@ function AgentSettingsPanel({
             <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={voiceId} onChange={(event) => setVoiceId(event.target.value)} />
           </label>
         ) : null}
+        {voicePreset === "openai_custom" ? <p className="text-xs text-muted md:col-span-2">Built-in voice IDs: {openAiBuiltInVoices.join(", ")}.</p> : null}
         <label className="block text-sm font-medium">
           Tone
           <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={tone} onChange={(event) => setTone(event.target.value as AgentSettings["tone"])}>
@@ -607,16 +904,17 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dispositionFilter, setDispositionFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
+  const [qaFilter, setQaFilter] = useState("all");
   const filteredRows = useMemo(
-    () => filterResultRows(rows, { status: statusFilter, disposition: dispositionFilter, language: languageFilter }),
-    [rows, statusFilter, dispositionFilter, languageFilter]
+    () => filterResultRows(rows, { status: statusFilter, disposition: dispositionFilter, language: languageFilter, qa: qaFilter }),
+    [rows, statusFilter, dispositionFilter, languageFilter, qaFilter]
   );
 
   return (
     <section className="overflow-hidden rounded-lg border border-line bg-panel">
       <div className="border-b border-line p-4">
         <h2 className="text-lg font-semibold">Results and uploaded details</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 grid gap-3 md:grid-cols-4">
           <label className="text-sm font-medium">
             Status
             <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -652,18 +950,21 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
             Language
             <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={languageFilter} onChange={(event) => setLanguageFilter(event.target.value)}>
               <option value="all">All languages</option>
-              <option value="hi">Hindi</option>
-              <option value="en">English</option>
-              <option value="bn">Bengali</option>
-              <option value="pa">Punjabi</option>
-              <option value="gu">Gujarati</option>
-              <option value="mr">Marathi</option>
-              <option value="ta">Tamil</option>
-              <option value="te">Telugu</option>
-              <option value="ml">Malayalam</option>
-              <option value="kn">Kannada</option>
-              <option value="or">Odia</option>
-              <option value="as">Assamese</option>
+              {languageOptions.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium">
+            QA verification
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={qaFilter} onChange={(event) => setQaFilter(event.target.value)}>
+              <option value="all">All QA scores</option>
+              <option value="pass">Pass</option>
+              <option value="warn">Warn</option>
+              <option value="fail">Fail</option>
+              <option value="none">No score</option>
             </select>
           </label>
         </div>
@@ -684,10 +985,12 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
               <InfoField label="Order" value={String(row.order_id ?? "")} />
               <InfoField label="Language" value={String(row.language_hint ?? "")} />
               <InfoField label="Detected" value={row.call?.detected_language ?? "-"} />
+              <InfoField label="QA score" value={row.call ? String(row.call.qa_score) : "-"} />
               <InfoField label="Attitude" value={row.call?.receiver_attitude ?? "unknown"} />
               <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
               <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
             </div>
+            {row.call ? <QaBadge call={row.call} /> : null}
             <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
             <div className="mt-3 text-sm">
               {row.call ? <a className="mr-3 text-accent" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
@@ -701,7 +1004,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-surface">
             <tr>
-              {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "Next", "Recording", "Remarks"].map((header) => (
+              {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "QA", "Next", "Recording", "Remarks"].map((header) => (
                 <th className="border-b border-line px-3 py-2 font-semibold" key={header}>{header}</th>
               ))}
             </tr>
@@ -718,6 +1021,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                   <td className="px-3 py-2">{row.call?.status ?? "not queued"}</td>
                   <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
                   <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
+                  <td className="px-3 py-2">{row.call ? <QaBadge call={row.call} compact /> : "-"}</td>
                   <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
                   <td className="px-3 py-2">
                     {row.call ? <a className="mr-2 text-accent" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
@@ -727,7 +1031,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                 </tr>
                 {row.call ? (
                   <tr className="border-b border-line bg-surface/60">
-                    <td className="px-3 py-2" colSpan={11}>
+                    <td className="px-3 py-2" colSpan={12}>
                       <CallHistoryDetails call={row.call} />
                     </td>
                   </tr>
@@ -736,7 +1040,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
             ))}
             {filteredRows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-muted" colSpan={11}>No results match the current filters.</td>
+                <td className="px-3 py-8 text-center text-muted" colSpan={12}>No results match the current filters.</td>
               </tr>
             ) : null}
           </tbody>
@@ -754,9 +1058,19 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
         <InfoField label="Live status" value={call.status} />
         <InfoField label="Last call" value={call.last_call_time ?? "-"} />
         <InfoField label="Receiver attitude" value={call.receiver_attitude ?? "unknown"} />
+        <InfoField label="Attitude confidence" value={String(call.receiver_attitude_confidence ?? 0)} />
         <InfoField label="Voice" value={`${call.voice_preset_snapshot ?? "-"} (${call.voice_id_snapshot ?? "-"})`} />
         <InfoField label="Tone" value={call.tone_snapshot ?? "-"} />
         <InfoField label="Transcript" value={call.transcript_status ?? "missing"} />
+      </div>
+      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+        <div className="text-xs text-muted">Behavior verification</div>
+        <div className="mt-2 grid gap-2 md:grid-cols-4">
+          <InfoField label="Language QA" value={call.qa_language_status ?? "warn"} />
+          <InfoField label="Tone QA" value={call.qa_tone_status ?? "warn"} />
+          <InfoField label="QA score" value={String(call.qa_score ?? 0)} />
+          <InfoField label="Summary" value={call.qa_notes ?? "No QA notes yet."} />
+        </div>
       </div>
       {call.prompt_enhancement_snapshot ? (
         <div className="mt-3 rounded-md border border-line bg-panel p-3">
@@ -786,6 +1100,23 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
       ) : null}
     </details>
   );
+}
+
+function QaBadge({ call, compact = false }: { call: Campaign["calls"][number]; compact?: boolean }) {
+  if ((call.transcript_status ?? "missing") === "missing") {
+    return <span className="inline-flex rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">QA pending</span>;
+  }
+  const score = call.qa_score ?? 0;
+  const level = score >= 75 ? "pass" : score >= 50 ? "warn" : "fail";
+  const label = `QA ${level.toUpperCase()} (${score})`;
+  const className =
+    level === "pass"
+      ? "bg-green-50 text-green-700 border-green-200"
+      : level === "warn"
+        ? "bg-amber-50 text-amber-700 border-amber-200"
+        : "bg-red-50 text-red-700 border-red-200";
+
+  return <span className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${className}`}>{compact ? score : label}</span>;
 }
 
 function UploadSummaryPanel({ summary }: { summary: UploadSummary }) {

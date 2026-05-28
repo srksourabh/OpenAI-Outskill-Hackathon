@@ -13,9 +13,9 @@
 body {
   margin: 0;
   overflow-x: hidden;
-  background: #f7f5ef;
+  background: #f2f4f3;
   color: #1f2523;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 button,

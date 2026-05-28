@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isRetryEligible, type CallStatus } from "@/domain/calls";
 import { getEffectiveLanguage } from "@/domain/languages";
-import { getAgentSettings, getPromptConfig, type AgentSettingsInput } from "@/domain/voice-agent";
+import { getAgentSettings, getPromptConfig, type AgentSettingsInput, type AgentTone, type BehaviorQaStatus, type ReceiverAttitude } from "@/domain/voice-agent";
 import { classifyTranscript } from "@/services/ai/classifier";
 import type { ParsedContact } from "@/services/ingestion/types";
 import type { CallRecord, Campaign, CampaignStats, ContactRecord } from "./types";
@@ -15,6 +15,19 @@ type CreateCampaignInput = {
   provider?: Campaign["provider"];
   promptConfig?: Campaign["prompt_config"];
   agentSettings?: AgentSettingsInput;
+};
+
+type ReceiverAttitudeMatch = {
+  attitude: ReceiverAttitude;
+  confidence: number;
+  signals: string[];
+};
+
+type BehaviorVerificationResult = {
+  qa_language_status: BehaviorQaStatus;
+  qa_tone_status: BehaviorQaStatus;
+  qa_score: number;
+  qa_notes: string;
 };
 
 const demoTranscripts = [
@@ -121,6 +134,14 @@ export function simulateCallOutcomes(
 
     const transcript = transcripts[index % transcripts.length] ?? "";
     const outcome = classifyTranscript(transcript);
+    const attitudeMatch = classifyReceiverAttitude(transcript);
+    const qaResult = evaluateCallBehaviorQuality({
+      transcriptText: transcript,
+      expectedLanguage: call.detected_language,
+      detectedLanguage: outcome.detected_language,
+      tone: call.tone_snapshot,
+      receiverAttitude: attitudeMatch.attitude
+    });
     return {
       ...call,
       status: "completed",
@@ -134,8 +155,10 @@ export function simulateCallOutcomes(
       detected_language: outcome.detected_language,
       recording_url: `https://recordings.example.com/${call.id}.mp3`,
       retry_eligible: isRetryEligible("completed", outcome.disposition),
-      receiver_attitude: detectReceiverAttitude(transcript),
-      improvement_note: campaign.agent_settings.self_improve_enabled ? buildImprovementNote(transcript) : "",
+      receiver_attitude: attitudeMatch.attitude,
+      receiver_attitude_confidence: attitudeMatch.confidence,
+      improvement_note: campaign.agent_settings.self_improve_enabled ? buildImprovementNoteFromAttitude(attitudeMatch.attitude) : "",
+      ...qaResult,
       status_history: [...call.status_history, { status: "completed", at: now, note: "Simulated callback completed." }],
       last_call_time: now,
       updated_at: now
@@ -189,7 +212,12 @@ function finishTerminal(
     confidence: 1,
     retry_eligible: isRetryEligible(status, disposition),
     receiver_attitude: "unknown",
+    receiver_attitude_confidence: 0,
     improvement_note: "",
+    qa_language_status: "warn",
+    qa_tone_status: "warn",
+    qa_score: 55,
+    qa_notes: "No transcript available for language/tone verification.",
     status_history: [...call.status_history, { status, at: now, note: summary }],
     last_call_time: now,
     updated_at: now
@@ -215,6 +243,11 @@ export function buildCallAgentSnapshot(campaign: Pick<Campaign, "agent_settings"
     tone_snapshot: settings.tone,
     prompt_enhancement_snapshot: settings.prompt_enhancement,
     receiver_attitude: "unknown" as const,
+    receiver_attitude_confidence: 0,
+    qa_language_status: "warn" as const,
+    qa_tone_status: "warn" as const,
+    qa_score: 0,
+    qa_notes: "Call has not produced transcript evidence yet.",
     improvement_note: ""
   };
 }
@@ -227,19 +260,92 @@ export function buildStatusHistory(status: CallStatus, now: string) {
   ];
 }
 
-export function detectReceiverAttitude(transcript: string) {
+export function classifyReceiverAttitude(transcript: string): ReceiverAttitudeMatch {
   const normalized = transcript.toLowerCase();
-  if (/(busy|later|callback|call back|kal|baad)/.test(normalized)) return "busy" as const;
-  if (/(thank|yes|haan|ready|sure|ok)/.test(normalized)) return "cooperative" as const;
-  if (/(who|kaun|why|confused|samajh)/.test(normalized)) return "confused" as const;
-  if (/(stop|angry|rude|don't call|do not call)/.test(normalized)) return "rude" as const;
-  return "unknown" as const;
+  const rules: Array<{ attitude: ReceiverAttitude; regex: RegExp; confidence: number }> = [
+    { attitude: "rude", regex: /(stop|angry|rude|don't call|do not call|shut up|nonsense)/, confidence: 0.92 },
+    { attitude: "busy", regex: /(busy|later|callback|call back|kal|baad|meeting|driving)/, confidence: 0.88 },
+    { attitude: "suspicious", regex: /(proof|fraud|scam|who are you|why calling|otp|fake)/, confidence: 0.86 },
+    { attitude: "confused", regex: /(who|kaun|why|confused|samajh|what is this|not clear)/, confidence: 0.8 },
+    { attitude: "polite", regex: /(please|thank you|dhanyavad|ji|kindly)/, confidence: 0.76 },
+    { attitude: "cooperative", regex: /(thank|yes|haan|ready|sure|ok|proceed|confirm)/, confidence: 0.78 }
+  ];
+
+  for (const rule of rules) {
+    const matches = normalized.match(rule.regex);
+    if (!matches) continue;
+    return { attitude: rule.attitude, confidence: rule.confidence, signals: matches };
+  }
+
+  return { attitude: "unknown", confidence: 0.35, signals: [] };
+}
+
+export function detectReceiverAttitude(transcript: string) {
+  return classifyReceiverAttitude(transcript).attitude;
 }
 
 export function buildImprovementNote(transcript: string) {
-  const attitude = detectReceiverAttitude(transcript);
+  return buildImprovementNoteFromAttitude(detectReceiverAttitude(transcript));
+}
+
+export function buildImprovementNoteFromAttitude(attitude: ReceiverAttitude) {
   if (attitude === "busy") return "When receivers sound busy, ask for a callback time before repeating details.";
   if (attitude === "confused") return "When receivers sound confused, identify the company and reference once in simple words.";
   if (attitude === "rude") return "When receivers sound rude, keep the response calm and short.";
-  return "";
+  if (attitude === "suspicious") return "When receivers sound suspicious, state company and reference clearly before asking readiness.";
+  if (attitude === "polite") return "When receivers are polite, keep the script warm and efficient.";
+  if (attitude === "cooperative") return "When receivers are cooperative, confirm readiness quickly and close cleanly.";
+  return "Collect one clarifying question before closing when response intent is unclear.";
+}
+
+export function evaluateCallBehaviorQuality({
+  transcriptText,
+  expectedLanguage,
+  detectedLanguage,
+  tone,
+  receiverAttitude
+}: {
+  transcriptText: string;
+  expectedLanguage: string;
+  detectedLanguage: string;
+  tone: AgentTone;
+  receiverAttitude: ReceiverAttitude;
+}): BehaviorVerificationResult {
+  const normalizedTranscript = transcriptText.trim().toLowerCase();
+  if (!normalizedTranscript) {
+    return {
+      qa_language_status: "fail",
+      qa_tone_status: "warn",
+      qa_score: 35,
+      qa_notes: "Transcript missing, unable to verify language adherence and tone quality."
+    };
+  }
+
+  const expected = expectedLanguage.trim().toLowerCase();
+  const detected = detectedLanguage.trim().toLowerCase();
+  const languageStatus: BehaviorQaStatus = expected && detected ? (expected === detected ? "pass" : "fail") : "warn";
+
+  let toneStatus: BehaviorQaStatus = "warn";
+  if (receiverAttitude === "rude") {
+    toneStatus = tone === "patient" || tone === "polite" || tone === "assertive_respectful" ? "pass" : "fail";
+  } else if (receiverAttitude === "busy" || receiverAttitude === "confused" || receiverAttitude === "suspicious") {
+    toneStatus = tone === "patient" || tone === "polite" || tone === "warm" ? "pass" : "warn";
+  } else if (receiverAttitude === "cooperative" || receiverAttitude === "polite") {
+    toneStatus = tone === "warm" || tone === "polite" || tone === "direct" ? "pass" : "warn";
+  } else if (normalizedTranscript.length > 20) {
+    toneStatus = "pass";
+  }
+
+  const languageScore = languageStatus === "pass" ? 55 : languageStatus === "warn" ? 35 : 20;
+  const toneScore = toneStatus === "pass" ? 35 : toneStatus === "warn" ? 20 : 8;
+  const evidenceScore = Math.min(10, Math.floor(normalizedTranscript.length / 40) + 2);
+  const score = Math.max(0, Math.min(100, languageScore + toneScore + evidenceScore));
+  const notes = [`Language check: ${languageStatus}`, `Tone check: ${toneStatus}`, `Receiver attitude: ${receiverAttitude}`].join(". ");
+
+  return {
+    qa_language_status: languageStatus,
+    qa_tone_status: toneStatus,
+    qa_score: score,
+    qa_notes: `${notes}.`
+  };
 }

@@ -126,6 +126,9 @@
 - [x] Add AI helper for language detection.
 - [x] Add AI helper for transcript summarization.
 - [x] Add AI helper for disposition extraction.
+- [x] Add post-call behavior verification scoring for language/tone adherence and QA notes on each call.
+- [x] Upgrade deterministic receiver sentiment detection with confidence-style scoring and richer behavior categories.
+- [x] Add dedicated Prompt Studio panel with blended system prompt preview and copy support.
 - [x] Persist `confidence` internally or in metadata.
 - [x] Route low-confidence calls to `manual_review`.
 - [x] Add tests for disposition mapping and next-action rules.
@@ -159,10 +162,22 @@
 - [x] Add recording and transcript display.
 - [x] Show live call status history, transcript text, receiver attitude, and voice/tone/language snapshot in the dashboard. Spec: [dashboard UX](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#dashboard-ux). Plan: [Task 5 - Add Dashboard Controls and History](docs/superpowers/plans/2026-05-28-dashboard-agent-settings-history.md#task-5-add-dashboard-controls-and-history). Acceptance: [agent settings and history criteria](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#acceptance-criteria).
 - [x] Ensure quick number check campaigns copy the selected dashboard campaign's saved agent settings before call start.
+- [x] Redesign the campaigns workspace with a hackathon-ready product name and cleaner intake UX.
+- [x] Add intake mode choices for single number, number list, and CSV/XLSX upload.
+- [x] Mirror core agent configuration options in the intake panel and the Agent Settings panel so quick checks and uploads use the same settings model.
 - [x] Add CSV export for all result rows, engineer-ready rows, and follow-up rows.
 - [x] Ensure CSV export includes original uploaded columns plus call status, disposition, recording URL, transcript status, summary, next action, attempt number, last call time, and retry eligibility.
 - [x] Add mobile responsive checks.
 - [x] Add e2e test for upload-to-export demo workflow.
+- [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
+- [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
+- [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.
+- [ ] Design parity pass: extend results filters with provider, retry eligibility, transcript availability, recording availability, and search by name/phone/order/location.
+- [ ] Design parity pass: preserve results filters in URL query params instead of component-only state.
+- [ ] Design parity pass: add a live activity event feed with source tags (system, provider webhook, cron, admin, simulated).
+- [ ] Design parity pass: add export builder controls (disposition/status filters, include alternate phone/summary/recording URL) and preview rows before generation.
+- [ ] Design parity pass: add provider readiness statuses and masked secret statuses in a dedicated settings surface.
+- [ ] Design parity pass: add accessibility sweep items from `design.md` (skip link, icon-button accessible names, aria-live for live updates/toasts, keyboard flow checks).
 
 ### Acceptance Criteria
 - [x] Dashboard shows the hackathon golden path states from seeded or uploaded contacts.
