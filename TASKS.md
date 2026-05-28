@@ -175,6 +175,7 @@
 - [x] Add explicit campaign draft creation panel with connected agent/prompt defaults.
 - [x] Capture callback request datetime/remarks plus missed-call notes and surface them in UI and exports.
 - [x] Add Excel-compatible results export alongside CSV export.
+- [x] Align HTML table export format, filename extension, and MIME type so it is not mislabeled as XLSX.
 - [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
 - [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
 - [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.
@@ -193,6 +194,7 @@
 
 ## Phase 10: Security and Reliability
 - [x] Re-check provider webhook signatures or shared secrets where supported.
+- [x] Harden dashboard authentication with environment-configured users and signed session cookies.
 - [x] Add clear error responses without leaking secrets.
 - [x] Ensure `.env` is never read directly outside config.
 - [x] Re-check rate limits or basic admin protection for write routes.

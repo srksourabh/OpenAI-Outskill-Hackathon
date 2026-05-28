@@ -10,5 +10,12 @@ export async function POST() {
     path: "/",
     expires: new Date(0)
   });
+  response.cookies.set("edial_session_role", "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(0)
+  });
   return response;
 }

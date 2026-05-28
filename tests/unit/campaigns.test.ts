@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCampaignFromContacts, simulateCallOutcomes, startCampaign } from "@/services/campaigns/engine";
+import { createCampaignFromContacts, extractCallbackSchedule, simulateCallOutcomes, startCampaign } from "@/services/campaigns/engine";
 import type { ParsedContact } from "@/services/ingestion/types";
 
 const contacts: ParsedContact[] = Array.from({ length: 7 }, (_, index) => ({
@@ -152,5 +152,15 @@ describe("campaign engine", () => {
     expect(completed.calls[0].disposition).toBe("follow_up_needed");
     expect(completed.calls[0].callback_requested_at).toBeTruthy();
     expect(completed.calls[0].callback_remarks).toContain("call back");
+  });
+
+  it("extracts grouped callback day offsets without matching words ending in in", () => {
+    const now = "2026-05-28T09:30:00.000Z";
+
+    const pluralDays = extractCallbackSchedule("Please call back in 3 days at 5 pm.", now);
+    expect(pluralDays.callback_requested_at).toBe("2026-05-31T17:00:00.000Z");
+
+    const withinDays = extractCallbackSchedule("Please call back within 3 days at 5 pm.", now);
+    expect(withinDays.callback_requested_at).toBe("2026-05-28T17:00:00.000Z");
   });
 });

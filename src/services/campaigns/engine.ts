@@ -388,8 +388,8 @@ export function extractCallbackSchedule(transcript: string, nowIso = new Date().
     scheduled.setDate(scheduled.getDate() + 7);
   }
 
-  const afterDaysMatch = lower.match(/after\s+(\d+)\s+day|in\s+(\d+)\s+day/);
-  const numericDays = Number(afterDaysMatch?.[1] ?? afterDaysMatch?.[2] ?? NaN);
+  const afterDaysMatch = lower.match(/\b(?:after|in)\s+(\d+)\s+days?\b/);
+  const numericDays = Number(afterDaysMatch?.[1] ?? NaN);
   if (Number.isFinite(numericDays) && numericDays > 0) {
     scheduled = new Date(base);
     scheduled.setDate(scheduled.getDate() + Math.min(30, numericDays));

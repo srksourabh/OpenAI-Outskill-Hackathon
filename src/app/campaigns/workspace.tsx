@@ -314,8 +314,8 @@ export function CampaignWorkspace() {
                 </a>
               ) : null}
               {selected ? (
-                <a className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold" href={`/api/campaigns/${selected.id}/export?format=xlsx`}>
-                  Export Excel
+                <a className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold" href={`/api/campaigns/${selected.id}/export?format=html`}>
+                  Export HTML
                 </a>
               ) : null}
             </div>

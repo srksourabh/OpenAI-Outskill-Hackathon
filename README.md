@@ -82,6 +82,16 @@ For a real Plivo outbound call, the app now requires all of the following before
 
 If any of these are missing, the dashboard now returns a clear error instead of pretending the live call started.
 
+## Authentication Setup
+Configure these values before production deployment:
+
+- `SESSION_SECRET`: at least 32 random characters, used to sign the HTTP-only session cookie.
+- `AUTH_ADMIN_EMAIL` and `AUTH_ADMIN_PASSWORD`: admin login credentials.
+- `AUTH_USER_EMAIL` and `AUTH_USER_PASSWORD`: optional read-only user login credentials.
+- `ADMIN_API_KEY`: optional API-key fallback for admin-protected write routes.
+
+Local development keeps demo login credentials available only when no `AUTH_*` credentials are configured and the app is not running in production.
+
 ## Provider Setup
 1. Create or reuse a Plivo application and verified outbound number.
 2. Set `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` in the dashboard/API environment.

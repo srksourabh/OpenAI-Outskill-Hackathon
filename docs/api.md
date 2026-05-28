@@ -1,7 +1,7 @@
 # API Documentation
 
 ## Authentication
-The hackathon MVP can use a simple admin-only session model. Provider webhook endpoints must validate provider signatures or a shared secret where supported. Cron endpoints must require `Authorization: Bearer <CRON_SECRET>`.
+The dashboard uses an HTTP-only signed session cookie. Production deployments must configure `SESSION_SECRET`, `AUTH_ADMIN_EMAIL`, and `AUTH_ADMIN_PASSWORD`; optional read-only credentials use `AUTH_USER_EMAIL` and `AUTH_USER_PASSWORD`. Admin-protected write routes accept a verified admin session or the `x-admin-key` header when `ADMIN_API_KEY` is configured. Provider webhook endpoints must validate provider signatures or a shared secret where supported. Cron endpoints must require `Authorization: Bearer <CRON_SECRET>`.
 
 ## Idempotency
 Webhook routes must be idempotent. Each provider event should derive an idempotency key from:

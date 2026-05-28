@@ -3,7 +3,7 @@ import { env } from "@/config/env";
 import { getSessionRole } from "@/lib/session";
 
 export async function requireAdmin(request: Request) {
-  const configuredKey = process.env.ADMIN_API_KEY;
+  const configuredKey = env.adminApiKey;
   const role = await getSessionRole();
   if (role === "admin") return null;
 

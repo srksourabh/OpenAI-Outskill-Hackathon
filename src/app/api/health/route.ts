@@ -52,11 +52,16 @@ export async function GET() {
         : "VOICE_BRIDGE_PUBLIC_WS_URL still uses placeholder value."
   });
 
-  const authConfigured = Boolean(process.env.ADMIN_API_KEY && !process.env.ADMIN_API_KEY.startsWith("replace-with"));
+  const apiKeyConfigured = Boolean(env.adminApiKey && !env.adminApiKey.startsWith("replace-with"));
+  const sessionConfigured = Boolean(env.sessionSecret && env.sessionSecret.length >= 32 && !env.sessionSecret.startsWith("replace-with"));
+  const credentialsConfigured = Boolean(env.authAdminEmail && env.authAdminPassword);
   components.push({
     name: "Admin authentication",
-    status: authConfigured ? "ok" : "warn",
-    detail: authConfigured ? "ADMIN_API_KEY guard enabled for API access." : "Using test login session only; ADMIN_API_KEY is not configured."
+    status: apiKeyConfigured && sessionConfigured && credentialsConfigured ? "ok" : "warn",
+    detail:
+      apiKeyConfigured && sessionConfigured && credentialsConfigured
+        ? "Admin API key, signed sessions, and admin login credentials are configured."
+        : "Configure ADMIN_API_KEY, SESSION_SECRET, AUTH_ADMIN_EMAIL, and AUTH_ADMIN_PASSWORD before production use."
   });
 
   const overallStatus: HealthLevel = components.some((item) => item.status === "fail")
