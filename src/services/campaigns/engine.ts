@@ -381,18 +381,18 @@ export function extractCallbackSchedule(transcript: string, nowIso = new Date().
   let scheduled = new Date(base);
 
   if (/day after tomorrow/.test(lower)) {
-    scheduled.setDate(scheduled.getDate() + 2);
+    scheduled.setUTCDate(scheduled.getUTCDate() + 2);
   } else if (/tomorrow|kal/.test(lower)) {
-    scheduled.setDate(scheduled.getDate() + 1);
+    scheduled.setUTCDate(scheduled.getUTCDate() + 1);
   } else if (/next week/.test(lower)) {
-    scheduled.setDate(scheduled.getDate() + 7);
+    scheduled.setUTCDate(scheduled.getUTCDate() + 7);
   }
 
   const afterDaysMatch = lower.match(/\b(?:after|in)\s+(\d+)\s+days?\b/);
   const numericDays = Number(afterDaysMatch?.[1] ?? NaN);
   if (Number.isFinite(numericDays) && numericDays > 0) {
     scheduled = new Date(base);
-    scheduled.setDate(scheduled.getDate() + Math.min(30, numericDays));
+    scheduled.setUTCDate(scheduled.getUTCDate() + Math.min(30, numericDays));
   }
 
   const timeMatch = lower.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
@@ -402,9 +402,9 @@ export function extractCallbackSchedule(transcript: string, nowIso = new Date().
     const meridiem = timeMatch[3];
     let hour24 = hours % 12;
     if (meridiem === "pm") hour24 += 12;
-    scheduled.setHours(hour24, minutes, 0, 0);
+    scheduled.setUTCHours(hour24, minutes, 0, 0);
   } else {
-    scheduled.setHours(base.getHours(), base.getMinutes(), 0, 0);
+    scheduled.setUTCHours(base.getUTCHours(), base.getUTCMinutes(), 0, 0);
   }
 
   return {

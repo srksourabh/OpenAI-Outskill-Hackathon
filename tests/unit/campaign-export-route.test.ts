@@ -21,9 +21,9 @@ describe("campaign export route", () => {
     mockedGetSessionRole.mockReset();
   });
 
-  it("rejects non-admin session exports before loading campaign data", async () => {
+  it("rejects unauthenticated exports before loading campaign data", async () => {
     vi.stubEnv("ADMIN_API_KEY", "replace-with-admin-key");
-    mockedGetSessionRole.mockResolvedValue("user");
+    mockedGetSessionRole.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/api/campaigns/campaign-1/export"), {
       params: Promise.resolve({ id: "campaign-1" })
@@ -34,8 +34,8 @@ describe("campaign export route", () => {
     expect(mockedGetCampaign).not.toHaveBeenCalled();
   });
 
-  it("allows admin session exports", async () => {
-    mockedGetSessionRole.mockResolvedValue("admin");
+  it.each(["admin", "user"] as const)("allows %s session exports", async (role) => {
+    mockedGetSessionRole.mockResolvedValue(role);
     mockedGetCampaign.mockResolvedValue({
       id: "campaign-1",
       name: "Demo Export",
@@ -43,6 +43,8 @@ describe("campaign export route", () => {
       default_language: "hi",
       status: "completed",
       provider: "simulated",
+      self_improvement_notes: "",
+      retry_limit: 2,
       concurrency_limit: 5,
       prompt_config: {
         asset_label: "POS machine",
@@ -59,9 +61,8 @@ describe("campaign export route", () => {
       },
       contacts: [],
       calls: [],
-      events: [],
-      created_at: "2026-05-28T00:00:00.000Z",
-      updated_at: "2026-05-28T00:00:00.000Z"
+      call_events: [],
+      created_at: "2026-05-28T00:00:00.000Z"
     });
 
     const response = await GET(new Request("http://localhost/api/campaigns/campaign-1/export"), {
@@ -82,6 +83,8 @@ describe("campaign export route", () => {
       default_language: "hi",
       status: "completed",
       provider: "simulated",
+      self_improvement_notes: "",
+      retry_limit: 2,
       concurrency_limit: 5,
       prompt_config: {
         asset_label: "POS machine",
@@ -98,9 +101,8 @@ describe("campaign export route", () => {
       },
       contacts: [],
       calls: [],
-      events: [],
-      created_at: "2026-05-28T00:00:00.000Z",
-      updated_at: "2026-05-28T00:00:00.000Z"
+      call_events: [],
+      created_at: "2026-05-28T00:00:00.000Z"
     });
 
     const response = await GET(new Request("http://localhost/api/campaigns/campaign-1/export?format=html"), {

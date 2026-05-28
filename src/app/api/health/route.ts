@@ -32,7 +32,7 @@ export async function GET() {
   components.push({
     name: "OpenAI API",
     status: openAiConfigured ? "ok" : "warn",
-    detail: openAiConfigured ? "API key configured." : "Missing OPENAI_API_KEY, realtime and analysis routes will degrade."
+    detail: openAiConfigured ? "Configured." : "Not configured."
   });
 
   const plivoConfigured = Boolean(env.plivoAuthId && env.plivoAuthToken && env.plivoNumber);
@@ -46,10 +46,7 @@ export async function GET() {
   components.push({
     name: "Voice bridge",
     status: voiceBridgeConfigured,
-    detail:
-      voiceBridgeConfigured === "ok"
-        ? `Voice bridge endpoint set to ${env.voiceBridgePublicWsUrl}.`
-        : "VOICE_BRIDGE_PUBLIC_WS_URL still uses placeholder value."
+    detail: voiceBridgeConfigured === "ok" ? "Configured." : "Not configured."
   });
 
   const apiKeyConfigured = Boolean(env.adminApiKey && !env.adminApiKey.startsWith("replace-with"));
@@ -58,10 +55,7 @@ export async function GET() {
   components.push({
     name: "Admin authentication",
     status: apiKeyConfigured && sessionConfigured && credentialsConfigured ? "ok" : "warn",
-    detail:
-      apiKeyConfigured && sessionConfigured && credentialsConfigured
-        ? "Admin API key, signed sessions, and admin login credentials are configured."
-        : "Configure ADMIN_API_KEY, SESSION_SECRET, AUTH_ADMIN_EMAIL, and AUTH_ADMIN_PASSWORD before production use."
+    detail: apiKeyConfigured && sessionConfigured && credentialsConfigured ? "Configured." : "Incomplete production auth configuration."
   });
 
   const overallStatus: HealthLevel = components.some((item) => item.status === "fail")

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAuthenticated } from "@/lib/auth";
 import { getCampaign } from "@/services/campaigns/file-store";
 import { buildResultsCsv, buildResultsHtmlTable } from "@/services/export/csv";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const authError = await requireAdmin(request);
+  const authError = await requireAuthenticated();
   if (authError) return authError;
 
   const { id } = await params;

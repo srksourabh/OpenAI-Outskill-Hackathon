@@ -170,6 +170,11 @@
 - [x] Add mobile responsive checks.
 - [x] Add e2e test for upload-to-export demo workflow.
 - [x] Add authenticated login experience with test admin and user accounts for workspace access.
+- [x] Publish hackathon demo admin and user credentials directly on the login page.
+- [x] Add detailed Admin and User role feature descriptions to the public hackathon login page.
+- [x] Apply Honk-inspired blue/yellow product UI language across public and dashboard pages.
+- [x] Hide simulated mode from normal dashboard operations while keeping backend helpers available.
+- [x] Allow authenticated user role to download normal campaign exports without write permissions.
 - [x] Add front-page product landing, SEO metadata, privacy page, and sitemap output.
 - [x] Add health dashboard page with component readiness status (store, OpenAI, Plivo, voice bridge, auth).
 - [x] Add explicit campaign draft creation panel with connected agent/prompt defaults.

@@ -244,7 +244,7 @@ export function CampaignWorkspace() {
     company_name: string;
     default_language: string;
     concurrency_limit: number;
-    provider: "simulated" | "plivo";
+    provider: "plivo";
     prompt_config: Campaign["prompt_config"];
     agent_settings: AgentSettings;
   }) {
@@ -271,50 +271,49 @@ export function CampaignWorkspace() {
   }
 
   return (
-    <main className="min-h-dvh overflow-x-hidden bg-surface text-ink">
+    <main className="min-h-dvh overflow-x-hidden bg-surface text-white">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
-        <aside className="border-b border-line bg-rail p-5 text-white lg:border-b-0 lg:border-r">
-          <div className="text-xs font-semibold uppercase tracking-wide text-white/70">Autonomous Calling Agent</div>
-          <div className="mt-2 text-xl font-semibold">{productName}</div>
-          <p className="mt-2 text-sm text-white/70">Multilingual outbound AI campaigns with synced agent controls and callback tracking.</p>
-          <div className="mt-4 rounded-md bg-white/10 px-3 py-2 text-xs">
+        <aside className="border-b border-white/50 bg-panel p-5 text-ink lg:border-b-0 lg:border-r-4 lg:border-accent">
+          <div className="text-xs font-black uppercase tracking-wide text-surface">Autonomous Calling Agent</div>
+          <div className="mt-2 text-2xl font-black">{productName}</div>
+          <p className="mt-2 text-sm text-muted">Multilingual outbound AI campaigns with synced agent controls and callback tracking.</p>
+          <div className="mt-4 rounded-md bg-accent px-3 py-2 text-xs font-bold">
             Signed in as: <span className="font-semibold uppercase">{session.role ?? "guest"}</span>
           </div>
           <nav className="mt-8 space-y-2 text-sm">
-            <Link className="block rounded-md bg-white/10 px-3 py-2" href="/campaigns">Campaigns</Link>
-            <Link className="block rounded-md px-3 py-2 text-white/75" href="/health">Health</Link>
-            <Link className="block rounded-md px-3 py-2 text-white/75" href="/">Landing</Link>
+            <Link className="block rounded-md bg-surface px-3 py-2 font-black text-white" href="/campaigns">Campaigns</Link>
+            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#upload">Upload</a>
+            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#agent-settings">Agent Settings</a>
+            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#results">Results</a>
+            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#downloads">Downloads</a>
+            <Link className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="/health">Health</Link>
           </nav>
         </aside>
 
         <section className="min-w-0 p-4 sm:p-6">
-          <header className="flex flex-col gap-4 border-b border-line pb-5 xl:flex-row xl:items-center xl:justify-between">
+          <header className="flex flex-col gap-4 border-b border-white/50 pb-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold">{productName} Command Center</h1>
-              <p className="mt-1 text-sm text-muted">Single number, number list, or CSV upload with mirrored agent configuration and campaign controls.</p>
+              <p className="text-sm font-black uppercase tracking-wide text-accent">Live operations workspace</p>
+              <h1 className="mt-2 text-5xl font-black leading-tight tracking-[-0.62px] text-accent">{productName} Command Center</h1>
+              <p className="mt-2 text-base text-white">Single number, number list, or CSV upload with mirrored agent configuration and campaign controls.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={!selected || busy || !canManage}
-                onClick={() => postAction(`/api/campaigns/${selected?.id}/start`)}
-              >
-                Start campaign
-              </button>
-              <button
-                className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                disabled={!selected || busy || !canManage}
-                onClick={() => postAction(`/api/campaigns/${selected?.id}/simulate`)}
-              >
-                Simulate callbacks
-              </button>
+              {canManage ? (
+                <button
+                  className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50"
+                  disabled={!selected || busy}
+                  onClick={() => postAction(`/api/campaigns/${selected?.id}/start`)}
+                >
+                  Start live campaign
+                </button>
+              ) : null}
               {selected ? (
-                <a className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold" href={`/api/campaigns/${selected.id}/export`}>
+                <a className="rounded-md bg-white px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${selected.id}/export`}>
                   Export CSV
                 </a>
               ) : null}
               {selected ? (
-                <a className="rounded-md border border-line bg-panel px-4 py-2 text-sm font-semibold" href={`/api/campaigns/${selected.id}/export?format=html`}>
+                <a className="rounded-md border-2 border-white px-4 py-2 text-sm font-black text-white" href={`/api/campaigns/${selected.id}/export?format=html`}>
                   Export HTML
                 </a>
               ) : null}
@@ -326,11 +325,12 @@ export function CampaignWorkspace() {
             <div className="min-w-0 space-y-5">
               <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} />
               <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={setSelectedId} />
-              {message ? <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm">{message}</div> : null}
+              {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
               {uploadSummary ? <UploadSummaryPanel summary={uploadSummary} /> : null}
               {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
-              {selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
               {selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+              {selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+              {selected ? <DownloadsPanel campaign={selected} /> : null}
               {selected ? <ResultsTable rows={results?.rows ?? []} /> : null}
             </div>
           </div>
@@ -420,31 +420,32 @@ function UploadPanel({
   }
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className="rounded-2xl bg-panel p-5 text-ink" id="upload">
       <div>
-        <h2 className="text-lg font-semibold">Intake and agent setup</h2>
+        <p className="text-xs font-black uppercase tracking-wide text-surface">Upload</p>
+        <h2 className="mt-1 text-2xl font-black">Intake and agent setup</h2>
         <p className="mt-1 text-sm text-muted">Use one number, a list of numbers, or spreadsheet upload. Agent options here mirror the campaign Agent Settings panel.</p>
-        <a className="mt-3 inline-flex text-sm font-medium text-accent" href="/sample-mobile-upload.csv" download>
+        <a className="mt-3 inline-flex rounded-md bg-accent px-3 py-2 text-sm font-black text-ink" href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border border-line bg-surface p-1 text-sm">
+      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border-2 border-surface p-1 text-sm">
         <button
-          className={`rounded px-2 py-2 font-medium ${intakeMode === "single" ? "bg-panel shadow-sm" : "text-muted"}`}
+          className={`rounded px-2 py-2 font-black ${intakeMode === "single" ? "bg-surface text-white" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("single")}
         >
           Single number
         </button>
         <button
-          className={`rounded px-2 py-2 font-medium ${intakeMode === "list" ? "bg-panel shadow-sm" : "text-muted"}`}
+          className={`rounded px-2 py-2 font-black ${intakeMode === "list" ? "bg-surface text-white" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("list")}
         >
           Number list
         </button>
         <button
-          className={`rounded px-2 py-2 font-medium ${intakeMode === "file" ? "bg-panel shadow-sm" : "text-muted"}`}
+          className={`rounded px-2 py-2 font-black ${intakeMode === "file" ? "bg-surface text-white" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("file")}
         >
@@ -497,9 +498,8 @@ function UploadPanel({
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Calling mode
-              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+              <select className="mt-1 w-full rounded-md border-2 border-surface px-3 py-2" name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
                 <option value="plivo">Plivo live call</option>
-                <option value="simulated">Simulated demo</option>
               </select>
             </label>
             <label className="block text-sm font-medium">
@@ -513,7 +513,7 @@ function UploadPanel({
               </select>
             </label>
           </div>
-          <div className="mt-3 rounded-md border border-line bg-surface p-3">
+          <div className="mt-3 rounded-2xl border-2 border-surface p-3">
             <h3 className="text-sm font-semibold">Agent options (mirrors Agent Settings)</h3>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
@@ -590,10 +590,10 @@ function UploadPanel({
       ) : (
         <form className="mt-4 space-y-3" onSubmit={submitManualCheck}>
           <div>
-            <h3 className="text-base font-semibold">{intakeMode === "single" ? "Quick number check" : "Quick number-list check"}</h3>
+            <h3 className="text-base font-semibold">{intakeMode === "single" ? "Single number intake" : "Number-list intake"}</h3>
             <p className="mt-1 text-sm text-muted">
               {intakeMode === "single"
-                ? "Create a one-contact test campaign without preparing a spreadsheet."
+                ? "Create a one-contact live campaign without preparing a spreadsheet."
                 : "Paste multiple numbers separated by new lines, commas, or semicolons."}
             </p>
           </div>
@@ -656,7 +656,6 @@ function UploadPanel({
               Calling mode
               <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
                 <option value="plivo">Plivo live call</option>
-                <option value="simulated">Simulated demo</option>
               </select>
             </label>
             <label className="block text-sm font-medium">
@@ -734,7 +733,7 @@ function UploadPanel({
                 || !canManage
             }
           >
-            {intakeMode === "single" ? "Create quick-check campaign" : "Create list-check campaign"}
+            {intakeMode === "single" ? "Create single-number campaign" : "Create number-list campaign"}
           </button>
           {!canManage ? <p className="text-xs text-muted">Sign in as admin to create campaigns and upload contacts.</p> : null}
         </form>
@@ -757,7 +756,7 @@ function CreateCampaignPanel({
     company_name: string;
     default_language: string;
     concurrency_limit: number;
-    provider: "simulated" | "plivo";
+    provider: "plivo";
     prompt_config: Campaign["prompt_config"];
     agent_settings: AgentSettings;
   }) => void;
@@ -765,7 +764,7 @@ function CreateCampaignPanel({
   const [name, setName] = useState("New readiness campaign");
   const [company, setCompany] = useState(defaults?.company_name ?? "UDS");
   const [language, setLanguage] = useState(defaults?.default_language ?? "hi");
-  const [provider, setProvider] = useState<"simulated" | "plivo">((defaults?.provider as "simulated" | "plivo") ?? "simulated");
+  const [provider, setProvider] = useState<"plivo">("plivo");
   const [concurrency, setConcurrency] = useState(defaults?.concurrency_limit ?? 5);
   const [assetLabel, setAssetLabel] = useState(defaults?.prompt_config.asset_label ?? "POS machine");
   const [referenceLabel, setReferenceLabel] = useState(defaults?.prompt_config.reference_label ?? "POS machine number");
@@ -777,7 +776,7 @@ function CreateCampaignPanel({
     if (!defaults) return;
     setCompany(defaults.company_name);
     setLanguage(defaults.default_language);
-    setProvider((defaults.provider as "simulated" | "plivo") ?? "simulated");
+    setProvider("plivo");
     setConcurrency(defaults.concurrency_limit);
     setAssetLabel(defaults.prompt_config.asset_label);
     setReferenceLabel(defaults.prompt_config.reference_label);
@@ -811,13 +810,14 @@ function CreateCampaignPanel({
   }
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className="rounded-2xl bg-panel p-5 text-ink">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">Create Campaign</h2>
+          <p className="text-xs font-black uppercase tracking-wide text-surface">Campaign draft</p>
+          <h2 className="mt-1 text-2xl font-black">Create Campaign</h2>
           <p className="text-sm text-muted">Create a campaign draft with agent defaults, then connect contacts using quick check or spreadsheet upload.</p>
         </div>
-        <span className="rounded bg-surface px-2 py-1 text-xs">Connected to intake, prompt studio, and exports</span>
+        <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">Connected to intake, prompt studio, and exports</span>
       </div>
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submit}>
         <label className="text-sm font-medium">
@@ -840,8 +840,7 @@ function CreateCampaignPanel({
         </label>
         <label className="text-sm font-medium">
           Provider
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={provider} onChange={(event) => setProvider(event.target.value as "simulated" | "plivo")}>
-            <option value="simulated">Simulated demo</option>
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={provider} onChange={() => setProvider("plivo")}>
             <option value="plivo">Plivo live call</option>
           </select>
         </label>
@@ -883,7 +882,7 @@ function CreateCampaignPanel({
           <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={accountName} onChange={(event) => setAccountName(event.target.value)} />
         </label>
         <div className="md:col-span-2">
-          <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || !canManage}>
+          <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
             Create campaign draft
           </button>
           {!canManage ? <p className="mt-2 text-xs text-muted">Sign in as admin to create and manage campaigns.</p> : null}
@@ -896,7 +895,7 @@ function CreateCampaignPanel({
 function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: Campaign[]; selectedId: string; onSelect: (id: string) => void }) {
   if (campaigns.length === 0) return null;
   return (
-    <label className="block rounded-lg border border-line bg-panel p-4 text-sm font-medium">
+    <label className="block rounded-2xl bg-panel p-5 text-sm font-bold text-ink">
       Active campaign
       <select className="mt-2 w-full rounded-md border border-line px-3 py-2" value={selectedId} onChange={(event) => onSelect(event.target.value)}>
         {campaigns.map((campaign) => (
@@ -921,23 +920,23 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
     ["Retry eligible", stats.retryEligible ?? 0]
   ];
   return (
-    <section className="rounded-lg border border-line bg-panel">
-      <div className="border-b border-line p-4">
+    <section className="rounded-2xl bg-panel text-ink">
+      <div className="border-b-2 border-line p-5">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold">{campaign.name}</h2>
-          <span className="rounded bg-surface px-2 py-1 text-xs">{campaign.status}</span>
-          <span className="rounded bg-surface px-2 py-1 text-xs">Default: {campaign.default_language}</span>
-          <span className="rounded bg-surface px-2 py-1 text-xs">Concurrency: {campaign.concurrency_limit}</span>
-          <span className="rounded bg-surface px-2 py-1 text-xs">Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
-          <span className="rounded bg-surface px-2 py-1 text-xs">Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
-          <span className="rounded bg-surface px-2 py-1 text-xs">Self-improve: {campaign.agent_settings?.self_improve_enabled ? "on" : "off"}</span>
+          <h2 className="text-2xl font-black">{campaign.name}</h2>
+          <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">{campaign.status}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Default: {campaign.default_language}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Concurrency: {campaign.concurrency_limit}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Self-improve: {campaign.agent_settings?.self_improve_enabled ? "on" : "off"}</span>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8">
         {metrics.map(([label, value]) => (
           <div className="border-b border-r border-line p-3" key={label}>
             <div className="text-xs text-muted">{label}</div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+            <div className="mt-1 text-3xl font-black tabular-nums">{value}</div>
           </div>
         ))}
       </div>
@@ -999,13 +998,14 @@ function PromptStudioPanel({
   }
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className="rounded-2xl bg-panel p-5 text-ink" id="agent-settings">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Prompt Studio</h2>
+          <p className="text-xs font-black uppercase tracking-wide text-surface">Prompt Studio</p>
+          <h2 className="mt-1 text-2xl font-black">Prompt Studio</h2>
           <p className="text-sm text-muted">Edit your operator prompt and preview the blended system prompt for future calls.</p>
         </div>
-        <button className="rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium disabled:opacity-50" disabled={busy} onClick={copyPreview} type="button">
+        <button className="rounded-md bg-accent px-3 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy} onClick={copyPreview} type="button">
           {copied ? "Copied" : "Copy preview"}
         </button>
       </div>
@@ -1020,12 +1020,12 @@ function PromptStudioPanel({
             onChange={(event) => setPromptEnhancement(event.target.value)}
           />
         </label>
-        <div className="rounded-md border border-line bg-surface p-3">
+        <div className="rounded-2xl border-2 border-line p-3">
           <div className="text-xs text-muted">Blended system prompt preview</div>
           <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap font-sans text-sm">{blendedPromptPreview}</pre>
         </div>
         <div className="flex justify-end">
-          <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || !canManage}>
+          <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
             Save prompt window
           </button>
         </div>
@@ -1078,10 +1078,11 @@ function AgentSettingsPanel({
   }
 
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className="rounded-2xl bg-panel p-5 text-ink">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Agent settings</h2>
+          <p className="text-xs font-black uppercase tracking-wide text-surface">Agent Settings</p>
+          <h2 className="mt-1 text-2xl font-black">Agent settings</h2>
           <p className="text-sm text-muted">Saved changes apply to future calls only.</p>
         </div>
         {campaign.self_improvement_notes ? <div className="max-w-xl text-sm text-muted">{campaign.self_improvement_notes}</div> : null}
@@ -1137,12 +1138,34 @@ function AgentSettingsPanel({
           Self-improve future calls from short call notes
         </label>
         <div className="flex justify-end md:col-span-2">
-          <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || !canManage}>
+          <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
             Save agent settings
           </button>
         </div>
         {!canManage ? <p className="text-xs text-muted md:col-span-2">Admin role required to edit agent settings.</p> : null}
       </form>
+    </section>
+  );
+}
+
+function DownloadsPanel({ campaign }: { campaign: Campaign }) {
+  return (
+    <section className="rounded-2xl bg-panel p-5 text-ink" id="downloads">
+      <p className="text-xs font-black uppercase tracking-wide text-surface">Downloads</p>
+      <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-black">Export campaign results</h2>
+          <p className="mt-1 text-sm text-muted">Download normal result exports for operations handoff. Raw secrets and provider payloads stay out of these files.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${campaign.id}/export`}>
+            Download CSV
+          </a>
+          <a className="rounded-md border-2 border-line px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${campaign.id}/export?format=html`}>
+            Download HTML
+          </a>
+        </div>
+      </div>
     </section>
   );
 }
@@ -1158,9 +1181,10 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
   );
 
   return (
-    <section className="overflow-hidden rounded-lg border border-line bg-panel">
-      <div className="border-b border-line p-4">
-        <h2 className="text-lg font-semibold">Results and uploaded details</h2>
+    <section className="overflow-hidden rounded-2xl bg-panel text-ink" id="results">
+      <div className="border-b-2 border-line p-5">
+        <p className="text-xs font-black uppercase tracking-wide text-surface">Results</p>
+        <h2 className="mt-1 text-2xl font-black">Results and uploaded details</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <label className="text-sm font-medium">
             Status
@@ -1219,13 +1243,13 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
       <div className="space-y-3 p-4 md:hidden">
         {filteredRows.length === 0 ? <div className="py-4 text-center text-sm text-muted">No results match the current filters.</div> : null}
         {filteredRows.map((row) => (
-          <article className="rounded-md border border-line bg-surface p-3" key={String(row.contact_id)}>
+          <article className="rounded-2xl border-2 border-line p-3" key={String(row.contact_id)}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-semibold">{String(row.provider_name ?? "")}</div>
                 <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
               </div>
-              <span className="rounded bg-panel px-2 py-1 text-xs">{row.call?.status ?? "not queued"}</span>
+              <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">{row.call?.status ?? "not queued"}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <InfoField label="Location" value={String(row.location ?? "")} />
@@ -1242,8 +1266,8 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
             {row.call ? <QaBadge call={row.call} /> : null}
             <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
             <div className="mt-3 text-sm">
-              {row.call ? <a className="mr-3 text-accent" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
-              {row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>Open recording</a> : "Recording pending"}
+              {row.call ? <a className="mr-3 font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+              {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>Open recording</a> : "Recording pending"}
             </div>
             {row.call ? <CallHistoryDetails call={row.call} /> : null}
           </article>
@@ -1251,7 +1275,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
       </div>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1200px] text-left text-sm">
-          <thead className="bg-surface">
+          <thead className="bg-surface text-white">
             <tr>
               {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "QA", "Next", "Callback", "Recording", "Remarks"].map((header) => (
                 <th className="border-b border-line px-3 py-2 font-semibold" key={header}>{header}</th>
@@ -1274,8 +1298,8 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
                   <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
                   <td className="px-3 py-2">{formatDateTime(row.call?.callback_requested_at)}</td>
                   <td className="px-3 py-2">
-                    {row.call ? <a className="mr-2 text-accent" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
-                    {row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>recording</a> : "none"}
+                    {row.call ? <a className="mr-2 font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
+                    {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>recording</a> : "none"}
                   </td>
                   <td className="max-w-[280px] px-3 py-2">{row.call?.callback_remarks || row.call?.missed_call_note || row.call?.summary_text || ""}</td>
                 </tr>
@@ -1430,7 +1454,7 @@ function EmptyState() {
   return (
     <section className="rounded-lg border border-dashed border-line bg-panel p-8 text-center">
       <h2 className="text-lg font-semibold">No campaign yet</h2>
-      <p className="mt-2 text-sm text-muted">Upload an Excel or CSV contact list to begin the demo workflow.</p>
+      <p className="mt-2 text-sm text-muted">Upload an Excel or CSV contact list to begin the live operations workflow.</p>
     </section>
   );
 }

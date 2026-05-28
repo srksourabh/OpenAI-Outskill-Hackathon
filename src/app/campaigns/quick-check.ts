@@ -44,7 +44,7 @@ export function resolveQuickCheckDefaults(campaign?: QuickCheckCampaignDefaults 
     promptConfig,
     agentSettings: getAgentSettings(campaign?.agent_settings ?? fallbackAgentSettings),
     language: campaign?.default_language || "en",
-    provider: campaign?.provider === "simulated" ? "simulated" : "plivo"
+    provider: "plivo"
   };
 }
 

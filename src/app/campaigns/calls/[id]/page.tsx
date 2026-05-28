@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionRole } from "@/lib/session";
+import { formatDateTime } from "@/lib/date-time";
 import { listCampaigns } from "@/services/campaigns/file-store";
 
 export const runtime = "nodejs";
@@ -17,25 +18,26 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
 
   if (!campaign || !call || !contact) {
     return (
-      <main className="min-h-dvh bg-surface p-6 text-ink">
-        <Link className="text-sm font-medium text-accent" href="/campaigns">Back to campaigns</Link>
-        <section className="mt-6 rounded-lg border border-line bg-panel p-6">
-          <h1 className="text-xl font-semibold">Call not found</h1>
+      <main className="min-h-dvh bg-surface p-6 text-white">
+        <Link className="text-sm font-black text-accent" href="/campaigns">Back to campaigns</Link>
+        <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
+          <h1 className="text-xl font-black">Call not found</h1>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-dvh bg-surface p-6 text-ink">
-      <Link className="text-sm font-medium text-accent" href="/campaigns">Back to campaigns</Link>
-      <section className="mt-6 rounded-lg border border-line bg-panel p-6">
+    <main className="min-h-dvh bg-surface p-6 text-white">
+      <Link className="text-sm font-black text-accent" href="/campaigns">Back to campaigns</Link>
+      <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{contact.provider_name}</h1>
+            <p className="text-xs font-black uppercase tracking-wide text-surface">Call detail</p>
+            <h1 className="mt-1 text-4xl font-black tracking-[-0.62px]">{contact.provider_name}</h1>
             <p className="mt-1 font-mono text-sm text-muted">{contact.phone}</p>
           </div>
-          <span className="rounded bg-surface px-3 py-1 text-sm">{call.status}</span>
+          <span className="rounded-md bg-accent px-3 py-2 text-sm font-black">{call.status}</span>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <Info label="Campaign" value={campaign.name} />
@@ -53,8 +55,8 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           <Info label="Missed call note" value={call.missed_call_note || "-"} />
           <Info label="Attempt" value={String(call.attempt_number)} />
         </div>
-        <div className="mt-5 rounded-md border border-line bg-surface p-4">
-          <h2 className="text-sm font-semibold">Behavior Verification</h2>
+        <div className="mt-5 rounded-2xl border-2 border-line p-4">
+          <h2 className="text-sm font-black">Behavior Verification</h2>
           <div className="mt-3 grid gap-4 md:grid-cols-4">
             <Info label="Language QA" value={call.qa_language_status ?? "warn"} />
             <Info label="Tone QA" value={call.qa_tone_status ?? "warn"} />
@@ -65,8 +67,8 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         <Evidence title="Summary" value={call.summary_text || "No summary yet."} />
         <Evidence title="Transcript" value={call.transcript_text || "Transcript pending."} />
         <Evidence title="Recording" value={call.recording_url || "Recording pending."} />
-        <div className="mt-5 rounded-md border border-line bg-surface p-4">
-          <h2 className="text-sm font-semibold">Status history</h2>
+        <div className="mt-5 rounded-2xl border-2 border-line p-4">
+          <h2 className="text-sm font-black">Status history</h2>
           <ol className="mt-3 space-y-2 text-sm">
             {call.status_history.map((item, index) => (
               <li key={`${item.status}-${item.at}-${index}`}>
@@ -80,13 +82,6 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
   );
 }
 
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
-}
-
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -98,8 +93,8 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function Evidence({ title, value }: { title: string; value: string }) {
   return (
-    <div className="mt-5 rounded-md border border-line bg-surface p-4">
-      <h2 className="text-sm font-semibold">{title}</h2>
+    <div className="mt-5 rounded-2xl border-2 border-line p-4">
+      <h2 className="text-sm font-black">{title}</h2>
       <pre className="mt-2 whitespace-pre-wrap font-sans text-sm">{value}</pre>
     </div>
   );

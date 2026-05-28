@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: light;
+  --color-sky-canvas: #008fff;
+  --color-sunshine-accent: #ffe400;
+  --color-paper-white: #ffffff;
+  --color-charcoal-text: #111111;
 }
 
 * {
@@ -13,13 +17,22 @@
 body {
   margin: 0;
   overflow-x: hidden;
-  background: #f2f4f3;
-  color: #1f2523;
-  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--color-sky-canvas);
+  color: var(--color-charcoal-text);
+  font-family: Montserrat, Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 button,
 input,
 select {
   font: inherit;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-sunshine-accent);
+  color: var(--color-charcoal-text);
 }

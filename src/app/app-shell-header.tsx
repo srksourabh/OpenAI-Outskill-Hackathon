@@ -36,10 +36,10 @@ export function AppShellHeader() {
   }
 
   return (
-    <header className="border-b border-line bg-white">
+    <header className="border-b border-white/40 bg-surface text-white">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link className="text-lg font-semibold text-ink" href="/">
+          <Link className="rounded-md bg-accent px-3 py-2 text-lg font-black text-ink" href="/">
             eDial
           </Link>
           <nav className="hidden items-center gap-2 text-sm md:flex">
@@ -51,13 +51,13 @@ export function AppShellHeader() {
         <div className="flex items-center gap-2 text-sm">
           {session.authenticated ? (
             <>
-              <span className="rounded bg-surface px-2 py-1 text-xs uppercase tracking-wide text-muted">{session.role}</span>
-              <button className="rounded-md border border-line px-3 py-2" onClick={logout} type="button">
+              <span className="rounded-md border border-white px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">{session.role}</span>
+              <button className="rounded-md bg-white px-3 py-2 font-semibold text-ink" onClick={logout} type="button">
                 Sign out
               </button>
             </>
           ) : (
-            <Link className="rounded-md bg-accent px-3 py-2 font-semibold text-white" href="/login">
+            <Link className="rounded-md bg-white px-3 py-2 font-semibold text-ink" href="/login">
               Sign in
             </Link>
           )}
@@ -70,7 +70,7 @@ export function AppShellHeader() {
 function TopLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
   const active = pathname.startsWith(href);
   return (
-    <Link className={`rounded-md px-3 py-2 ${active ? "bg-surface font-medium text-ink" : "text-muted hover:text-ink"}`} href={href}>
+    <Link className={`rounded-md px-3 py-2 ${active ? "bg-white font-bold text-ink" : "text-white hover:bg-white/15"}`} href={href}>
       {label}
     </Link>
   );

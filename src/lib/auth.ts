@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { env } from "@/config/env";
 import { getSessionRole } from "@/lib/session";
 
+export async function requireAuthenticated() {
+  const role = await getSessionRole();
+  if (role === "admin" || role === "user") return null;
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
 export async function requireAdmin(request: Request) {
   const configuredKey = env.adminApiKey;
   const role = await getSessionRole();

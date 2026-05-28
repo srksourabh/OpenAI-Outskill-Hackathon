@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { env } from "@/config/env";
+import { DEMO_LOGIN_ACCOUNTS } from "@/lib/demo-accounts";
 
 export type SessionRole = "admin" | "user";
 
@@ -88,20 +89,15 @@ function configuredUsers(): StoredAuthUser[] {
     users.push({ email: normalizeEmail(env.authUserEmail), password: env.authUserPassword, role: "user", label: "User" });
   }
 
-  if (users.length === 0 && !isProduction()) {
-    users.push(
-      { email: "admin@edial.ai", password: "Admin@123", role: "admin", label: "Local Admin" },
-      { email: "user@edial.ai", password: "User@123", role: "user", label: "Local User" }
-    );
-  }
+  users.push(...DEMO_LOGIN_ACCOUNTS.map((account) => ({ email: account.email, password: account.password, role: account.role, label: account.label })));
 
   return users;
 }
 
 export function resolveLoginUser(email: string, password: string): AuthenticatedUser | null {
   const normalized = normalizeEmail(email);
-  const user = configuredUsers().find((candidate) => candidate.email === normalized);
-  if (!user || !safePasswordEquals(password, user.password)) return null;
+  const user = configuredUsers().find((candidate) => candidate.email === normalized && safePasswordEquals(password, candidate.password));
+  if (!user) return null;
   return { email: user.email, role: user.role, label: user.label };
 }
 
