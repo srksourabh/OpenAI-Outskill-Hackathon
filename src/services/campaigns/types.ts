@@ -1,5 +1,6 @@
 import type { CallStatus, Disposition, NextAction } from "@/domain/calls";
 import type { LanguageCode } from "@/domain/languages";
+import type { AgentSettings, AgentTone, ReceiverAttitude, VoicePreset } from "@/domain/voice-agent";
 import type { ParsedContact } from "@/services/ingestion/types";
 
 export type CampaignStatus = "draft" | "running" | "completed";
@@ -33,6 +34,17 @@ export type CallRecord = {
   retry_eligible: boolean;
   last_call_time: string | null;
   provider_call_id: string | null;
+  voice_preset_snapshot: VoicePreset;
+  voice_id_snapshot: string;
+  tone_snapshot: AgentTone;
+  prompt_enhancement_snapshot: string;
+  receiver_attitude: ReceiverAttitude;
+  improvement_note: string;
+  status_history: Array<{
+    status: CallStatus;
+    at: string;
+    note: string;
+  }>;
   updated_at: string;
 };
 
@@ -41,6 +53,8 @@ export type Campaign = {
   name: string;
   company_name: string;
   prompt_config: PromptConfig;
+  agent_settings: AgentSettings;
+  self_improvement_notes: string;
   provider: "simulated" | "plivo" | "twilio" | "exotel";
   status: CampaignStatus;
   default_language: LanguageCode;

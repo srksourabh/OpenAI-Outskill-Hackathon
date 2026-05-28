@@ -31,6 +31,7 @@ export async function POST(request: Request) {
               summary_text: recordingDuration
                 ? `${call.summary_text || "Call updated."} Recording available (${recordingDuration}s).`
                 : call.summary_text || "Recording available.",
+              status_history: [...call.status_history, { status: call.status, at: now, note: "Recording callback received." }],
               updated_at: now
             }
           : call

@@ -28,6 +28,13 @@ export async function POST(request: Request) {
       account_label: String(form.get("account_label") ?? "company/bank"),
       account_name: String(form.get("account_name") ?? "")
     };
+    const agentSettings = {
+      voice_preset: String(form.get("voice_preset") ?? "indian_female_natural"),
+      voice_id: String(form.get("voice_id") ?? ""),
+      tone: String(form.get("tone") ?? "warm"),
+      prompt_enhancement: String(form.get("prompt_enhancement") ?? ""),
+      self_improve_enabled: String(form.get("self_improve_enabled") ?? "") === "true"
+    };
     const requestedProvider = String(form.get("provider") ?? env.telephonyProvider ?? "simulated");
     const concurrencyLimit = Number(form.get("concurrency_limit") ?? 5);
     const content = Buffer.from(await file.arrayBuffer());
@@ -39,7 +46,8 @@ export async function POST(request: Request) {
       concurrencyLimit,
       contacts: parsed.validRows,
       provider: requestedProvider === "plivo" ? "plivo" : "simulated",
-      promptConfig
+      promptConfig,
+      agentSettings
     });
 
     await saveCampaign(campaign);

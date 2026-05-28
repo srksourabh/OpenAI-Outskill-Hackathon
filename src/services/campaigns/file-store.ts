@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { getPromptConfig } from "@/domain/voice-agent";
+import { getAgentSettings, getPromptConfig } from "@/domain/voice-agent";
+import { buildCallAgentSnapshot, buildStatusHistory } from "./engine";
 import type { Campaign } from "./types";
 
 type Store = {
@@ -64,8 +65,22 @@ async function writeStore(store: Store) {
 }
 
 function normalizeCampaign(campaign: Campaign): Campaign {
+  const agentSettings = getAgentSettings(campaign.agent_settings);
   return {
     ...campaign,
-    prompt_config: getPromptConfig(campaign.prompt_config)
+    prompt_config: getPromptConfig(campaign.prompt_config),
+    agent_settings: agentSettings,
+    self_improvement_notes: campaign.self_improvement_notes ?? "",
+    calls: campaign.calls.map((call) => ({
+      ...call,
+      ...("voice_preset_snapshot" in call
+        ? {}
+        : buildCallAgentSnapshot({
+            agent_settings: agentSettings
+          })),
+      receiver_attitude: call.receiver_attitude ?? "unknown",
+      improvement_note: call.improvement_note ?? "",
+      status_history: call.status_history?.length ? call.status_history : buildStatusHistory(call.status, call.updated_at)
+    }))
   };
 }

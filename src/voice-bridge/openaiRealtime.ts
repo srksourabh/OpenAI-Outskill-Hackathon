@@ -1,8 +1,9 @@
 import WebSocket from "ws";
+import type { RealtimeVoice } from "@/domain/voice-agent";
 
 export const realtimeOutputModalities = ["audio"] as const;
 
-export function connectOpenAIRealtime(input: { apiKey: string; model: string; voice: string; instructions: string }) {
+export function connectOpenAIRealtime(input: { apiKey: string; model: string; voice: RealtimeVoice; instructions: string }) {
   const ws = new WebSocket(buildRealtimeUrl(input.model), {
     headers: buildRealtimeHeaders(input.apiKey)
   });
@@ -29,7 +30,7 @@ export function appendRealtimeAudio(ws: WebSocket, base64Audio: string) {
   ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: base64Audio }));
 }
 
-export function updateRealtimeInstructions(ws: WebSocket, instructions: string, input: { voice: string; model: string }) {
+export function updateRealtimeInstructions(ws: WebSocket, instructions: string, input: { voice: RealtimeVoice; model: string }) {
   if (ws.readyState !== ws.OPEN) return;
   updateRealtimeSession(ws, instructions, input.voice, input.model);
 }
@@ -48,7 +49,7 @@ export function requestRealtimeResponse(ws: WebSocket, instructions?: string) {
   );
 }
 
-function updateRealtimeSession(ws: WebSocket, instructions: string, voice: string, model: string) {
+function updateRealtimeSession(ws: WebSocket, instructions: string, voice: RealtimeVoice, model: string) {
   ws.send(
     JSON.stringify({
       type: "session.update",

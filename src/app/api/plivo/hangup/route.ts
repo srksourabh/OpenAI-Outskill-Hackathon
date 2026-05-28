@@ -29,6 +29,7 @@ export async function POST(request: Request) {
           return {
             ...call,
             status: call.status === "answered" ? "completed" : call.status,
+            status_history: [...call.status_history, { status: call.status === "answered" ? "completed" : call.status, at: now, note: "Provider hangup received after realtime outcome." }],
             updated_at: now
           };
         }
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
           next_action: mapped.nextAction,
           summary_text: call.summary_text ? `${call.summary_text} ${mapped.summary}` : mapped.summary,
           retry_eligible: mapped.status === "not_picked" || mapped.status === "not_connected",
+          status_history: [...call.status_history, { status: mapped.status, at: now, note: mapped.summary }],
           updated_at: now
         };
       })

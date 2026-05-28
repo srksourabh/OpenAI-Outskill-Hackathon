@@ -26,6 +26,7 @@ export async function POST(request: Request) {
               ...call,
               status: "ringing",
               summary_text: "The receiver's line is ringing.",
+              status_history: [...call.status_history, { status: "ringing", at: now, note: "Provider reported ringing." }],
               last_call_time: call.last_call_time ?? now,
               updated_at: now
             }

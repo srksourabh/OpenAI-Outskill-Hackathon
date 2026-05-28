@@ -4,6 +4,7 @@ import { env } from "@/config/env";
 import { jsonError } from "@/lib/http";
 import { isRetryEligible } from "@/domain/calls";
 import { callOutcomeSchema } from "@/domain/voice-agent";
+import { buildImprovementNote, detectReceiverAttitude } from "@/services/campaigns/engine";
 import { updateCampaign } from "@/services/campaigns/file-store";
 
 const bodySchema = z.object({
@@ -20,11 +21,15 @@ export async function POST(request: Request) {
     }
     const body = bodySchema.parse(await request.json());
     let saved = false;
+    const now = new Date().toISOString();
     const campaigns = await import("@/services/campaigns/file-store").then((module) => module.listCampaigns());
     for (const campaign of campaigns) {
       if (!campaign.calls.some((call) => call.id === body.call_id)) continue;
+      const receiverAttitude = detectReceiverAttitude(body.transcript_text);
+      const improvementNote = campaign.agent_settings.self_improve_enabled ? buildImprovementNote(body.transcript_text) : "";
       await updateCampaign(campaign.id, (current) => ({
         ...current,
+        self_improvement_notes: improvementNote || current.self_improvement_notes,
         calls: current.calls.map((call) => {
           if (call.id !== body.call_id) return call;
           const status = call.status === "invalid_number" || call.status === "not_connected" || call.status === "not_picked" ? call.status : "completed";
@@ -40,7 +45,10 @@ export async function POST(request: Request) {
             reason_code: body.outcome.reason_code,
             detected_language: body.outcome.detected_language,
             retry_eligible: isRetryEligible(status, body.outcome.disposition),
-            updated_at: new Date().toISOString()
+            receiver_attitude: receiverAttitude,
+            improvement_note: improvementNote,
+            status_history: [...call.status_history, { status, at: now, note: "Realtime voice outcome saved." }],
+            updated_at: now
           };
         })
       }));

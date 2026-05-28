@@ -45,4 +45,63 @@ describe("campaign engine", () => {
     expect(started.calls.filter((call) => call.status === "ringing")).toHaveLength(5);
     expect(started.calls.filter((call) => call.status === "queued")).toHaveLength(2);
   });
+
+  it("stores default agent settings and snapshots them onto future calls", () => {
+    const campaign = createCampaignFromContacts({
+      name: "Demo",
+      companyName: "UDS",
+      defaultLanguage: "hi",
+      concurrencyLimit: 2,
+      contacts,
+      agentSettings: {
+        voice_preset: "indian_male_natural",
+        voice_id: "cedar",
+        tone: "patient",
+        prompt_enhancement: "Ask for callback timing if the receiver is busy.",
+        self_improve_enabled: true
+      }
+    });
+
+    const started = startCampaign(campaign);
+
+    expect(campaign.agent_settings.voice_preset).toBe("indian_male_natural");
+    expect(started.calls[0].voice_preset_snapshot).toBe("indian_male_natural");
+    expect(started.calls[0].voice_id_snapshot).toBe("cedar");
+    expect(started.calls[0].tone_snapshot).toBe("patient");
+    expect(started.calls[0].prompt_enhancement_snapshot).toBe("Ask for callback timing if the receiver is busy.");
+    expect(started.calls[0].receiver_attitude).toBe("unknown");
+    expect(started.calls[0].status_history.at(-1)?.status).toBe("ringing");
+  });
+
+  it("does not rewrite existing call snapshots when campaign settings change", () => {
+    const campaign = createCampaignFromContacts({
+      name: "Demo",
+      companyName: "UDS",
+      defaultLanguage: "hi",
+      concurrencyLimit: 2,
+      contacts,
+      agentSettings: {
+        voice_preset: "indian_female_natural",
+        voice_id: "marin",
+        tone: "warm",
+        prompt_enhancement: "First version.",
+        self_improve_enabled: false
+      }
+    });
+    const started = startCampaign(campaign);
+    const edited = {
+      ...started,
+      agent_settings: {
+        voice_preset: "indian_male_natural" as const,
+        voice_id: "cedar",
+        tone: "direct" as const,
+        prompt_enhancement: "Second version.",
+        self_improve_enabled: true
+      }
+    };
+
+    expect(edited.calls[0].voice_id_snapshot).toBe("marin");
+    expect(edited.calls[0].tone_snapshot).toBe("warm");
+    expect(edited.calls[0].prompt_enhancement_snapshot).toBe("First version.");
+  });
 });

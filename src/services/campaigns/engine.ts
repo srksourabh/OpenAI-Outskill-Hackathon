@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { isRetryEligible } from "@/domain/calls";
+import { isRetryEligible, type CallStatus } from "@/domain/calls";
 import { getEffectiveLanguage } from "@/domain/languages";
-import { getPromptConfig } from "@/domain/voice-agent";
+import { getAgentSettings, getPromptConfig, type AgentSettingsInput } from "@/domain/voice-agent";
 import { classifyTranscript } from "@/services/ai/classifier";
 import type { ParsedContact } from "@/services/ingestion/types";
 import type { CallRecord, Campaign, CampaignStats, ContactRecord } from "./types";
@@ -14,6 +14,7 @@ type CreateCampaignInput = {
   contacts: ParsedContact[];
   provider?: Campaign["provider"];
   promptConfig?: Campaign["prompt_config"];
+  agentSettings?: AgentSettingsInput;
 };
 
 const demoTranscripts = [
@@ -44,6 +45,8 @@ export function createCampaignFromContacts(input: CreateCampaignInput): Campaign
     name: input.name,
     company_name: input.companyName,
     prompt_config: getPromptConfig(input.promptConfig),
+    agent_settings: getAgentSettings(input.agentSettings),
+    self_improvement_notes: "",
     provider: input.provider ?? "simulated",
     status: "draft",
     default_language: getEffectiveLanguage(input.defaultLanguage, "hi"),
@@ -78,6 +81,8 @@ export function startCampaign(campaign: Campaign): Campaign {
       retry_eligible: false,
       last_call_time: index < campaign.concurrency_limit ? now : null,
       provider_call_id: null,
+      ...buildCallAgentSnapshot(campaign),
+      status_history: buildStatusHistory(index < campaign.concurrency_limit ? "ringing" : "queued", now),
       updated_at: now
     }));
 
@@ -121,6 +126,9 @@ export function simulateCallOutcomes(campaign: Campaign, count = campaign.calls.
       detected_language: outcome.detected_language,
       recording_url: `https://recordings.example.com/${call.id}.mp3`,
       retry_eligible: isRetryEligible("completed", outcome.disposition),
+      receiver_attitude: detectReceiverAttitude(transcript),
+      improvement_note: campaign.agent_settings.self_improve_enabled ? buildImprovementNote(transcript) : "",
+      status_history: [...call.status_history, { status: "completed", at: now, note: "Simulated callback completed." }],
       last_call_time: now,
       updated_at: now
     } satisfies CallRecord;
@@ -131,7 +139,7 @@ export function simulateCallOutcomes(campaign: Campaign, count = campaign.calls.
   const refilled = calls.map((call) => {
     if (availableSlots <= 0 || call.status !== "queued") return call;
     availableSlots -= 1;
-    return { ...call, status: "ringing", last_call_time: now, updated_at: now } satisfies CallRecord;
+    return { ...call, status: "ringing", status_history: [...call.status_history, { status: "ringing", at: now, note: "Call slot opened." }], last_call_time: now, updated_at: now } satisfies CallRecord;
   });
 
   return {
@@ -171,7 +179,58 @@ function finishTerminal(
     summary_text: summary,
     transcript_status: "simulated",
     retry_eligible: isRetryEligible(status, disposition),
+    receiver_attitude: "unknown",
+    improvement_note: "",
+    status_history: [...call.status_history, { status, at: now, note: summary }],
     last_call_time: now,
     updated_at: now
   };
+}
+
+export function mergeCampaignAgentSettings(campaign: Campaign, input: AgentSettingsInput & { default_language?: string }): Campaign {
+  return {
+    ...campaign,
+    default_language: getEffectiveLanguage(input.default_language, campaign.default_language),
+    agent_settings: getAgentSettings({
+      ...campaign.agent_settings,
+      ...input
+    })
+  };
+}
+
+export function buildCallAgentSnapshot(campaign: Pick<Campaign, "agent_settings">) {
+  const settings = getAgentSettings(campaign.agent_settings);
+  return {
+    voice_preset_snapshot: settings.voice_preset,
+    voice_id_snapshot: settings.voice_id,
+    tone_snapshot: settings.tone,
+    prompt_enhancement_snapshot: settings.prompt_enhancement,
+    receiver_attitude: "unknown" as const,
+    improvement_note: ""
+  };
+}
+
+export function buildStatusHistory(status: CallStatus, now: string) {
+  if (status === "queued") return [{ status, at: now, note: "Call queued." }];
+  return [
+    { status: "queued" as const, at: now, note: "Call queued." },
+    { status, at: now, note: "Call started." }
+  ];
+}
+
+export function detectReceiverAttitude(transcript: string) {
+  const normalized = transcript.toLowerCase();
+  if (/(busy|later|callback|call back|kal|baad)/.test(normalized)) return "busy" as const;
+  if (/(thank|yes|haan|ready|sure|ok)/.test(normalized)) return "cooperative" as const;
+  if (/(who|kaun|why|confused|samajh)/.test(normalized)) return "confused" as const;
+  if (/(stop|angry|rude|don't call|do not call)/.test(normalized)) return "rude" as const;
+  return "unknown" as const;
+}
+
+export function buildImprovementNote(transcript: string) {
+  const attitude = detectReceiverAttitude(transcript);
+  if (attitude === "busy") return "When receivers sound busy, ask for a callback time before repeating details.";
+  if (attitude === "confused") return "When receivers sound confused, identify the company and reference once in simple words.";
+  if (attitude === "rude") return "When receivers sound rude, keep the response calm and short.";
+  return "";
 }

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { mapDispositionToNextAction } from "@/domain/calls";
 import { env } from "@/config/env";
+import { getAgentSettings, resolveRealtimeVoice } from "@/domain/voice-agent";
 import { WebSocketServer } from "ws";
 import { analyzeTranscriptWithOpenAI } from "../services/ai/openai";
 import { buildInitialAgentPrompt, createAgentSessionState, normalizeSupportedLanguages, planAgentTurn } from "./agent-session";
@@ -33,6 +34,13 @@ server.on("connection", (plivoWs, request) => {
     return;
   }
 
+  const agentSettings = getAgentSettings({
+    voice_preset: searchParams.get("voicePreset") ?? undefined,
+    voice_id: searchParams.get("voiceId") ?? undefined,
+    tone: searchParams.get("tone") ?? undefined,
+    prompt_enhancement: searchParams.get("promptEnhancement") ?? undefined,
+    self_improve_enabled: searchParams.get("selfImproveEnabled") === "true"
+  });
   const context = {
     companyName: searchParams.get("companyName") ?? "UDS",
     orderId: searchParams.get("orderId") ?? "Realtime call",
@@ -45,7 +53,9 @@ server.on("connection", (plivoWs, request) => {
       reference_label: searchParams.get("referenceLabel") ?? "POS machine number",
       account_label: searchParams.get("accountLabel") ?? "company/bank",
       account_name: searchParams.get("accountName") ?? ""
-    }
+    },
+    agentSettings,
+    selfImprovementNotes: searchParams.get("selfImprovementNotes") ?? ""
   };
   const supportedLanguages = normalizeSupportedLanguages(env.supportedCallLanguages);
   let sessionState = createAgentSessionState(context.languageHint);
@@ -57,7 +67,7 @@ server.on("connection", (plivoWs, request) => {
   const realtimeWs = connectOpenAIRealtime({
     apiKey: env.openaiApiKey ?? "",
     model: env.openaiRealtimeModel,
-    voice: env.openaiRealtimeVoice,
+    voice: resolveRealtimeVoice(agentSettings),
     instructions: initialPrompt.instructions
   });
 
@@ -101,7 +111,7 @@ server.on("connection", (plivoWs, request) => {
       const turn = planAgentTurn(receiverText, context, sessionState, supportedLanguages);
       sessionState = turn.state;
       updateRealtimeInstructions(realtimeWs, turn.instructions, {
-        voice: env.openaiRealtimeVoice,
+        voice: resolveRealtimeVoice(agentSettings),
         model: env.openaiRealtimeModel
       });
       if (turn.plan.shouldRespond) {

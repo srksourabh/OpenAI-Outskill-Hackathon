@@ -26,6 +26,12 @@ export async function GET(request: Request) {
   copyIfPresent(url, wsUrl, "referenceLabel");
   copyIfPresent(url, wsUrl, "accountLabel");
   copyIfPresent(url, wsUrl, "accountName");
+  copyIfPresent(url, wsUrl, "voicePreset");
+  copyIfPresent(url, wsUrl, "voiceId");
+  copyIfPresent(url, wsUrl, "tone");
+  copyIfPresent(url, wsUrl, "promptEnhancement");
+  copyIfPresent(url, wsUrl, "selfImproveEnabled");
+  copyIfPresent(url, wsUrl, "selfImprovementNotes");
   const xml = buildPlivoStreamXml({
     wsUrl: wsUrl.toString(),
     statusCallbackUrl: buildSignedCallbackUrl("/api/plivo/stream-status", callId),
@@ -65,6 +71,7 @@ async function markCallAnswered(callId: string) {
               ...call,
               status: "answered",
               summary_text: call.summary_text || "Call answered. Voice agent connected.",
+              status_history: [...call.status_history, { status: "answered", at: new Date().toISOString(), note: "Call answered. Voice agent connected." }],
               updated_at: new Date().toISOString()
             }
           : call

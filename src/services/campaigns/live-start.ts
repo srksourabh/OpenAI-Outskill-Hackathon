@@ -3,6 +3,7 @@ import { env } from "@/config/env";
 import { isRetryEligible } from "@/domain/calls";
 import { createPlivoCall, getProviderCallId } from "@/services/plivo/client";
 import type { CallRecord, Campaign } from "./types";
+import { buildCallAgentSnapshot, buildStatusHistory } from "./engine";
 
 export async function startCampaignLive(campaign: Campaign) {
   validateLiveCallingSetup();
@@ -39,6 +40,8 @@ export async function startCampaignLive(campaign: Campaign) {
       retry_eligible: false,
       last_call_time: null,
       provider_call_id: null,
+      ...buildCallAgentSnapshot(campaign),
+      status_history: buildStatusHistory("queued", now),
       updated_at: now
     });
   }
@@ -60,7 +63,13 @@ export async function startCampaignLive(campaign: Campaign) {
         assetLabel: campaign.prompt_config.asset_label,
         referenceLabel: campaign.prompt_config.reference_label,
         accountLabel: campaign.prompt_config.account_label,
-        accountName: campaign.prompt_config.account_name
+        accountName: campaign.prompt_config.account_name,
+        voicePreset: call.voice_preset_snapshot,
+        voiceId: call.voice_id_snapshot,
+        tone: call.tone_snapshot,
+        promptEnhancement: call.prompt_enhancement_snapshot,
+        selfImproveEnabled: String(campaign.agent_settings.self_improve_enabled),
+        selfImprovementNotes: campaign.self_improvement_notes
       });
       const ringUrl = buildSignedCallbackUrl("/api/plivo/ring", call.id);
       const hangupUrl = buildSignedCallbackUrl("/api/plivo/hangup", call.id);
@@ -77,6 +86,7 @@ export async function startCampaignLive(campaign: Campaign) {
           ...call,
           status: "initiated",
           provider_call_id: getProviderCallId(response),
+          status_history: [...call.status_history, { status: "initiated", at: now, note: "Provider call created." }],
           last_call_time: now,
           updated_at: now
         } satisfies CallRecord;
@@ -88,6 +98,7 @@ export async function startCampaignLive(campaign: Campaign) {
           status: "failed",
           summary_text: message,
           retry_eligible: isRetryEligible("failed", "unknown"),
+          status_history: [...call.status_history, { status: "failed", at: now, note: message }],
           last_call_time: now,
           updated_at: now
         } satisfies CallRecord;

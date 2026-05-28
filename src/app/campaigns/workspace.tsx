@@ -1,6 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
+
+type AgentSettings = {
+  voice_preset: "indian_female_natural" | "indian_male_natural" | "openai_custom";
+  voice_id: string;
+  tone: "polite" | "warm" | "direct" | "patient" | "assertive_respectful";
+  prompt_enhancement: string;
+  self_improve_enabled: boolean;
+};
 
 type Campaign = {
   id: string;
@@ -12,6 +20,8 @@ type Campaign = {
     account_label: string;
     account_name: string;
   };
+  agent_settings: AgentSettings;
+  self_improvement_notes: string;
   provider: string;
   status: string;
   default_language: string;
@@ -24,8 +34,18 @@ type Campaign = {
     disposition: string;
     next_action: string;
     summary_text: string;
+    transcript_text: string;
+    transcript_status: string;
     recording_url: string;
     detected_language: string;
+    last_call_time: string | null;
+    voice_preset_snapshot: string;
+    voice_id_snapshot: string;
+    tone_snapshot: string;
+    prompt_enhancement_snapshot: string;
+    receiver_attitude: string;
+    improvement_note: string;
+    status_history: Array<{ status: string; at: string; note: string }>;
     retry_eligible: boolean;
   }>;
 };
@@ -62,6 +82,14 @@ const defaultPromptConfig: {
   referenceLabel: "POS machine number",
   accountLabel: "company/bank",
   accountName: ""
+};
+
+const defaultAgentSettings: AgentSettings = {
+  voice_preset: "indian_female_natural",
+  voice_id: "marin",
+  tone: "warm",
+  prompt_enhancement: "",
+  self_improve_enabled: false
 };
 
 export function CampaignWorkspace() {
@@ -127,6 +155,25 @@ export function CampaignWorkspace() {
     await loadResults(data.campaign.id);
   }
 
+  async function saveAgentSettings(campaignId: string, settings: AgentSettings & { default_language: string }) {
+    setBusy(true);
+    setMessage("Saving agent settings for future calls...");
+    const response = await fetch(`/api/campaigns/${campaignId}/settings`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings)
+    });
+    const data = await response.json().catch(() => ({}));
+    setBusy(false);
+    if (!response.ok) {
+      setMessage(data.error ?? "Failed to save agent settings");
+      return;
+    }
+    setCampaigns((current) => current.map((campaign) => (campaign.id === data.campaign.id ? data.campaign : campaign)));
+    setMessage("Agent settings saved for future calls.");
+    await loadResults(data.campaign.id);
+  }
+
   return (
     <main className="min-h-dvh overflow-x-hidden bg-surface text-ink">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
@@ -175,6 +222,7 @@ export function CampaignWorkspace() {
               {message ? <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm">{message}</div> : null}
               {uploadSummary ? <UploadSummaryPanel summary={uploadSummary} /> : null}
               {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
+              {selected ? <AgentSettingsPanel busy={busy} campaign={selected} onSave={saveAgentSettings} /> : null}
               {selected ? <ResultsTable rows={results?.rows ?? []} /> : null}
             </div>
           </div>
@@ -205,6 +253,11 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
     formData.set("reference_label", manualReferenceLabel);
     formData.set("account_label", manualAccountLabel);
     formData.set("account_name", manualAccountName);
+    formData.set("voice_preset", defaultAgentSettings.voice_preset);
+    formData.set("voice_id", defaultAgentSettings.voice_id);
+    formData.set("tone", defaultAgentSettings.tone);
+    formData.set("prompt_enhancement", defaultAgentSettings.prompt_enhancement);
+    formData.set("self_improve_enabled", String(defaultAgentSettings.self_improve_enabled));
     formData.set("default_language", manualLanguage);
     formData.set("concurrency_limit", "1");
     formData.set("provider", manualProvider);
@@ -272,6 +325,29 @@ function UploadPanel({ busy, onUpload }: { busy: boolean; onUpload: (formData: F
             <option value="bn">Bengali</option>
           </select>
         </label>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            Voice preset
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="voice_preset" defaultValue={defaultAgentSettings.voice_preset}>
+              <option value="indian_female_natural">Indian female natural</option>
+              <option value="indian_male_natural">Indian male natural</option>
+              <option value="openai_custom">OpenAI custom voice</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            Tone
+            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="tone" defaultValue={defaultAgentSettings.tone}>
+              <option value="warm">Warm</option>
+              <option value="polite">Polite</option>
+              <option value="direct">Direct</option>
+              <option value="patient">Patient</option>
+              <option value="assertive_respectful">Assertive but respectful</option>
+            </select>
+          </label>
+        </div>
+        <input name="voice_id" type="hidden" value={defaultAgentSettings.voice_id} readOnly />
+        <input name="prompt_enhancement" type="hidden" value={defaultAgentSettings.prompt_enhancement} readOnly />
+        <input name="self_improve_enabled" type="hidden" value={String(defaultAgentSettings.self_improve_enabled)} readOnly />
         <label className="mt-3 block text-sm font-medium">
           Concurrency limit
           <input className="mt-1 w-full rounded-md border border-line px-3 py-2" min={1} max={25} name="concurrency_limit" type="number" defaultValue={5} />
@@ -385,6 +461,9 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
           <span className="rounded bg-surface px-2 py-1 text-xs">{campaign.status}</span>
           <span className="rounded bg-surface px-2 py-1 text-xs">Default: {campaign.default_language}</span>
           <span className="rounded bg-surface px-2 py-1 text-xs">Concurrency: {campaign.concurrency_limit}</span>
+          <span className="rounded bg-surface px-2 py-1 text-xs">Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
+          <span className="rounded bg-surface px-2 py-1 text-xs">Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
+          <span className="rounded bg-surface px-2 py-1 text-xs">Self-improve: {campaign.agent_settings?.self_improve_enabled ? "on" : "off"}</span>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8">
@@ -395,6 +474,120 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function AgentSettingsPanel({
+  busy,
+  campaign,
+  onSave
+}: {
+  busy: boolean;
+  campaign: Campaign;
+  onSave: (campaignId: string, settings: AgentSettings & { default_language: string }) => void;
+}) {
+  const settings = campaign.agent_settings ?? defaultAgentSettings;
+  const [voicePreset, setVoicePreset] = useState(settings.voice_preset);
+  const [voiceId, setVoiceId] = useState(settings.voice_id);
+  const [tone, setTone] = useState(settings.tone);
+  const [language, setLanguage] = useState(campaign.default_language);
+  const [promptEnhancement, setPromptEnhancement] = useState(settings.prompt_enhancement);
+  const [selfImprove, setSelfImprove] = useState(settings.self_improve_enabled);
+
+  useEffect(() => {
+    const next = campaign.agent_settings ?? defaultAgentSettings;
+    setVoicePreset(next.voice_preset);
+    setVoiceId(next.voice_id);
+    setTone(next.tone);
+    setLanguage(campaign.default_language);
+    setPromptEnhancement(next.prompt_enhancement);
+    setSelfImprove(next.self_improve_enabled);
+  }, [campaign.id, campaign.default_language, campaign.agent_settings]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSave(campaign.id, {
+      default_language: language,
+      voice_preset: voicePreset,
+      voice_id: voicePreset === "indian_male_natural" ? "cedar" : voicePreset === "indian_female_natural" ? "marin" : voiceId,
+      tone,
+      prompt_enhancement: promptEnhancement,
+      self_improve_enabled: selfImprove
+    });
+  }
+
+  return (
+    <section className="rounded-lg border border-line bg-panel p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Agent settings</h2>
+          <p className="text-sm text-muted">Saved changes apply to future calls only.</p>
+        </div>
+        {campaign.self_improvement_notes ? <div className="max-w-xl text-sm text-muted">{campaign.self_improvement_notes}</div> : null}
+      </div>
+      <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submit}>
+        <label className="block text-sm font-medium">
+          Voice preset
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={voicePreset} onChange={(event) => setVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
+            <option value="indian_female_natural">Indian female natural</option>
+            <option value="indian_male_natural">Indian male natural</option>
+            <option value="openai_custom">OpenAI custom voice ID</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium">
+          Default language
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={language} onChange={(event) => setLanguage(event.target.value)}>
+            <option value="hi">Hindi</option>
+            <option value="en">English</option>
+            <option value="bn">Bengali</option>
+            <option value="pa">Punjabi</option>
+            <option value="gu">Gujarati</option>
+            <option value="mr">Marathi</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+            <option value="ml">Malayalam</option>
+            <option value="kn">Kannada</option>
+            <option value="or">Odia</option>
+            <option value="as">Assamese</option>
+          </select>
+        </label>
+        {voicePreset === "openai_custom" ? (
+          <label className="block text-sm font-medium">
+            OpenAI custom voice ID
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={voiceId} onChange={(event) => setVoiceId(event.target.value)} />
+          </label>
+        ) : null}
+        <label className="block text-sm font-medium">
+          Tone
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={tone} onChange={(event) => setTone(event.target.value as AgentSettings["tone"])}>
+            <option value="warm">Warm</option>
+            <option value="polite">Polite</option>
+            <option value="direct">Direct</option>
+            <option value="patient">Patient</option>
+            <option value="assertive_respectful">Assertive but respectful</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium md:col-span-2">
+          Prompt enhancement
+          <textarea
+            className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2"
+            maxLength={1200}
+            placeholder="Extra call guidance appended to the system prompt for future calls."
+            value={promptEnhancement}
+            onChange={(event) => setPromptEnhancement(event.target.value)}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input checked={selfImprove} type="checkbox" onChange={(event) => setSelfImprove(event.target.checked)} />
+          Self-improve future calls from short call notes
+        </label>
+        <div className="flex justify-end md:col-span-2">
+          <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy}>
+            Save agent settings
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -421,11 +614,13 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
               <InfoField label="Order" value={String(row.order_id ?? "")} />
               <InfoField label="Language" value={String(row.language_hint ?? "")} />
               <InfoField label="Detected" value={row.call?.detected_language ?? "-"} />
+              <InfoField label="Attitude" value={row.call?.receiver_attitude ?? "unknown"} />
               <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
               <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
             </div>
             <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
             <div className="mt-3 text-sm">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>Open recording</a> : "Recording pending"}</div>
+            {row.call ? <CallHistoryDetails call={row.call} /> : null}
           </article>
         ))}
       </div>
@@ -440,19 +635,28 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr className="border-b border-line" key={String(row.contact_id)}>
-                <td className="px-3 py-2">{String(row.provider_name ?? "")}</td>
-                <td className="px-3 py-2 font-mono">{String(row.phone ?? "")}</td>
-                <td className="px-3 py-2">{String(row.location ?? "")}</td>
-                <td className="px-3 py-2">{String(row.order_id ?? "")}</td>
-                <td className="px-3 py-2">{String(row.language_hint ?? "")}</td>
-                <td className="px-3 py-2">{row.call?.status ?? "not queued"}</td>
-                <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
-                <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
-                <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
-                <td className="px-3 py-2">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>link</a> : "none"}</td>
-                <td className="max-w-[280px] px-3 py-2">{row.call?.summary_text ?? ""}</td>
-              </tr>
+              <Fragment key={String(row.contact_id)}>
+                <tr className="border-b border-line">
+                  <td className="px-3 py-2">{String(row.provider_name ?? "")}</td>
+                  <td className="px-3 py-2 font-mono">{String(row.phone ?? "")}</td>
+                  <td className="px-3 py-2">{String(row.location ?? "")}</td>
+                  <td className="px-3 py-2">{String(row.order_id ?? "")}</td>
+                  <td className="px-3 py-2">{String(row.language_hint ?? "")}</td>
+                  <td className="px-3 py-2">{row.call?.status ?? "not queued"}</td>
+                  <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
+                  <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
+                  <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
+                  <td className="px-3 py-2">{row.call?.recording_url ? <a className="text-accent" href={row.call.recording_url}>link</a> : "none"}</td>
+                  <td className="max-w-[280px] px-3 py-2">{row.call?.summary_text ?? ""}</td>
+                </tr>
+                {row.call ? (
+                  <tr className="border-b border-line bg-surface/60">
+                    <td className="px-3 py-2" colSpan={11}>
+                      <CallHistoryDetails call={row.call} />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             ))}
             {rows.length === 0 ? (
               <tr>
@@ -463,6 +667,48 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
         </table>
       </div>
     </section>
+  );
+}
+
+function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
+  return (
+    <details className="mt-3 text-sm">
+      <summary className="cursor-pointer font-medium text-accent">Call history and transcript</summary>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <InfoField label="Live status" value={call.status} />
+        <InfoField label="Last call" value={call.last_call_time ?? "-"} />
+        <InfoField label="Receiver attitude" value={call.receiver_attitude ?? "unknown"} />
+        <InfoField label="Voice" value={`${call.voice_preset_snapshot ?? "-"} (${call.voice_id_snapshot ?? "-"})`} />
+        <InfoField label="Tone" value={call.tone_snapshot ?? "-"} />
+        <InfoField label="Transcript" value={call.transcript_status ?? "missing"} />
+      </div>
+      {call.prompt_enhancement_snapshot ? (
+        <div className="mt-3 rounded-md border border-line bg-panel p-3">
+          <div className="text-xs text-muted">Prompt enhancement snapshot</div>
+          <div className="mt-1 whitespace-pre-wrap">{call.prompt_enhancement_snapshot}</div>
+        </div>
+      ) : null}
+      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+        <div className="text-xs text-muted">Transcript text</div>
+        <pre className="mt-1 whitespace-pre-wrap font-sans text-sm">{call.transcript_text || "Transcript pending."}</pre>
+      </div>
+      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+        <div className="text-xs text-muted">Status history</div>
+        <ol className="mt-2 space-y-1">
+          {(call.status_history ?? []).map((item, index) => (
+            <li key={`${item.status}-${item.at}-${index}`}>
+              <span className="font-medium">{item.status}</span> <span className="text-muted">{item.at}</span> {item.note ? <span>{item.note}</span> : null}
+            </li>
+          ))}
+        </ol>
+      </div>
+      {call.improvement_note ? (
+        <div className="mt-3 rounded-md border border-line bg-panel p-3">
+          <div className="text-xs text-muted">Self-improvement note</div>
+          <div className="mt-1">{call.improvement_note}</div>
+        </div>
+      ) : null}
+    </details>
   );
 }
 

@@ -1,6 +1,33 @@
 import type { PromptConfig } from "@/services/campaigns/types";
 import { z } from "zod";
 
+export const voicePresets = ["indian_female_natural", "indian_male_natural", "openai_custom"] as const;
+export type VoicePreset = (typeof voicePresets)[number];
+
+export const agentTones = ["polite", "warm", "direct", "patient", "assertive_respectful"] as const;
+export type AgentTone = (typeof agentTones)[number];
+
+export const receiverAttitudes = ["unknown", "rude", "polite", "busy", "confused", "cooperative", "suspicious"] as const;
+export type ReceiverAttitude = (typeof receiverAttitudes)[number];
+
+export type AgentSettings = {
+  voice_preset: VoicePreset;
+  voice_id: string;
+  tone: AgentTone;
+  prompt_enhancement: string;
+  self_improve_enabled: boolean;
+};
+
+export type AgentSettingsInput = {
+  voice_preset?: unknown;
+  voice_id?: unknown;
+  tone?: unknown;
+  prompt_enhancement?: unknown;
+  self_improve_enabled?: unknown;
+} | null;
+
+export type RealtimeVoice = string | { id: string };
+
 export const callOutcomeSchema = z.object({
   disposition: z.enum(["confirmed_pickup", "declined", "follow_up_needed", "manual_review", "voicemail", "not_picked", "not_connected", "invalid_number"]),
   next_action: z.enum(["none", "retry", "send_engineer", "manual_followup", "verify_data"]),
@@ -20,6 +47,8 @@ export type VoiceAgentContext = {
   languageHint: string;
   contactName?: string;
   promptConfig?: Partial<PromptConfig>;
+  agentSettings?: AgentSettingsInput;
+  selfImprovementNotes?: string;
 };
 
 export type VoiceAgentStage = "opening" | "readiness_question" | "follow_up" | "closing";
@@ -32,16 +61,28 @@ export function buildVoiceAgentInstructions(
     supportedLanguages?: string[];
     responseGoal?: string;
     latestReceiverReply?: string;
+    agentSettings?: AgentSettingsInput;
+    selfImprovementNotes?: string;
   } = {}
 ) {
   const stage = options.stage ?? "opening";
   const selectedLanguage = options.selectedLanguage ?? context.languageHint;
   const supportedLanguages = options.supportedLanguages?.join(", ") ?? "en, hi, bn, pa, gu, mr, ta, te, ml, kn, or, as";
   const promptConfig = getPromptConfig(context.promptConfig);
+  const agentSettings = getAgentSettings(options.agentSettings ?? context.agentSettings);
+  const promptEnhancement = agentSettings.prompt_enhancement.trim();
+  const selfImprovementNotes = (options.selfImprovementNotes ?? context.selfImprovementNotes ?? "").trim();
 
   return [
     "You are a warm, concise AI calling assistant for an operations team in India.",
-    "Sound like a polite Indian female operations caller. Speak like a real person on a phone call: short spoken sentences, natural pacing, light conversational glue, and respectful phrasing.",
+    "Speak in hyper realistic natural mode with an Indian operations-caller accent. Use small sentences, natural pacing, light conversational glue, and respectful phrasing.",
+    "Vary the introduction wording across calls while preserving the required meaning.",
+    "Do not repeat the same sentence when the receiver is confused, rude, or interrupting.",
+    "Stop speaking when the receiver interrupts, listen, and then continue with the shortest useful response.",
+    "Detect the receiver attitude as rude, polite, busy, confused, cooperative, suspicious, or unknown, then adapt calmly.",
+    "If the receiver is rude, stay calm and brief. If busy, ask for a better callback time. If confused, explain the company and purpose once. If cooperative, move quickly. If suspicious, identify the company and reference without over-talking.",
+    `Tone: ${agentSettings.tone}.`,
+    `Voice preset: ${agentSettings.voice_preset}.`,
     "Open in the selected language for this turn. English should be used first, Hindi is the safe fallback, and other supported Indian languages are available only on explicit request.",
     "Do not auto-switch languages because of code-mixing. Switch immediately when the receiver clearly asks for another supported language.",
     `Supported languages for this call: ${supportedLanguages}.`,
@@ -68,6 +109,8 @@ export function buildVoiceAgentInstructions(
     "If the receiver asks who is calling, identify the company and repeat the de-installation request briefly.",
     options.responseGoal ? `Immediate response goal: ${options.responseGoal}.` : "",
     options.latestReceiverReply ? `Latest receiver reply: ${options.latestReceiverReply}.` : "",
+    promptEnhancement ? `Operator prompt enhancement: ${promptEnhancement}` : "",
+    agentSettings.self_improve_enabled && selfImprovementNotes ? `Self-improvement guidance from earlier calls: ${selfImprovementNotes}` : "",
     "Do not promise engineer arrival times, prices, refunds, or support actions.",
     "End politely and briefly."
   ]
@@ -93,4 +136,28 @@ export function getPromptConfig(input?: Partial<PromptConfig> | null): PromptCon
     account_label: input?.account_label?.trim() || "company/bank",
     account_name: input?.account_name?.trim() || ""
   };
+}
+
+export function getAgentSettings(input?: AgentSettingsInput): AgentSettings {
+  const preset = voicePresets.includes(input?.voice_preset as VoicePreset) ? (input?.voice_preset as VoicePreset) : "indian_female_natural";
+  const defaultVoice = preset === "indian_male_natural" ? "cedar" : "marin";
+  const voiceId = String(input?.voice_id ?? defaultVoice).trim() || defaultVoice;
+  const tone = agentTones.includes(input?.tone as AgentTone) ? (input?.tone as AgentTone) : "warm";
+  const promptEnhancement = String(input?.prompt_enhancement ?? "").trim().slice(0, 1200);
+
+  return {
+    voice_preset: preset,
+    voice_id: preset === "openai_custom" ? voiceId : defaultVoice,
+    tone,
+    prompt_enhancement: promptEnhancement,
+    self_improve_enabled: Boolean(input?.self_improve_enabled)
+  };
+}
+
+export function resolveRealtimeVoice(settings: AgentSettings): RealtimeVoice {
+  if (settings.voice_preset === "openai_custom") {
+    return { id: settings.voice_id };
+  }
+
+  return settings.voice_id;
 }
