@@ -34,13 +34,16 @@ export function createAgentSessionState(languageHint: string): AgentSessionState
 }
 
 export function buildInitialAgentPrompt(context: VoiceAgentContext, state: AgentSessionState, supportedLanguages: LanguageCode[]) {
+  const promptConfig = context.promptConfig;
+  const requestType = promptConfig?.request_type?.trim() || "service";
+  const callPurpose = promptConfig?.call_purpose?.trim() || "validate merchant details and confirm service readiness";
+
   return {
     instructions: buildVoiceAgentInstructions(context, {
       stage: state.stage,
       selectedLanguage: state.selectedLanguage,
       supportedLanguages,
-      responseGoal:
-        "Introduce yourself, mention the de-installation request, and ask whether the machine is with the receiver right now.",
+      responseGoal: `Introduce yourself, mention the ${requestType} request and ${callPurpose}, then ask whether the request can proceed and the details are correct.`,
       latestReceiverReply: ""
     }),
     openingLine: buildOpeningLine(context)
@@ -65,7 +68,7 @@ export function planAgentTurn(
       context,
       supportedLanguages,
       transcript,
-      `Acknowledge briefly, switch immediately to ${languageLabels[requestedLanguage]}, and continue with the same de-installation question without restarting the whole script.`
+      `Acknowledge briefly, switch immediately to ${languageLabels[requestedLanguage]}, and continue with the same confirmation question without restarting the whole script.`
     );
   }
 
@@ -101,7 +104,7 @@ export function planAgentTurn(
       context,
       supportedLanguages,
       transcript,
-      "Confirm that the machine is with the receiver and ready for de-installation or pickup, thank them, and close politely."
+      "Confirm that the request can proceed, briefly recap the confirmed details, thank them, and close politely."
     );
   }
 
@@ -126,7 +129,7 @@ export function planAgentTurn(
       context,
       supportedLanguages,
       transcript,
-      "Ask one short follow-up about why the machine is not available or what callback time is better."
+      "Ask one short follow-up about the blocker, missing confirmation, or what callback time is better."
     );
   }
 
@@ -136,7 +139,7 @@ export function planAgentTurn(
     context,
     supportedLanguages,
     transcript,
-    "Clarify briefly who is calling and repeat the de-installation question in simple words."
+    "Clarify briefly who is calling and repeat the confirmation question in simple words."
   );
 }
 

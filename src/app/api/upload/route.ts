@@ -23,10 +23,13 @@ export async function POST(request: Request) {
     const campaignName = String(form.get("campaign_name") ?? "Uploaded campaign");
     const companyName = String(form.get("company_name") ?? "UDS");
     const promptConfig = {
+      call_purpose: String(form.get("call_purpose") ?? "validate merchant details and confirm service readiness"),
+      request_type: String(form.get("request_type") ?? "de-installation"),
       asset_label: String(form.get("asset_label") ?? "POS machine"),
-      reference_label: String(form.get("reference_label") ?? "POS machine number"),
-      account_label: String(form.get("account_label") ?? "company/bank"),
-      account_name: String(form.get("account_name") ?? "")
+      reference_label: String(form.get("reference_label") ?? "terminal ID"),
+      address_label: String(form.get("address_label") ?? "service address"),
+      confirmation_points: parseChecklistValue(String(form.get("confirmation_points") ?? "")),
+      collection_points: parseChecklistValue(String(form.get("collection_points") ?? ""))
     };
     const agentSettings = {
       voice_preset: String(form.get("voice_preset") ?? "indian_female_natural"),
@@ -66,4 +69,11 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(error);
   }
+}
+
+function parseChecklistValue(value: string) {
+  return value
+    .split(/\r?\n|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

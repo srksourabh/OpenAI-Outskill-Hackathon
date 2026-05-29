@@ -34,11 +34,11 @@ const openAIOutcomeJsonSchema = {
 } as const;
 
 const classifierInstructions = [
-  "You classify outbound pickup-readiness call transcripts for an India-focused operations team.",
+  "You classify outbound merchant verification call transcripts for an India-focused operations team.",
   "Return JSON only.",
   "Pick the best disposition from: confirmed_pickup, declined, follow_up_needed, manual_review, voicemail, not_picked, not_connected, invalid_number.",
-  "Use follow_up_needed when the contact says the items are not ready or needs a later callback.",
-  "Use declined only when the contact clearly refuses pickup or de-installation.",
+  "Use follow_up_needed when the contact says the request cannot proceed yet or needs a later callback.",
+  "Use declined only when the contact clearly refuses the request or refuses to confirm details.",
   "Use manual_review when the transcript is too unclear to trust.",
   "Use ISO-style language tags when possible such as hi, en, bn, ta, te, mr, gu, pa, ml, kn, or, as.",
   "Keep summary_text short and operational.",

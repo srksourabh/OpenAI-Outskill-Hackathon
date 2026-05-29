@@ -45,14 +45,18 @@ server.on("connection", (plivoWs, request) => {
     companyName: searchParams.get("companyName") ?? "UDS",
     orderId: searchParams.get("orderId") ?? "Realtime call",
     location: searchParams.get("location") ?? "Uploaded location",
+    address: searchParams.get("address") ?? "",
     machineCount: Number(searchParams.get("machineCount") ?? "1") || 1,
     languageHint: searchParams.get("languageHint") ?? env.primaryCallLanguage,
     contactName: searchParams.get("providerName") ?? "sir/ma'am",
     promptConfig: {
+      call_purpose: searchParams.get("callPurpose") ?? "validate merchant details and confirm service readiness",
+      request_type: searchParams.get("requestType") ?? "de-installation",
       asset_label: searchParams.get("assetLabel") ?? "POS machine",
-      reference_label: searchParams.get("referenceLabel") ?? "POS machine number",
-      account_label: searchParams.get("accountLabel") ?? "company/bank",
-      account_name: searchParams.get("accountName") ?? ""
+      reference_label: searchParams.get("referenceLabel") ?? "terminal ID",
+      address_label: searchParams.get("addressLabel") ?? "service address",
+      confirmation_points: parseChecklistValue(searchParams.get("confirmationPoints") ?? ""),
+      collection_points: parseChecklistValue(searchParams.get("collectionPoints") ?? "")
     },
     agentSettings,
     selfImprovementNotes: searchParams.get("selfImprovementNotes") ?? ""
@@ -182,4 +186,11 @@ function getMediaPayload(event: Record<string, unknown>) {
   if (!media || typeof media !== "object" || !("payload" in media)) return null;
   const payload = media.payload;
   return typeof payload === "string" ? payload : null;
+}
+
+function parseChecklistValue(value: string) {
+  return value
+    .split(/\r?\n|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

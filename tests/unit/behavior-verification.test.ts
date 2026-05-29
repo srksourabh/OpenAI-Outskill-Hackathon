@@ -34,10 +34,13 @@ describe("prompt studio preview", () => {
       companyName: "eDial",
       defaultLanguage: "hi",
       promptConfig: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
         reference_label: "terminal ID",
-        account_label: "bank",
-        account_name: "HDFC"
+        address_label: "merchant address",
+        confirmation_points: ["Confirm merchant name", "Confirm merchant address"],
+        collection_points: ["Collect callback timing if needed"]
       },
       agentSettings: {
         tone: "polite",

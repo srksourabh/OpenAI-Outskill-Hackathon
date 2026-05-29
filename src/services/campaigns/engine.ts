@@ -263,6 +263,30 @@ export function mergeCampaignAgentSettings(campaign: Campaign, input: AgentSetti
   };
 }
 
+export function mergeCampaignConfiguration(
+  campaign: Campaign,
+  input: {
+    company_name?: string;
+    default_language?: string;
+    prompt_config?: Partial<Campaign["prompt_config"]> | null;
+    agent_settings?: AgentSettingsInput;
+  }
+): Campaign {
+  return {
+    ...campaign,
+    company_name: input.company_name?.trim() || campaign.company_name,
+    default_language: getEffectiveLanguage(input.default_language, campaign.default_language),
+    prompt_config: getPromptConfig({
+      ...campaign.prompt_config,
+      ...(input.prompt_config ?? {})
+    }),
+    agent_settings: getAgentSettings({
+      ...campaign.agent_settings,
+      ...(input.agent_settings ?? {})
+    })
+  };
+}
+
 export function buildCallAgentSnapshot(campaign: Pick<Campaign, "agent_settings">) {
   const settings = getAgentSettings(campaign.agent_settings);
   return {

@@ -46,6 +46,7 @@ export type VoiceAgentContext = {
   companyName: string;
   orderId: string;
   location: string;
+  address: string;
   machineCount: number;
   languageHint: string;
   contactName?: string;
@@ -63,6 +64,20 @@ export type PromptStudioPreviewInput = {
   agentSettings?: AgentSettingsInput;
   selfImprovementNotes?: string;
 };
+
+const defaultConfirmationPoints = [
+  "Confirm the merchant or store name",
+  "Confirm the service address or branch location",
+  "Confirm the device or request reference",
+  "Confirm whether the request can proceed now"
+];
+
+const defaultCollectionPoints = [
+  "Readiness confirmation or current status",
+  "Reason for delay or blocker if not ready",
+  "Preferred callback time if follow-up is needed",
+  "Any address correction or landmark note"
+];
 
 export function buildVoiceAgentInstructions(
   context: VoiceAgentContext,
@@ -83,6 +98,8 @@ export function buildVoiceAgentInstructions(
   const agentSettings = getAgentSettings(options.agentSettings ?? context.agentSettings);
   const promptEnhancement = agentSettings.prompt_enhancement.trim();
   const selfImprovementNotes = (options.selfImprovementNotes ?? context.selfImprovementNotes ?? "").trim();
+  const confirmationChecklist = formatChecklistForPrompt(promptConfig.confirmation_points);
+  const collectionChecklist = formatChecklistForPrompt(promptConfig.collection_points);
 
   return [
     "You are a warm, concise AI calling assistant for an operations team in India.",
@@ -98,26 +115,32 @@ export function buildVoiceAgentInstructions(
     "Do not auto-switch languages because of code-mixing. Switch immediately when the receiver clearly asks for another supported language.",
     `Supported languages for this call: ${supportedLanguages}.`,
     "If the receiver asks for an unsupported language, apologize briefly and continue in English or Hindi.",
+    "Use only the operator-entered or uploaded contact details as conversation context. Do not invent extra facts, IDs, reasons, or operational promises.",
+    "Do not read internal order IDs, machine counts, backend field names, or structured labels aloud unless the receiver asks for them or the confirmation checklist explicitly requires them.",
     `Company: ${context.companyName}.`,
-    `Order ID or reference value: ${context.orderId}.`,
-    `Location: ${context.location}.`,
-    `Machine or item count: ${context.machineCount}.`,
-    `Asset label: ${promptConfig.asset_label}.`,
-    `Reference label: ${promptConfig.reference_label}.`,
-    `Account label: ${promptConfig.account_label}.`,
-    `Account name: ${promptConfig.account_name || "not provided"}.`,
+    `Call purpose: ${promptConfig.call_purpose}.`,
+    `Request type: ${promptConfig.request_type}.`,
+    `Internal reference value: ${context.orderId || "not provided"}.`,
+    `Location from uploaded data: ${context.location}.`,
+    `Detailed address from uploaded data: ${context.address || "not provided"}.`,
+    `Internal machine or item count: ${context.machineCount}.`,
+    `Asset label from uploaded data: ${promptConfig.asset_label}.`,
+    `Reference label for internal grounding: ${promptConfig.reference_label}.`,
+    `Address label to use naturally: ${promptConfig.address_label}.`,
+    `Required confirmations: ${confirmationChecklist}.`,
+    `Information to collect: ${collectionChecklist}.`,
     `Preferred language hint: ${context.languageHint}.`,
     `Selected language for this turn: ${selectedLanguage}.`,
     `Current stage: ${stage}.`,
     `Receiver name if needed: ${context.contactName ?? "sir/ma'am"}.`,
-    `Goal: confirm whether the ${promptConfig.asset_label.toLowerCase()} is currently with the receiver and ready for pickup or engineer de-installation.`,
+    `Goal: complete a polite merchant verification call for the ${promptConfig.request_type} request, confirm the required details, and collect missing information without sounding robotic.`,
     `Opening meaning to preserve: "${buildOpeningLine(context)}"`,
     "Ask only one question at a time.",
     "Do not sound robotic, repetitive, or overly scripted.",
-    "If the receiver says yes, confirm the machine is with them and ready, then close politely.",
-    "If the receiver says no, asks for later, or sounds uncertain, ask one short follow-up about the reason or callback timing, then close politely.",
+    "If the receiver confirms the request can proceed, briefly recap the confirmed details and close politely.",
+    "If the receiver says no, asks for later, or sounds uncertain, ask one short follow-up about the blocker, missing confirmation, or callback timing, then close politely.",
     "If the receiver says wrong number, acknowledge it, apologize, and end the call quickly.",
-    "If the receiver asks who is calling, identify the company and repeat the de-installation request briefly.",
+    "If the receiver asks who is calling, identify the company and repeat the business purpose briefly.",
     options.responseGoal ? `Immediate response goal: ${options.responseGoal}.` : "",
     options.latestReceiverReply ? `Latest receiver reply: ${options.latestReceiverReply}.` : "",
     promptEnhancement ? `Operator prompt enhancement: ${promptEnhancement}` : "",
@@ -131,21 +154,22 @@ export function buildVoiceAgentInstructions(
 
 export function buildOpeningLine(context: VoiceAgentContext) {
   const promptConfig = getPromptConfig(context.promptConfig);
-  const assetLabel = promptConfig.asset_label;
-  const quantityPart = context.machineCount > 1 ? `${context.machineCount} ${assetLabel}s` : `a ${assetLabel}`;
-  const referencePart = context.orderId ? ` regarding ${promptConfig.reference_label} ${context.orderId}` : "";
-  const accountPart = promptConfig.account_name ? ` linked to ${promptConfig.account_label} ${promptConfig.account_name}` : "";
-  const availabilityPhrase = context.machineCount > 1 ? `${assetLabel.toLowerCase()}s are` : `${assetLabel.toLowerCase()} is`;
+  const assetLabel = promptConfig.asset_label.trim();
+  const addressValue = context.address.trim() || context.location.trim();
+  const addressPart = addressValue ? ` for the ${assetLabel.toLowerCase()} at ${addressValue}` : ` for your ${assetLabel.toLowerCase()}`;
 
-  return `Hello, I am calling from ${context.companyName}${referencePart}. We have a de-installation request for ${quantityPart}${accountPart}. Could you please confirm whether the ${availabilityPhrase} with you right now or not?`;
+  return `Hello, I am calling from ${context.companyName}. This is about ${promptConfig.request_type}${addressPart}. We are calling to ${promptConfig.call_purpose}. Could you please confirm whether this request can proceed and the details are correct?`;
 }
 
 export function getPromptConfig(input?: Partial<PromptConfig> | null): PromptConfig {
   return {
+    call_purpose: cleanPromptField(input?.call_purpose, "validate merchant details and confirm service readiness"),
+    request_type: cleanPromptField(input?.request_type, "de-installation"),
     asset_label: input?.asset_label?.trim() || "POS machine",
-    reference_label: input?.reference_label?.trim() || "POS machine number",
-    account_label: input?.account_label?.trim() || "company/bank",
-    account_name: input?.account_name?.trim() || ""
+    reference_label: input?.reference_label?.trim() || "terminal ID",
+    address_label: cleanPromptField(input?.address_label, "service address"),
+    confirmation_points: normalizeChecklistInput(input?.confirmation_points, defaultConfirmationPoints),
+    collection_points: normalizeChecklistInput(input?.collection_points, defaultCollectionPoints)
   };
 }
 
@@ -180,6 +204,7 @@ export function buildPromptStudioPreview(input: PromptStudioPreviewInput) {
       companyName: input.companyName,
       orderId: "DEMO-1001",
       location: "Sample location",
+      address: "Sample merchant address",
       machineCount: 1,
       languageHint: language,
       promptConfig: input.promptConfig ?? undefined,
@@ -189,10 +214,43 @@ export function buildPromptStudioPreview(input: PromptStudioPreviewInput) {
     {
       selectedLanguage: language,
       stage: "opening",
-      responseGoal: "Introduce and verify pickup or de-installation readiness.",
+      responseGoal: "Introduce the company, validate the merchant details, and collect the required confirmations.",
       latestReceiverReply: "",
       agentSettings: input.agentSettings,
       selfImprovementNotes: input.selfImprovementNotes
     }
   );
+}
+
+export function promptChecklistToText(items: string[]) {
+  return items.join("\n");
+}
+
+function cleanPromptField(value: string | undefined, fallback: string) {
+  return value?.trim() || fallback;
+}
+
+function normalizeChecklistInput(value: unknown, fallback: string[]) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    return normalized.length > 0 ? normalized : fallback;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value
+      .split(/\r?\n|;/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    return normalized.length > 0 ? normalized : fallback;
+  }
+
+  return fallback;
+}
+
+function formatChecklistForPrompt(items: string[]) {
+  return items.map((item, index) => `${index + 1}. ${item}`).join(" ");
 }

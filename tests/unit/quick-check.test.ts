@@ -8,10 +8,13 @@ describe("quick check defaults", () => {
       default_language: "hi",
       provider: "simulated",
       prompt_config: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "card machine",
         reference_label: "terminal ID",
-        account_label: "bank",
-        account_name: "HDFC"
+        address_label: "merchant address",
+        confirmation_points: ["Confirm merchant name", "Confirm address"],
+        collection_points: ["Collect callback timing"]
       },
       agent_settings: {
         voice_preset: "openai_custom",
@@ -34,7 +37,10 @@ describe("quick check defaults", () => {
     expect(formData.get("company_name")).toBe("UDS Ops");
     expect(formData.get("default_language")).toBe("hi");
     expect(formData.get("provider")).toBe("simulated");
+    expect(formData.get("call_purpose")).toBe("validate merchant details and confirm service readiness");
+    expect(formData.get("request_type")).toBe("de-installation");
     expect(formData.get("asset_label")).toBe("card machine");
+    expect(formData.get("address_label")).toBe("merchant address");
     expect(formData.get("voice_preset")).toBe("openai_custom");
     expect(formData.get("voice_id")).toBe("voice_custom_123");
     expect(formData.get("tone")).toBe("patient");
@@ -49,10 +55,13 @@ describe("quick check defaults", () => {
       provider: "plivo",
       companyName: "UDS",
       promptConfig: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
-        reference_label: "POS machine number",
-        account_label: "company/bank",
-        account_name: ""
+        reference_label: "terminal ID",
+        address_label: "service address",
+        confirmation_points: ["Confirm merchant name"],
+        collection_points: ["Collect callback timing"]
       },
       agentSettings: {
         voice_preset: "indian_male_natural",

@@ -21,6 +21,7 @@ describe("buildVoiceAgentInstructions", () => {
         companyName: "UDS",
         orderId: "ORD-1001",
         location: "Mumbai",
+        address: "",
         machineCount: 1,
         languageHint: "hi"
       },
@@ -49,38 +50,47 @@ describe("buildVoiceAgentInstructions", () => {
       companyName: "UDS",
       orderId: "ORD-1001",
       location: "Mumbai",
+      address: "Andheri East",
       machineCount: 2,
       languageHint: "hi",
       promptConfig: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
-        reference_label: "POS machine number",
-        account_label: "bank",
-        account_name: "HDFC"
+        reference_label: "terminal ID",
+        address_label: "merchant address",
+        confirmation_points: ["Confirm the merchant name", "Confirm the address"],
+        collection_points: ["Collect callback timing if needed"]
       }
     });
 
     expect(instructions).toContain("explicit request");
     expect(instructions).toContain("Selected language for this turn");
     expect(instructions).toContain("Do not sound robotic");
-    expect(instructions).toContain("Account name: HDFC");
+    expect(instructions).toContain("Address label to use naturally: merchant address");
   });
 
   it("builds the required opening line for the live call", () => {
-    expect(
-      buildOpeningLine({
+    const openingLine = buildOpeningLine({
         companyName: "UDS",
         orderId: "ORD-1001",
         location: "Mumbai",
+        address: "Andheri East",
         machineCount: 2,
         languageHint: "en",
         promptConfig: {
+          call_purpose: "validate merchant details and confirm service readiness",
+          request_type: "de-installation",
           asset_label: "POS machine",
-          reference_label: "POS machine number",
-          account_label: "bank",
-          account_name: "HDFC"
+          reference_label: "terminal ID",
+          address_label: "merchant address",
+          confirmation_points: ["Confirm the merchant name", "Confirm the address"],
+          collection_points: ["Collect callback timing if needed"]
         }
-      })
-    ).toContain("Could you please confirm whether the pos machines are with you right now or not");
+      });
+
+    expect(openingLine).toContain("Could you please confirm whether this request can proceed and the details are correct");
+    expect(openingLine).not.toContain("ORD-1001");
   });
 
   it("uses custom OpenAI voice IDs only for custom OpenAI voice settings", () => {

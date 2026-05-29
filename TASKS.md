@@ -178,6 +178,8 @@
 - [x] Add front-page product landing, SEO metadata, privacy page, and sitemap output.
 - [x] Clean landing and workspace flow with simultaneous call sentiment analysis copy, a post-login Start Here guide, mobile workspace nav, and one canonical Prompt Studio prompt window.
 - [x] Split the campaign workspace into separate pages for Overview, New Campaign, Upload, Results, Agent Behavior, and Exports, with selected-contact campaign start and stronger completed-status/transcript actions.
+- [x] Merge Campaign Setup and Agent Behavior into one setup surface, drive the voice prompt from saved call-purpose validation checklists, and replace the cluttered results table with live-updating contact cards.
+- [x] Auto-start manual fresh-number quick checks on first submit and stop reading internal order IDs aloud unless explicitly needed.
 - [x] Add health dashboard page with component readiness status (store, OpenAI, Plivo, voice bridge, auth).
 - [x] Add explicit campaign draft creation panel with connected agent/prompt defaults.
 - [x] Capture callback request datetime/remarks plus missed-call notes and surface them in UI and exports.

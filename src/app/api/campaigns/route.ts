@@ -25,10 +25,13 @@ export async function POST(request: Request) {
       concurrency_limit?: number;
       provider?: "simulated" | "plivo";
       prompt_config?: {
+        call_purpose?: string;
+        request_type?: string;
         asset_label?: string;
         reference_label?: string;
-        account_label?: string;
-        account_name?: string;
+        address_label?: string;
+        confirmation_points?: string[] | string;
+        collection_points?: string[] | string;
       };
       agent_settings?: {
         voice_preset?: string;
@@ -42,10 +45,13 @@ export async function POST(request: Request) {
 
     const promptConfig = body.prompt_config
       ? {
+          call_purpose: String(body.prompt_config.call_purpose ?? "validate merchant details and confirm service readiness"),
+          request_type: String(body.prompt_config.request_type ?? "de-installation"),
           asset_label: String(body.prompt_config.asset_label ?? "POS machine"),
-          reference_label: String(body.prompt_config.reference_label ?? "POS machine number"),
-          account_label: String(body.prompt_config.account_label ?? "company/bank"),
-          account_name: String(body.prompt_config.account_name ?? "")
+          reference_label: String(body.prompt_config.reference_label ?? "terminal ID"),
+          address_label: String(body.prompt_config.address_label ?? "service address"),
+          confirmation_points: parseChecklistValue(body.prompt_config.confirmation_points),
+          collection_points: parseChecklistValue(body.prompt_config.collection_points)
         }
       : undefined;
 
@@ -65,4 +71,19 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(error);
   }
+}
+
+function parseChecklistValue(value: string[] | string | undefined) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? "").trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(/\r?\n|;/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }

@@ -6,10 +6,13 @@ import type { ParsedContact } from "@/services/ingestion/types";
 export type CampaignStatus = "draft" | "running" | "completed";
 
 export type PromptConfig = {
+  call_purpose: string;
+  request_type: string;
   asset_label: string;
   reference_label: string;
-  account_label: string;
-  account_name: string;
+  address_label: string;
+  confirmation_points: string[];
+  collection_points: string[];
 };
 
 export type ContactRecord = ParsedContact & {

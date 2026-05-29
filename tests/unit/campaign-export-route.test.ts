@@ -47,10 +47,13 @@ describe("campaign export route", () => {
       retry_limit: 2,
       concurrency_limit: 5,
       prompt_config: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
         reference_label: "order",
-        account_label: "company",
-        account_name: ""
+        address_label: "merchant address",
+        confirmation_points: ["Confirm merchant name"],
+        collection_points: ["Collect callback timing"]
       },
       agent_settings: {
         voice_preset: "indian_female_natural",
@@ -87,10 +90,13 @@ describe("campaign export route", () => {
       retry_limit: 2,
       concurrency_limit: 5,
       prompt_config: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
         reference_label: "order",
-        account_label: "company",
-        account_name: ""
+        address_label: "merchant address",
+        confirmation_points: ["Confirm merchant name"],
+        collection_points: ["Collect callback timing"]
       },
       agent_settings: {
         voice_preset: "indian_female_natural",

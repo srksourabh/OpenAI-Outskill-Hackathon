@@ -5,22 +5,26 @@ const context = {
   companyName: "UDS",
   orderId: "ORD-1001",
   location: "Mumbai",
+  address: "Andheri East",
   machineCount: 1,
   languageHint: "en",
   contactName: "Receiver",
   promptConfig: {
+    call_purpose: "validate merchant details and confirm service readiness",
+    request_type: "de-installation",
     asset_label: "POS machine",
-    reference_label: "POS machine number",
-    account_label: "bank",
-    account_name: "HDFC"
+    reference_label: "terminal ID",
+    address_label: "merchant address",
+    confirmation_points: ["Confirm the merchant name", "Confirm the address"],
+    collection_points: ["Collect callback timing if needed"]
   }
-} as const;
+};
 
 describe("voice bridge agent session", () => {
-  it("creates an opening prompt with the required de-installation question", () => {
+  it("creates an opening prompt with the required confirmation question", () => {
     const prompt = buildInitialAgentPrompt(context, createAgentSessionState("en"), ["en", "hi", "bn"]);
 
-    expect(prompt.openingLine).toContain("Could you please confirm whether the pos machine is with you right now or not");
+    expect(prompt.openingLine).toContain("Could you please confirm whether this request can proceed");
     expect(prompt.instructions).toContain("Current stage: opening");
   });
 

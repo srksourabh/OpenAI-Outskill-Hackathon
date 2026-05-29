@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
-import { buildPromptStudioPreview } from "@/domain/voice-agent";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { buildPromptStudioPreview, promptChecklistToText } from "@/domain/voice-agent";
 import { buildQuickCheckFormData, parsePhoneList, resolveQuickCheckDefaults } from "./quick-check";
 import { filterResultRows } from "./results-filter";
 
@@ -20,10 +20,13 @@ type Campaign = {
   name: string;
   company_name: string;
   prompt_config: {
+    call_purpose: string;
+    request_type: string;
     asset_label: string;
     reference_label: string;
-    account_label: string;
-    account_name: string;
+    address_label: string;
+    confirmation_points: string[];
+    collection_points: string[];
   };
   agent_settings: AgentSettings;
   self_improvement_notes: string;
@@ -90,16 +93,32 @@ type UploadSummary = {
 
 const defaultPromptConfig: {
   companyName: string;
+  callPurpose: string;
+  requestType: string;
   assetLabel: string;
   referenceLabel: string;
-  accountLabel: string;
-  accountName: string;
+  addressLabel: string;
+  confirmationPoints: string[];
+  collectionPoints: string[];
 } = {
   companyName: "UDS",
+  callPurpose: "validate merchant details and confirm service readiness",
+  requestType: "de-installation",
   assetLabel: "POS machine",
-  referenceLabel: "POS machine number",
-  accountLabel: "company/bank",
-  accountName: ""
+  referenceLabel: "terminal ID",
+  addressLabel: "service address",
+  confirmationPoints: [
+    "Confirm the merchant or store name",
+    "Confirm the service address or branch location",
+    "Confirm the device or request reference",
+    "Confirm whether the request can proceed now"
+  ],
+  collectionPoints: [
+    "Readiness confirmation or current status",
+    "Reason for delay or blocker if not ready",
+    "Preferred callback time if follow-up is needed",
+    "Any address correction or landmark note"
+  ]
 };
 
 const defaultAgentSettings: AgentSettings = {
@@ -130,10 +149,9 @@ const languageOptions = [
 
 const workspaceNavigation = [
   { href: "/campaigns", label: "Overview" },
-  { href: "/campaigns/new", label: "New Campaign" },
+  { href: "/campaigns/new", label: "Campaign Setup" },
   { href: "/campaigns/upload", label: "Upload" },
   { href: "/campaigns/results", label: "Results" },
-  { href: "/campaigns/settings", label: "Agent Behavior" },
   { href: "/campaigns/exports", label: "Exports" },
   { href: "/health", label: "Health" }
 ] as const;
@@ -142,6 +160,13 @@ function resolveVoiceId(voicePreset: AgentSettings["voice_preset"], voiceId: str
   if (voicePreset === "indian_female_natural") return "marin";
   if (voicePreset === "indian_male_natural") return "cedar";
   return voiceId.trim() || "marin";
+}
+
+function splitChecklistText(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export type CampaignWorkspaceView = "overview" | "new" | "upload" | "results" | "settings" | "exports";
@@ -176,6 +201,18 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
     window.sessionStorage.setItem(selectedCampaignStorageKey, selected.id);
   }, [selected?.id]);
 
+  useEffect(() => {
+    if (!selected?.id) return;
+    if (view !== "results" && selected.status !== "running") return;
+
+    const interval = window.setInterval(() => {
+      void loadCampaigns();
+      void loadResults(selected.id);
+    }, 4_000);
+
+    return () => window.clearInterval(interval);
+  }, [selected?.id, selected?.status, view]);
+
   const canManage = session.role === "admin";
 
   async function loadSession() {
@@ -208,21 +245,47 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
     setResults((await response.json()) as CampaignResults);
   }
 
-  async function uploadFile(formData: FormData) {
+  async function uploadFile(formData: FormData, options?: { autoStart?: boolean }) {
     setBusy(true);
     setMessage("Uploading and validating contacts...");
     setUploadSummary(null);
     const response = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await response.json();
-    setBusy(false);
     if (!response.ok) {
+      setBusy(false);
       setMessage(data.error ?? "Upload failed");
       return;
     }
     setUploadSummary(data.import_summary as UploadSummary);
+    const createdCampaign = data.campaign as Campaign;
     setMessage(`Imported ${data.import_summary.imported} contacts. Invalid: ${data.import_summary.invalid}. Duplicates: ${data.import_summary.duplicates}.`);
     await loadCampaigns();
-    selectCampaign(data.campaign.id);
+    selectCampaign(createdCampaign.id);
+
+    if (options?.autoStart && createdCampaign.contacts.length > 0) {
+      const contactIds = createdCampaign.contacts.map((contact) => String(contact.id));
+      setBusy(true);
+      setMessage(contactIds.length === 1 ? "Starting the fresh number now..." : `Starting ${contactIds.length} fresh contacts now...`);
+      const startResponse = await fetch(`/api/campaigns/${createdCampaign.id}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact_ids: contactIds })
+      });
+      const startData = await startResponse.json().catch(() => ({}));
+      setBusy(false);
+      if (!startResponse.ok) {
+        setMessage(startData.error ?? "Uploaded contacts were saved, but auto-start failed.");
+        return;
+      }
+
+      setCampaigns((current) => current.map((campaign) => (campaign.id === startData.campaign.id ? startData.campaign : campaign)));
+      setSelectedContactIdsByCampaign((current) => ({ ...current, [startData.campaign.id]: [] }));
+      await loadResults(startData.campaign.id);
+      setMessage(contactIds.length === 1 ? "Fresh number created and started." : "Fresh contacts created and started.");
+      return;
+    }
+
+    setBusy(false);
   }
 
   async function startCampaign(contactIds?: string[]) {
@@ -250,7 +313,20 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
     await loadResults(data.campaign.id);
   }
 
-  async function saveAgentSettings(campaignId: string, settings: AgentSettings & { default_language: string }) {
+  async function saveAgentSettings(
+    campaignId: string,
+    settings: AgentSettings & {
+      company_name: string;
+      default_language: string;
+      call_purpose: string;
+      request_type: string;
+      asset_label: string;
+      reference_label: string;
+      address_label: string;
+      confirmation_points: string[];
+      collection_points: string[];
+    }
+  ) {
     if (!canManage) {
       setMessage("Only admin users can save agent settings.");
       return;
@@ -397,9 +473,9 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
             {uploadSummary && view === "upload" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
             {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
             {view === "new" ? <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} /> : null}
+            {view === "new" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "new" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
             {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
-            {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-            {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
             {view === "exports" && selected ? <DownloadsPanel campaign={selected} /> : null}
             {view === "results" && selected ? (
               <ResultsTable
@@ -439,20 +515,14 @@ function TopNavLink({ href, label, pathname }: { href: string; label: string; pa
 function getWorkspaceHeader(view: CampaignWorkspaceView) {
   if (view === "new") {
     return {
-      title: `${productName} New Campaign`,
-      description: "Create a fresh campaign shell first, then move to upload or results when you are ready to run it."
+      title: `${productName} Campaign Setup`,
+      description: "Create the campaign and define the live agent behavior in one place, then move to upload or results when you are ready to run it."
     };
   }
   if (view === "upload") {
     return {
       title: `${productName} Upload Workspace`,
       description: "Upload CSV or Excel files, or create a quick single-number / list-based campaign without touching a database-heavy flow."
-    };
-  }
-  if (view === "settings") {
-    return {
-      title: `${productName} Agent Behavior`,
-      description: "Change the agent voice, tone, language, and saved prompt behavior, then keep those settings for future calls."
     };
   }
   if (view === "results") {
@@ -482,7 +552,7 @@ function UploadPanel({
   busy: boolean;
   canManage: boolean;
   campaignDefaults?: Campaign;
-  onUpload: (formData: FormData) => void;
+  onUpload: (formData: FormData, options?: { autoStart?: boolean }) => void;
 }) {
   const quickCheckDefaults = useMemo(() => resolveQuickCheckDefaults(campaignDefaults), [campaignDefaults]);
   const [intakeMode, setIntakeMode] = useState<"single" | "list" | "file">("single");
@@ -493,10 +563,13 @@ function UploadPanel({
   const [manualLanguage, setManualLanguage] = useState(quickCheckDefaults.language);
   const [manualProvider, setManualProvider] = useState(quickCheckDefaults.provider);
   const [manualCompanyName, setManualCompanyName] = useState(quickCheckDefaults.companyName);
+  const [manualCallPurpose, setManualCallPurpose] = useState(quickCheckDefaults.promptConfig.call_purpose);
+  const [manualRequestType, setManualRequestType] = useState(quickCheckDefaults.promptConfig.request_type);
   const [manualAssetLabel, setManualAssetLabel] = useState(quickCheckDefaults.promptConfig.asset_label);
   const [manualReferenceLabel, setManualReferenceLabel] = useState(quickCheckDefaults.promptConfig.reference_label);
-  const [manualAccountLabel, setManualAccountLabel] = useState(quickCheckDefaults.promptConfig.account_label);
-  const [manualAccountName, setManualAccountName] = useState(quickCheckDefaults.promptConfig.account_name);
+  const [manualAddressLabel, setManualAddressLabel] = useState(quickCheckDefaults.promptConfig.address_label);
+  const [manualConfirmationPoints, setManualConfirmationPoints] = useState(promptChecklistToText(quickCheckDefaults.promptConfig.confirmation_points));
+  const [manualCollectionPoints, setManualCollectionPoints] = useState(promptChecklistToText(quickCheckDefaults.promptConfig.collection_points));
   const [manualVoicePreset, setManualVoicePreset] = useState<AgentSettings["voice_preset"]>(quickCheckDefaults.agentSettings.voice_preset);
   const [manualVoiceId, setManualVoiceId] = useState(quickCheckDefaults.agentSettings.voice_id);
   const [manualTone, setManualTone] = useState<AgentSettings["tone"]>(quickCheckDefaults.agentSettings.tone);
@@ -508,10 +581,13 @@ function UploadPanel({
     setManualLanguage(quickCheckDefaults.language);
     setManualProvider(quickCheckDefaults.provider);
     setManualCompanyName(quickCheckDefaults.companyName);
+    setManualCallPurpose(quickCheckDefaults.promptConfig.call_purpose);
+    setManualRequestType(quickCheckDefaults.promptConfig.request_type);
     setManualAssetLabel(quickCheckDefaults.promptConfig.asset_label);
     setManualReferenceLabel(quickCheckDefaults.promptConfig.reference_label);
-    setManualAccountLabel(quickCheckDefaults.promptConfig.account_label);
-    setManualAccountName(quickCheckDefaults.promptConfig.account_name);
+    setManualAddressLabel(quickCheckDefaults.promptConfig.address_label);
+    setManualConfirmationPoints(promptChecklistToText(quickCheckDefaults.promptConfig.confirmation_points));
+    setManualCollectionPoints(promptChecklistToText(quickCheckDefaults.promptConfig.collection_points));
     setManualVoicePreset(quickCheckDefaults.agentSettings.voice_preset);
     setManualVoiceId(quickCheckDefaults.agentSettings.voice_id);
     setManualTone(quickCheckDefaults.agentSettings.tone);
@@ -536,10 +612,13 @@ function UploadPanel({
         concurrencyLimit: manualConcurrency,
         companyName: manualCompanyName,
         promptConfig: {
+          call_purpose: manualCallPurpose,
+          request_type: manualRequestType,
           asset_label: manualAssetLabel,
           reference_label: manualReferenceLabel,
-          account_label: manualAccountLabel,
-          account_name: manualAccountName
+          address_label: manualAddressLabel,
+          confirmation_points: splitChecklistText(manualConfirmationPoints),
+          collection_points: splitChecklistText(manualCollectionPoints)
         },
         agentSettings: {
           voice_preset: manualVoicePreset,
@@ -548,7 +627,8 @@ function UploadPanel({
           prompt_enhancement: manualPromptEnhancement,
           self_improve_enabled: manualSelfImprove
         }
-      })
+      }),
+      { autoStart: true }
     );
   }
 
@@ -607,6 +687,14 @@ function UploadPanel({
             <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
           </label>
           <label className="mt-3 block text-sm font-medium">
+            Call purpose
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="call_purpose" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Request type
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="request_type" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
             Asset label
             <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
           </label>
@@ -615,18 +703,16 @@ function UploadPanel({
             <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
           </label>
           <label className="mt-3 block text-sm font-medium">
-            Account label
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="account_label" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
+            Address label
+            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="address_label" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
           </label>
           <label className="mt-3 block text-sm font-medium">
-            Account name
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="account_name"
-              placeholder="HDFC Bank, SBI, Pine Labs, etc."
-              value={manualAccountName}
-              onChange={(event) => setManualAccountName(event.target.value)}
-            />
+            Confirmation checklist
+            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="confirmation_points" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Information to collect
+            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="collection_points" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
           </label>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
@@ -753,6 +839,16 @@ function UploadPanel({
           </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
+              Call purpose
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+            </label>
+            <label className="block text-sm font-medium">
+              Request type
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
               Asset label
               <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
             </label>
@@ -763,19 +859,18 @@ function UploadPanel({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
-              Account label
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAccountLabel} onChange={(event) => setManualAccountLabel(event.target.value)} />
+              Address label
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
             </label>
             <label className="block text-sm font-medium">
-              Account name
-              <input
-                className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                placeholder="Optional bank or company name"
-                value={manualAccountName}
-                onChange={(event) => setManualAccountName(event.target.value)}
-              />
+              Confirmation checklist
+              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
             </label>
           </div>
+          <label className="block text-sm font-medium">
+            Information to collect
+            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
+          </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Calling mode
@@ -850,7 +945,7 @@ function UploadPanel({
                 || !canManage
             }
           >
-            {intakeMode === "single" ? "Create single-number campaign" : "Create number-list campaign"}
+            {intakeMode === "single" ? "Create and start single-number call" : "Create and start number-list calls"}
           </button>
           {!canManage ? <p className="text-xs text-muted">Sign in as admin to create campaigns and upload contacts.</p> : null}
         </form>
@@ -862,7 +957,7 @@ function UploadPanel({
 function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?: Campaign }) {
   const steps = canManage
     ? [
-        ["1", "Create or choose a campaign", selected ? `Selected: ${selected.name}` : "Use New Campaign if you are starting fresh."],
+        ["1", "Create or choose a campaign", selected ? `Selected: ${selected.name}` : "Use Campaign Setup if you are starting fresh."],
         ["2", "Add contacts", "Use quick single-number intake, paste a list, or upload CSV/XLSX."],
         ["3", "Start and review", "Run bounded simultaneous calls, then inspect sentiment, QA, callback notes, and exports."]
       ]
@@ -928,10 +1023,13 @@ function CreateCampaignPanel({
   const [language, setLanguage] = useState(defaults?.default_language ?? "hi");
   const [provider, setProvider] = useState<"simulated" | "plivo">(defaults?.provider === "plivo" ? "plivo" : "simulated");
   const [concurrency, setConcurrency] = useState(defaults?.concurrency_limit ?? 5);
+  const [callPurpose, setCallPurpose] = useState(defaults?.prompt_config.call_purpose ?? defaultPromptConfig.callPurpose);
+  const [requestType, setRequestType] = useState(defaults?.prompt_config.request_type ?? defaultPromptConfig.requestType);
   const [assetLabel, setAssetLabel] = useState(defaults?.prompt_config.asset_label ?? "POS machine");
-  const [referenceLabel, setReferenceLabel] = useState(defaults?.prompt_config.reference_label ?? "POS machine number");
-  const [accountLabel, setAccountLabel] = useState(defaults?.prompt_config.account_label ?? "company/bank");
-  const [accountName, setAccountName] = useState(defaults?.prompt_config.account_name ?? "");
+  const [referenceLabel, setReferenceLabel] = useState(defaults?.prompt_config.reference_label ?? defaultPromptConfig.referenceLabel);
+  const [addressLabel, setAddressLabel] = useState(defaults?.prompt_config.address_label ?? defaultPromptConfig.addressLabel);
+  const [confirmationPoints, setConfirmationPoints] = useState(promptChecklistToText(defaults?.prompt_config.confirmation_points ?? defaultPromptConfig.confirmationPoints));
+  const [collectionPoints, setCollectionPoints] = useState(promptChecklistToText(defaults?.prompt_config.collection_points ?? defaultPromptConfig.collectionPoints));
   const [tone, setTone] = useState<AgentSettings["tone"]>(defaults?.agent_settings?.tone ?? "warm");
 
   useEffect(() => {
@@ -940,10 +1038,13 @@ function CreateCampaignPanel({
     setLanguage(defaults.default_language);
     setProvider(defaults.provider === "plivo" ? "plivo" : "simulated");
     setConcurrency(defaults.concurrency_limit);
+    setCallPurpose(defaults.prompt_config.call_purpose);
+    setRequestType(defaults.prompt_config.request_type);
     setAssetLabel(defaults.prompt_config.asset_label);
     setReferenceLabel(defaults.prompt_config.reference_label);
-    setAccountLabel(defaults.prompt_config.account_label);
-    setAccountName(defaults.prompt_config.account_name);
+    setAddressLabel(defaults.prompt_config.address_label);
+    setConfirmationPoints(promptChecklistToText(defaults.prompt_config.confirmation_points));
+    setCollectionPoints(promptChecklistToText(defaults.prompt_config.collection_points));
     setTone(defaults.agent_settings?.tone ?? "warm");
   }, [defaults?.id]);
 
@@ -956,10 +1057,13 @@ function CreateCampaignPanel({
       provider,
       concurrency_limit: Math.max(1, Math.min(25, concurrency)),
       prompt_config: {
+        call_purpose: callPurpose,
+        request_type: requestType,
         asset_label: assetLabel,
         reference_label: referenceLabel,
-        account_label: accountLabel,
-        account_name: accountName
+        address_label: addressLabel,
+        confirmation_points: splitChecklistText(confirmationPoints),
+        collection_points: splitChecklistText(collectionPoints)
       },
       agent_settings: {
         voice_preset: defaults?.agent_settings?.voice_preset ?? "indian_female_natural",
@@ -1029,6 +1133,14 @@ function CreateCampaignPanel({
           </select>
         </label>
         <label className="text-sm font-medium">
+          Call purpose
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={callPurpose} onChange={(event) => setCallPurpose(event.target.value)} />
+        </label>
+        <label className="text-sm font-medium">
+          Request type
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={requestType} onChange={(event) => setRequestType(event.target.value)} />
+        </label>
+        <label className="text-sm font-medium">
           Asset label
           <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={assetLabel} onChange={(event) => setAssetLabel(event.target.value)} />
         </label>
@@ -1037,12 +1149,24 @@ function CreateCampaignPanel({
           <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={referenceLabel} onChange={(event) => setReferenceLabel(event.target.value)} />
         </label>
         <label className="text-sm font-medium">
-          Account label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={accountLabel} onChange={(event) => setAccountLabel(event.target.value)} />
+          Address label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={addressLabel} onChange={(event) => setAddressLabel(event.target.value)} />
         </label>
         <label className="text-sm font-medium md:col-span-2">
-          Account name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={accountName} onChange={(event) => setAccountName(event.target.value)} />
+          Confirmation checklist
+          <textarea
+            className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+            value={confirmationPoints}
+            onChange={(event) => setConfirmationPoints(event.target.value)}
+          />
+        </label>
+        <label className="text-sm font-medium md:col-span-2">
+          Information to collect
+          <textarea
+            className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+            value={collectionPoints}
+            onChange={(event) => setCollectionPoints(event.target.value)}
+          />
         </label>
         <div className="md:col-span-2">
           <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
@@ -1089,6 +1213,7 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
           <h2 className="text-2xl font-black">{campaign.name}</h2>
           <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">{campaign.status}</span>
           <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Default: {campaign.default_language}</span>
+          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Request: {campaign.prompt_config.request_type}</span>
           <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Concurrency: {campaign.concurrency_limit}</span>
           <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
           <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
@@ -1116,7 +1241,20 @@ function PromptStudioPanel({
   busy: boolean;
   canManage: boolean;
   campaign: Campaign;
-  onSave: (campaignId: string, settings: AgentSettings & { default_language: string }) => void;
+  onSave: (
+    campaignId: string,
+    settings: AgentSettings & {
+      company_name: string;
+      default_language: string;
+      call_purpose: string;
+      request_type: string;
+      asset_label: string;
+      reference_label: string;
+      address_label: string;
+      confirmation_points: string[];
+      collection_points: string[];
+    }
+  ) => void;
 }) {
   const settings = campaign.agent_settings ?? defaultAgentSettings;
   const [promptEnhancement, setPromptEnhancement] = useState(settings.prompt_enhancement);
@@ -1151,7 +1289,15 @@ function PromptStudioPanel({
     event.preventDefault();
     if (!canManage) return;
     onSave(campaign.id, {
+      company_name: campaign.company_name,
       default_language: campaign.default_language,
+      call_purpose: campaign.prompt_config.call_purpose,
+      request_type: campaign.prompt_config.request_type,
+      asset_label: campaign.prompt_config.asset_label,
+      reference_label: campaign.prompt_config.reference_label,
+      address_label: campaign.prompt_config.address_label,
+      confirmation_points: campaign.prompt_config.confirmation_points,
+      collection_points: campaign.prompt_config.collection_points,
       voice_preset: settings.voice_preset,
       voice_id: settings.voice_id,
       tone: settings.tone,
@@ -1207,13 +1353,34 @@ function AgentSettingsPanel({
   busy: boolean;
   canManage: boolean;
   campaign: Campaign;
-  onSave: (campaignId: string, settings: AgentSettings & { default_language: string }) => void;
+  onSave: (
+    campaignId: string,
+    settings: AgentSettings & {
+      company_name: string;
+      default_language: string;
+      call_purpose: string;
+      request_type: string;
+      asset_label: string;
+      reference_label: string;
+      address_label: string;
+      confirmation_points: string[];
+      collection_points: string[];
+    }
+  ) => void;
 }) {
   const settings = campaign.agent_settings ?? defaultAgentSettings;
   const [voicePreset, setVoicePreset] = useState(settings.voice_preset);
   const [voiceId, setVoiceId] = useState(settings.voice_id);
   const [tone, setTone] = useState(settings.tone);
+  const [companyName, setCompanyName] = useState(campaign.company_name);
   const [language, setLanguage] = useState(campaign.default_language);
+  const [callPurpose, setCallPurpose] = useState(campaign.prompt_config.call_purpose);
+  const [requestType, setRequestType] = useState(campaign.prompt_config.request_type);
+  const [assetLabel, setAssetLabel] = useState(campaign.prompt_config.asset_label);
+  const [referenceLabel, setReferenceLabel] = useState(campaign.prompt_config.reference_label);
+  const [addressLabel, setAddressLabel] = useState(campaign.prompt_config.address_label);
+  const [confirmationPoints, setConfirmationPoints] = useState(promptChecklistToText(campaign.prompt_config.confirmation_points));
+  const [collectionPoints, setCollectionPoints] = useState(promptChecklistToText(campaign.prompt_config.collection_points));
   const [promptEnhancement, setPromptEnhancement] = useState(settings.prompt_enhancement);
   const [selfImprove, setSelfImprove] = useState(settings.self_improve_enabled);
 
@@ -1222,16 +1389,32 @@ function AgentSettingsPanel({
     setVoicePreset(next.voice_preset);
     setVoiceId(next.voice_id);
     setTone(next.tone);
+    setCompanyName(campaign.company_name);
     setLanguage(campaign.default_language);
+    setCallPurpose(campaign.prompt_config.call_purpose);
+    setRequestType(campaign.prompt_config.request_type);
+    setAssetLabel(campaign.prompt_config.asset_label);
+    setReferenceLabel(campaign.prompt_config.reference_label);
+    setAddressLabel(campaign.prompt_config.address_label);
+    setConfirmationPoints(promptChecklistToText(campaign.prompt_config.confirmation_points));
+    setCollectionPoints(promptChecklistToText(campaign.prompt_config.collection_points));
     setPromptEnhancement(next.prompt_enhancement);
     setSelfImprove(next.self_improve_enabled);
-  }, [campaign.id, campaign.default_language, campaign.agent_settings]);
+  }, [campaign.id, campaign.company_name, campaign.default_language, campaign.agent_settings, campaign.prompt_config]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canManage) return;
     onSave(campaign.id, {
+      company_name: companyName,
       default_language: language,
+      call_purpose: callPurpose,
+      request_type: requestType,
+      asset_label: assetLabel,
+      reference_label: referenceLabel,
+      address_label: addressLabel,
+      confirmation_points: splitChecklistText(confirmationPoints),
+      collection_points: splitChecklistText(collectionPoints),
       voice_preset: voicePreset,
       voice_id: resolveVoiceId(voicePreset, voiceId),
       tone,
@@ -1252,6 +1435,10 @@ function AgentSettingsPanel({
       </div>
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submit}>
         <label className="block text-sm font-medium">
+          Company name
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
           Voice preset
           <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={voicePreset} onChange={(event) => setVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
             <option value="indian_female_natural">Indian female natural</option>
@@ -1268,6 +1455,26 @@ function AgentSettingsPanel({
               </option>
             ))}
           </select>
+        </label>
+        <label className="block text-sm font-medium">
+          Call purpose
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={callPurpose} onChange={(event) => setCallPurpose(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Request type
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={requestType} onChange={(event) => setRequestType(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Asset label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={assetLabel} onChange={(event) => setAssetLabel(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Reference label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={referenceLabel} onChange={(event) => setReferenceLabel(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium">
+          Address label
+          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={addressLabel} onChange={(event) => setAddressLabel(event.target.value)} />
         </label>
         {voicePreset === "openai_custom" ? (
           <label className="block text-sm font-medium">
@@ -1287,6 +1494,14 @@ function AgentSettingsPanel({
           </select>
         </label>
         <input type="hidden" value={promptEnhancement} readOnly />
+        <label className="block text-sm font-medium md:col-span-2">
+          Confirmations to capture
+          <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" value={confirmationPoints} onChange={(event) => setConfirmationPoints(event.target.value)} />
+        </label>
+        <label className="block text-sm font-medium md:col-span-2">
+          Information to collect
+          <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" value={collectionPoints} onChange={(event) => setCollectionPoints(event.target.value)} />
+        </label>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input checked={selfImprove} type="checkbox" onChange={(event) => setSelfImprove(event.target.checked)} />
           Self-improve future calls from short call notes
@@ -1356,6 +1571,13 @@ function ResultsTable({
   );
   const visibleContactIds = filteredRows.map((row) => String(row.contact_id));
   const everyVisibleSelected = visibleContactIds.length > 0 && visibleContactIds.every((contactId) => selectedContactIds.includes(contactId));
+  const liveCounts = {
+    visible: filteredRows.length,
+    selected: filteredRows.filter((row) => selectedContactIds.includes(String(row.contact_id))).length,
+    active: filteredRows.filter((row) => ["initiated", "ringing", "answered"].includes(row.call?.status ?? "")).length,
+    completed: filteredRows.filter((row) => (row.call?.status ?? "") === "completed").length,
+    transcriptReady: filteredRows.filter((row) => (row.call?.transcript_status ?? "missing") !== "missing").length
+  };
 
   return (
     <section className="scroll-mt-6 overflow-hidden rounded-2xl bg-panel text-ink" id="results">
@@ -1445,112 +1667,103 @@ function ResultsTable({
             </select>
           </label>
         </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-5">
+          {[
+            ["Visible rows", liveCounts.visible],
+            ["Selected", liveCounts.selected],
+            ["Calling now", liveCounts.active],
+            ["Completed", liveCounts.completed],
+            ["Transcript ready", liveCounts.transcriptReady]
+          ].map(([label, value]) => (
+            <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-3" key={String(label)}>
+              <div className="text-xs font-bold uppercase tracking-wide text-white/70">{label}</div>
+              <div className="mt-1 text-2xl font-black text-white">{value}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="space-y-3 p-4 md:hidden">
+      <div className="space-y-3 p-4">
         {filteredRows.length === 0 ? <div className="py-4 text-center text-sm text-muted">No results match the current filters.</div> : null}
-        {filteredRows.map((row) => (
-          <article className={`rounded-2xl border-2 p-3 ${resolveRowHighlight(row.call?.status ?? "not_queued")}`} key={String(row.contact_id)}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                {canManage ? (
-                  <input
-                    aria-label={`Select ${String(row.provider_name ?? "contact")}`}
-                    checked={selectedContactIds.includes(String(row.contact_id))}
-                    className="mt-1 h-4 w-4"
-                    onChange={() => onToggleContact(String(row.contact_id))}
-                    type="checkbox"
-                  />
-                ) : null}
-                <div>
-                  <div className="font-semibold">{String(row.provider_name ?? "")}</div>
+        {filteredRows.map((row, index) => {
+          const rowStatus = row.call?.status ?? "not_queued";
+          const selectedForStart = selectedContactIds.includes(String(row.contact_id));
+          return (
+            <article className={`rounded-2xl border-2 bg-white/95 p-4 shadow-sm ${resolveRowHighlight(rowStatus)}`} key={String(row.contact_id)}>
+              <div className="grid gap-4 lg:grid-cols-[52px_minmax(0,1.5fr)_minmax(280px,1fr)]">
+                <div className="flex items-start justify-center pt-1">
+                  {canManage ? (
+                    <input
+                      aria-label={`Select ${String(row.provider_name ?? "contact")}`}
+                      checked={selectedForStart}
+                      className="mt-1 h-5 w-5"
+                      onChange={() => onToggleContact(String(row.contact_id))}
+                      type="checkbox"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-muted">#{index + 1}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className={`text-lg ${rowStatus === "completed" ? "font-black text-green-700" : "font-black text-ink"}`}>{String(row.provider_name ?? "Unnamed contact")}</h3>
+                    <span className="rounded-md border border-line px-2 py-1 text-xs font-bold text-muted">{String(row.language_hint ?? "-")}</span>
+                    {row.call ? <QaBadge call={row.call} /> : null}
+                  </div>
                   <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <InfoField label="Location" value={String(row.location ?? "-")} />
+                    <InfoField label="Address" value={String(row.address ?? "-")} />
+                    <InfoField label="Order / reference" value={String(row.order_id ?? "-")} />
+                    <InfoField label="Detected language" value={row.call?.detected_language ?? "-"} />
+                    <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
+                    <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
+                    <InfoField label="Last update" value={formatDateTime(row.call?.last_call_time)} />
+                    <InfoField label="Callback at" value={formatDateTime(row.call?.callback_requested_at)} />
+                    <InfoField label="Summary" value={row.call?.summary_text || "No remarks yet."} />
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-surface p-4 text-white">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wide text-white/70">Live status</div>
+                      <div className="mt-2">
+                        <StatusBadge status={rowStatus} />
+                      </div>
+                    </div>
+                    {selectedForStart ? <span className="rounded-md bg-accent px-2 py-1 text-xs font-black text-ink">Selected</span> : null}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <LiveStateChip label={resolveTranscriptLabel(row.call?.transcript_status)} tone={(row.call?.transcript_status ?? "missing") === "missing" ? "neutral" : "good"} />
+                    <LiveStateChip label={row.call?.recording_url ? "Recording ready" : "Recording pending"} tone={row.call?.recording_url ? "good" : "neutral"} />
+                    <LiveStateChip label={row.call ? `Attitude: ${row.call.receiver_attitude}` : "Awaiting call"} tone={row.call?.receiver_attitude === "rude" ? "warn" : "neutral"} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                    {row.call ? <a className="font-black text-accent" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+                    {row.call?.recording_url ? <a className="font-black text-accent" href={row.call.recording_url}>Open recording</a> : <span className="text-white/70">Recording pending</span>}
+                    {row.call?.transcript_text ? (
+                      <button className="font-black text-accent" onClick={() => onDownloadTranscript(row.call!)} type="button">
+                        Download transcript
+                      </button>
+                    ) : null}
+                  </div>
+                  {row.call?.status_history?.length ? (
+                    <div className="mt-4 rounded-xl border border-white/15 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wide text-white/70">Status trail</div>
+                      <ol className="mt-2 space-y-1 text-sm text-white/90">
+                        {row.call.status_history.slice(-4).map((item, itemIndex) => (
+                          <li key={`${item.status}-${item.at}-${itemIndex}`}>
+                            <span className="font-semibold">{item.status}</span> <span className="text-white/60">{formatDateTime(item.at)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-              <StatusBadge status={row.call?.status ?? "not_queued"} />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              <InfoField label="Location" value={String(row.location ?? "")} />
-              <InfoField label="Order" value={String(row.order_id ?? "")} />
-              <InfoField label="Language" value={String(row.language_hint ?? "")} />
-              <InfoField label="Detected" value={row.call?.detected_language ?? "-"} />
-              <InfoField label="QA score" value={row.call ? String(row.call.qa_score) : "-"} />
-              <InfoField label="Attitude" value={row.call?.receiver_attitude ?? "unknown"} />
-              <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
-              <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
-              <InfoField label="Callback at" value={formatDateTime(row.call?.callback_requested_at)} />
-              <InfoField label="Transcript" value={resolveTranscriptLabel(row.call?.transcript_status)} />
-            </div>
-            {row.call ? <QaBadge call={row.call} /> : null}
-            <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
-            <div className="mt-3 flex flex-wrap gap-3 text-sm">
-              {row.call ? <a className="font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
-              {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>Open recording</a> : "Recording pending"}
-              {row.call?.transcript_text ? (
-                <button className="font-black text-surface" onClick={() => onDownloadTranscript(row.call!)} type="button">
-                  Download transcript
-                </button>
-              ) : null}
-            </div>
-            {row.call ? <CallHistoryDetails call={row.call} /> : null}
-          </article>
-        ))}
-      </div>
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1320px] text-left text-sm">
-          <thead className="bg-surface text-white">
-            <tr>
-              {["Pick", "Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "QA", "Next", "Transcript", "Recording", "Remarks"].map((header) => (
-                <th className="border-b border-line px-3 py-2 font-semibold" key={header}>{header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row) => (
-              <Fragment key={String(row.contact_id)}>
-                <tr className={`border-b ${resolveTableRowHighlight(row.call?.status ?? "not_queued")}`}>
-                  <td className="px-3 py-2">
-                    {canManage ? <input checked={selectedContactIds.includes(String(row.contact_id))} onChange={() => onToggleContact(String(row.contact_id))} type="checkbox" /> : "-"}
-                  </td>
-                  <td className="px-3 py-2 font-semibold">{String(row.provider_name ?? "")}</td>
-                  <td className="px-3 py-2 font-mono">{String(row.phone ?? "")}</td>
-                  <td className="px-3 py-2">{String(row.location ?? "")}</td>
-                  <td className="px-3 py-2">{String(row.order_id ?? "")}</td>
-                  <td className="px-3 py-2">{String(row.language_hint ?? "")}</td>
-                  <td className="px-3 py-2"><StatusBadge status={row.call?.status ?? "not_queued"} /></td>
-                  <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
-                  <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
-                  <td className="px-3 py-2">{row.call ? <QaBadge call={row.call} compact /> : "-"}</td>
-                  <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
-                  <td className="px-3 py-2">{resolveTranscriptLabel(row.call?.transcript_status)}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-2">
-                      {row.call ? <a className="font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
-                      {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>recording</a> : <span>none</span>}
-                      {row.call?.transcript_text ? (
-                        <button className="font-black text-surface" onClick={() => onDownloadTranscript(row.call!)} type="button">
-                          transcript
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="max-w-[280px] px-3 py-2">{row.call?.callback_remarks || row.call?.missed_call_note || row.call?.summary_text || ""}</td>
-                </tr>
-                {row.call ? (
-                  <tr className="border-b border-line bg-surface/60">
-                    <td className="px-3 py-2" colSpan={14}>
-                      <CallHistoryDetails call={row.call} />
-                    </td>
-                  </tr>
-                ) : null}
-              </Fragment>
-            ))}
-            {filteredRows.length === 0 ? (
-              <tr>
-                <td className="px-3 py-8 text-center text-muted" colSpan={14}>No results match the current filters.</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+              {row.call ? <CallHistoryDetails call={row.call} /> : null}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -1564,6 +1777,17 @@ function resolveTranscriptLabel(transcriptStatus: string | undefined) {
 
 function StatusBadge({ status }: { status: string }) {
   return <span className={`rounded-md px-2 py-1 text-xs font-black ${resolveStatusBadgeClassName(status)}`}>{status.replace(/_/g, " ")}</span>;
+}
+
+function LiveStateChip({ label, tone }: { label: string; tone: "good" | "warn" | "neutral" }) {
+  const className =
+    tone === "good"
+      ? "border-green-300 bg-green-100 text-green-800"
+      : tone === "warn"
+        ? "border-amber-300 bg-amber-100 text-amber-800"
+        : "border-white/20 bg-white/10 text-white";
+
+  return <span className={`rounded-md border px-2 py-1 text-xs font-bold ${className}`}>{label}</span>;
 }
 
 function resolveStatusBadgeClassName(status: string) {

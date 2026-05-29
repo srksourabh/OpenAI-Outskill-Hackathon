@@ -22,10 +22,23 @@ type QuickCheckFormInput = {
 
 const fallbackPromptConfig = {
   companyName: "UDS",
+  callPurpose: "validate merchant details and confirm service readiness",
+  requestType: "de-installation",
   assetLabel: "POS machine",
-  referenceLabel: "POS machine number",
-  accountLabel: "company/bank",
-  accountName: ""
+  referenceLabel: "terminal ID",
+  addressLabel: "service address",
+  confirmationPoints: [
+    "Confirm the merchant or store name",
+    "Confirm the service address or branch location",
+    "Confirm the device or request reference",
+    "Confirm whether the request can proceed now"
+  ],
+  collectionPoints: [
+    "Readiness confirmation or current status",
+    "Reason for delay or blocker if not ready",
+    "Preferred callback time if follow-up is needed",
+    "Any address correction or landmark note"
+  ]
 };
 
 const fallbackAgentSettings = {
@@ -54,10 +67,13 @@ export function buildQuickCheckFormData(input: QuickCheckFormInput) {
   const formData = new FormData();
   formData.set("campaign_name", campaignName);
   formData.set("company_name", input.companyName);
+  formData.set("call_purpose", input.promptConfig.call_purpose);
+  formData.set("request_type", input.promptConfig.request_type);
   formData.set("asset_label", input.promptConfig.asset_label);
   formData.set("reference_label", input.promptConfig.reference_label);
-  formData.set("account_label", input.promptConfig.account_label);
-  formData.set("account_name", input.promptConfig.account_name);
+  formData.set("address_label", input.promptConfig.address_label);
+  formData.set("confirmation_points", input.promptConfig.confirmation_points.join("\n"));
+  formData.set("collection_points", input.promptConfig.collection_points.join("\n"));
   formData.set("voice_preset", input.agentSettings.voice_preset);
   formData.set("voice_id", resolveVoiceIdForPreset(input.agentSettings.voice_preset, input.agentSettings.voice_id));
   formData.set("tone", input.agentSettings.tone);

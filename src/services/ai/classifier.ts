@@ -13,7 +13,7 @@ export function classifyTranscript(transcript: string): CallOutcome {
       disposition: "confirmed_pickup",
       next_action: "send_engineer",
       detected_language,
-      summary_text: "Contact confirmed that pickup or de-installation is ready.",
+      summary_text: "Contact confirmed that the request can proceed.",
       reason_code: null,
       confidence: 0.88
     };

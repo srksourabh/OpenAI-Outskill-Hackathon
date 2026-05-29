@@ -31,16 +31,20 @@ describe("campaign engine", () => {
       concurrencyLimit: 5,
       contacts,
       promptConfig: {
+        call_purpose: "validate merchant details and confirm service readiness",
+        request_type: "de-installation",
         asset_label: "POS machine",
         reference_label: "Terminal ID",
-        account_label: "bank",
-        account_name: "HDFC"
+        address_label: "merchant address",
+        confirmation_points: ["Confirm merchant name", "Confirm address"],
+        collection_points: ["Collect callback timing"]
       }
     });
 
     const started = startCampaign(campaign);
 
     expect(started.prompt_config.reference_label).toBe("Terminal ID");
+    expect(started.prompt_config.request_type).toBe("de-installation");
     expect(started.calls).toHaveLength(7);
     expect(started.calls.filter((call) => call.status === "ringing")).toHaveLength(5);
     expect(started.calls.filter((call) => call.status === "queued")).toHaveLength(2);
