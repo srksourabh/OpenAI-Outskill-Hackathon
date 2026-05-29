@@ -466,3 +466,63 @@
 [ 3278797ms] TypeError: Failed to fetch
     at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
     at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3293779ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3293779ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3308778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3308778ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3323801ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3323801ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3338793ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3338793ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3353779ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3353779ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3368772ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3368773ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3383804ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3383805ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3398788ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3398788ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3413793ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3413794ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3428788ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3428788ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3443771ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3443771ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3458780ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3458780ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3473797ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3473798ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3488779ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3488780ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 3503785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 3503786ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
