@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 720" role="img" aria-labelledby="title desc">
+  <title id="title">Codex generated realtime voice test loop</title>
+  <desc id="desc">A phone, microphone, speaker, and transcript cards connected in a realtime testing loop.</desc>
+  <rect width="640" height="720" fill="#008fff"/>
+  <circle cx="320" cy="260" r="174" fill="#ffe400"/>
+  <rect x="210" y="92" width="220" height="376" rx="40" fill="#111111"/>
+  <rect x="236" y="134" width="168" height="278" rx="18" fill="#ffffff"/>
+  <circle cx="320" cy="438" r="15" fill="#ffffff"/>
+  <path d="M286 214v76c0 20 14 34 34 34s34-14 34-34v-76c0-20-14-34-34-34s-34 14-34 34z" fill="#008fff"/>
+  <path d="M260 286c0 38 24 70 60 70s60-32 60-70M320 356v46M286 402h68" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+  <path d="M132 190c-46 42-72 96-72 158s26 116 72 158M508 190c46 42 72 96 72 158s-26 116-72 158" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <rect x="72" y="532" width="496" height="96" rx="20" fill="#ffffff"/>
+  <path d="M110 578h226M110 610h152M394 578h96" stroke="#111111" stroke-width="13" stroke-linecap="round"/>
+  <rect x="392" y="596" width="110" height="18" rx="9" fill="#008fff"/>
+</svg>

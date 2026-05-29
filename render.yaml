@@ -22,12 +22,14 @@ services:
       - key: OPENAI_RESPONSES_MODEL
         value: gpt-4.1-mini
       - key: OPENAI_REALTIME_MODEL
-        value: gpt-realtime
+        value: gpt-realtime-2
+      - key: OPENAI_REALTIME_TRANSCRIPTION_MODEL
+        value: gpt-realtime-whisper
       - key: OPENAI_REALTIME_VOICE
         value: marin
       - key: OPENAI_REALTIME_FALLBACK_VOICE
         value: cedar
       - key: PRIMARY_CALL_LANGUAGE
-        value: en
+        value: hi
       - key: SUPPORTED_CALL_LANGUAGES
-        value: en,hi,bn,ta,te,mr,gu
+        value: hi,en,bn,pa,gu,mr,ta,te,ml,kn,or,as

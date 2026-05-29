@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOpeningLine, buildVoiceAgentInstructions, getAgentSettings, resolveRealtimeVoice } from "@/domain/voice-agent";
+import { buildOpeningLine, buildOpeningTurnInstruction, buildOpeningVariants, buildVoiceAgentInstructions, getAgentSettings, resolveRealtimeVoice } from "@/domain/voice-agent";
 
 describe("buildVoiceAgentInstructions", () => {
   it("normalizes default realtime agent settings", () => {
@@ -67,6 +67,7 @@ describe("buildVoiceAgentInstructions", () => {
     expect(instructions).toContain("explicit request");
     expect(instructions).toContain("Selected language for this turn");
     expect(instructions).toContain("Do not sound robotic");
+    expect(instructions).toContain("Hindi is the default safe language");
     expect(instructions).toContain("Address label to use naturally: merchant address");
   });
 
@@ -91,6 +92,20 @@ describe("buildVoiceAgentInstructions", () => {
 
     expect(openingLine).toContain("Could you please confirm whether this request can proceed and the details are correct");
     expect(openingLine).not.toContain("ORD-1001");
+  });
+
+  it("provides varied opening guidance without requiring one fixed starter", () => {
+    const context = {
+      companyName: "UDS",
+      orderId: "ORD-1001",
+      location: "Mumbai",
+      address: "Andheri East",
+      machineCount: 2,
+      languageHint: "hi"
+    };
+
+    expect(buildOpeningVariants(context).length).toBeGreaterThan(2);
+    expect(buildOpeningTurnInstruction(context)).toContain("Do not read any one template verbatim");
   });
 
   it("uses custom OpenAI voice IDs only for custom OpenAI voice settings", () => {

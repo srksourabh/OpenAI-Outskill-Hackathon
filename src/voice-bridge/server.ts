@@ -72,7 +72,8 @@ server.on("connection", (plivoWs, request) => {
     apiKey: env.openaiApiKey ?? "",
     model: env.openaiRealtimeModel,
     voice: resolveRealtimeVoice(agentSettings),
-    instructions: initialPrompt.instructions
+    instructions: initialPrompt.instructions,
+    transcriptionModel: env.openaiRealtimeTranscriptionModel
   });
 
   realtimeWs.on("message", (data) => {
@@ -83,7 +84,7 @@ server.on("connection", (plivoWs, request) => {
       initialResponseRequested = true;
       requestRealtimeResponse(
         realtimeWs,
-        `${initialPrompt.instructions} Speak the following first turn verbatim and complete the full sentence before waiting for the receiver: "${initialPrompt.openingLine}"`
+        `${initialPrompt.instructions} ${initialPrompt.openingInstruction} Complete one full opening sentence before waiting for the receiver.`
       );
       return;
     }
@@ -116,7 +117,8 @@ server.on("connection", (plivoWs, request) => {
       sessionState = turn.state;
       updateRealtimeInstructions(realtimeWs, turn.instructions, {
         voice: resolveRealtimeVoice(agentSettings),
-        model: env.openaiRealtimeModel
+        model: env.openaiRealtimeModel,
+        transcriptionModel: env.openaiRealtimeTranscriptionModel
       });
       if (turn.plan.shouldRespond) {
         requestRealtimeResponse(realtimeWs, turn.instructions);
@@ -126,6 +128,11 @@ server.on("connection", (plivoWs, request) => {
 
     if (eventType === "error") {
       console.error("OpenAI Realtime error", event);
+      return;
+    }
+
+    if (eventType === "conversation.item.input_audio_transcription.failed") {
+      console.error("OpenAI Realtime transcription failed", event);
     }
   });
 

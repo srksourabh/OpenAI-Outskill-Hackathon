@@ -25,7 +25,12 @@ describe("voice bridge agent session", () => {
     const prompt = buildInitialAgentPrompt(context, createAgentSessionState("en"), ["en", "hi", "bn"]);
 
     expect(prompt.openingLine).toContain("Could you please confirm whether this request can proceed");
+    expect(prompt.openingInstruction).toContain("Do not read any one template verbatim");
     expect(prompt.instructions).toContain("Current stage: opening");
+  });
+
+  it("falls back to Hindi when no usable language hint is present", () => {
+    expect(createAgentSessionState("").selectedLanguage).toBe("hi");
   });
 
   it("switches language only when the receiver explicitly asks", () => {

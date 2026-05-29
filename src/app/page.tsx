@@ -25,8 +25,9 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="rounded-2xl bg-white p-5 text-ink">
-            <div className="rounded-2xl border-4 border-surface p-4">
+          <div className="overflow-hidden rounded-2xl bg-white text-ink">
+            <img alt="Codex generated eDial voice operations board" className="h-64 w-full object-cover" src="/codex-voice-ops.svg" />
+            <div className="border-t-4 border-surface p-4">
               <div className="flex items-center justify-between">
                 <span className="rounded-md bg-accent px-3 py-2 text-sm font-black">Live board</span>
                 <span className="font-mono text-sm">PLIVO</span>

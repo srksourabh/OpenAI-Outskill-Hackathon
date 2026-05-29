@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { buildPromptStudioPreview, promptChecklistToText } from "@/domain/voice-agent";
 import { buildQuickCheckFormData, parsePhoneList, resolveQuickCheckDefaults } from "./quick-check";
 import { filterResultRows } from "./results-filter";
@@ -91,6 +91,27 @@ type UploadSummary = {
   duplicate_rows: UploadIssue[];
 };
 
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onend: (() => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onresult: ((event: { resultIndex: number; results: BrowserSpeechRecognitionResultList }) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type BrowserSpeechRecognitionResultList = {
+  length: number;
+  [index: number]: { [index: number]: { transcript: string } | undefined } | undefined;
+};
+
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => BrowserSpeechRecognition;
+  webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
+};
+
 const defaultPromptConfig: {
   companyName: string;
   callPurpose: string;
@@ -152,6 +173,7 @@ const workspaceNavigation = [
   { href: "/campaigns/new", label: "Campaign Setup" },
   { href: "/campaigns/upload", label: "Upload" },
   { href: "/campaigns/results", label: "Results" },
+  { href: "/campaigns/settings", label: "Settings" },
   { href: "/campaigns/exports", label: "Exports" },
   { href: "/health", label: "Health" }
 ] as const;
@@ -470,11 +492,15 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
             {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
             <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={selectCampaign} />
             {view === "overview" ? <StartHerePanel canManage={canManage} selected={selected} /> : null}
+            {view === "overview" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
             {uploadSummary && view === "upload" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
             {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
             {view === "new" ? <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} /> : null}
             {view === "new" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
             {view === "new" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "settings" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
             {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
             {view === "exports" && selected ? <DownloadsPanel campaign={selected} /> : null}
             {view === "results" && selected ? (
@@ -535,6 +561,12 @@ function getWorkspaceHeader(view: CampaignWorkspaceView) {
     return {
       title: `${productName} Exports`,
       description: "Download campaign outputs instantly for operators, with transcript-ready result files and minimal backend dependency."
+    };
+  }
+  if (view === "settings") {
+    return {
+      title: `${productName} Voice Lab`,
+      description: "Tune the agent, test the device speaker and mic, and confirm transcript capture before a live Plivo run."
     };
   }
   return {
@@ -997,6 +1029,141 @@ function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?
       </div>
     </section>
   );
+}
+
+function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const [status, setStatus] = useState("Ready to test the device speaker and mic.");
+  const [listening, setListening] = useState(false);
+  const [spokenLine, setSpokenLine] = useState("");
+  const [transcript, setTranscript] = useState("");
+
+  function startRehearsal() {
+    if (typeof window === "undefined") return;
+    const speechWindow = window as SpeechWindow;
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    const canSpeak = "speechSynthesis" in window;
+    if (!Recognition || !canSpeak) {
+      setStatus("This browser does not expose speech synthesis and mic transcription together. Use Chrome or Edge for this rehearsal.");
+      return;
+    }
+
+    stopRehearsal();
+    const line = buildDeviceRehearsalOpening(selected);
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = resolveBrowserSpeechLanguage(selected?.default_language ?? "hi");
+    recognition.onresult = (event) => {
+      let nextTranscript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        nextTranscript += event.results[index]?.[0]?.transcript ?? "";
+      }
+      setTranscript((current) => `${current}${nextTranscript}`.trimStart());
+    };
+    recognition.onerror = (event) => {
+      setStatus(`Mic transcript issue: ${event.error ?? "unknown error"}.`);
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+      setStatus("Rehearsal stopped. Review the captured transcript below.");
+    };
+    recognitionRef.current = recognition;
+    setTranscript("");
+    setSpokenLine(line);
+    setStatus("Playing the agent opening through your speaker...");
+
+    const utterance = new SpeechSynthesisUtterance(line);
+    utterance.lang = resolveBrowserSpeechLanguage(selected?.default_language ?? "hi");
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    utterance.onend = () => {
+      try {
+        recognition.start();
+        setListening(true);
+        setStatus("Listening through your mic. Reply naturally, then stop the rehearsal.");
+      } catch {
+        setStatus("Could not start mic capture. Check browser permission for microphone access.");
+      }
+    };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopRehearsal() {
+    if (typeof window !== "undefined") {
+      window.speechSynthesis?.cancel();
+    }
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setListening(false);
+  }
+
+  return (
+    <section className="scroll-mt-6 overflow-hidden rounded-2xl bg-panel text-ink" id="device-voice-test">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_320px]">
+        <div className="p-5">
+          <p className="text-xs font-black uppercase tracking-wide text-surface">Realtime rehearsal</p>
+          <h2 className="mt-1 text-2xl font-black">Device speaker and mic simulation</h2>
+          <p className="mt-2 text-sm text-muted">
+            This browser rehearsal plays a varied agent opener through the device speaker, then captures your reply from the mic so you can check transcript readiness before a live provider call.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink" onClick={startRehearsal} type="button">
+              Start speaker and mic test
+            </button>
+            <button className="rounded-md border-2 border-surface px-4 py-2 text-sm font-black text-surface disabled:opacity-50" disabled={!listening && !spokenLine} onClick={stopRehearsal} type="button">
+              Stop
+            </button>
+          </div>
+          <div className="mt-4 rounded-md border border-line bg-white p-3 text-sm font-semibold">{status}</div>
+          {spokenLine ? (
+            <div className="mt-3 rounded-md border border-line bg-surface p-3 text-white">
+              <div className="text-xs font-bold uppercase text-white/70">Spoken opening</div>
+              <p className="mt-1 text-sm">{spokenLine}</p>
+            </div>
+          ) : null}
+          <label className="mt-3 block text-sm font-medium">
+            Captured mic transcript
+            <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" readOnly value={transcript || "Transcript will appear here after you speak."} />
+          </label>
+        </div>
+        <img alt="Codex generated voice rehearsal loop" className="h-full min-h-72 w-full object-cover" src="/codex-realtime-loop.svg" />
+      </div>
+    </section>
+  );
+}
+
+function buildDeviceRehearsalOpening(campaign?: Campaign) {
+  const company = campaign?.company_name ?? "UDS";
+  const requestType = campaign?.prompt_config.request_type ?? "de-installation";
+  const purpose = campaign?.prompt_config.call_purpose ?? "validate merchant details and confirm service readiness";
+  const asset = campaign?.prompt_config.asset_label ?? "POS machine";
+  const variants = [
+    `Namaste, ${company} se call hai. ${asset} ke ${requestType} request ke liye short confirmation chahiye. Kya abhi baat kar sakte hain?`,
+    `Hello, I am calling from ${company} about the ${requestType} request for your ${asset}. I just need a quick confirmation so the team can proceed.`,
+    `${company} side se quick verification call hai. We are calling to ${purpose}. Can you confirm if the request can proceed now?`
+  ];
+  return variants[Math.floor(Math.random() * variants.length)] ?? variants[0];
+}
+
+function resolveBrowserSpeechLanguage(language: string) {
+  const languageMap: Record<string, string> = {
+    hi: "hi-IN",
+    en: "en-IN",
+    bn: "bn-IN",
+    pa: "pa-IN",
+    gu: "gu-IN",
+    mr: "mr-IN",
+    ta: "ta-IN",
+    te: "te-IN",
+    ml: "ml-IN",
+    kn: "kn-IN",
+    or: "or-IN",
+    as: "as-IN"
+  };
+  return languageMap[language] ?? "hi-IN";
 }
 
 function CreateCampaignPanel({

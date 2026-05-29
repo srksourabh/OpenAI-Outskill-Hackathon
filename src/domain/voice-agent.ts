@@ -111,7 +111,7 @@ export function buildVoiceAgentInstructions(
     "If the receiver is rude, stay calm and brief. If busy, ask for a better callback time. If confused, explain the company and purpose once. If cooperative, move quickly. If suspicious, identify the company and reference without over-talking.",
     `Tone: ${agentSettings.tone}.`,
     `Voice preset: ${agentSettings.voice_preset}.`,
-    "Open in the selected language for this turn. English should be used first, Hindi is the safe fallback, and other supported Indian languages are available only on explicit request.",
+    "Open in the selected language for this turn. Hindi is the default safe language, English is secondary, and other supported Indian languages are available only on explicit request.",
     "Do not auto-switch languages because of code-mixing. Switch immediately when the receiver clearly asks for another supported language.",
     `Supported languages for this call: ${supportedLanguages}.`,
     "If the receiver asks for an unsupported language, apologize briefly and continue in English or Hindi.",
@@ -134,7 +134,7 @@ export function buildVoiceAgentInstructions(
     `Current stage: ${stage}.`,
     `Receiver name if needed: ${context.contactName ?? "sir/ma'am"}.`,
     `Goal: complete a polite merchant verification call for the ${promptConfig.request_type} request, confirm the required details, and collect missing information without sounding robotic.`,
-    `Opening meaning to preserve: "${buildOpeningLine(context)}"`,
+    `Opening meaning to preserve without repeating it word-for-word: "${buildOpeningLine(context)}"`,
     "Ask only one question at a time.",
     "Do not sound robotic, repetitive, or overly scripted.",
     "If the receiver confirms the request can proceed, briefly recap the confirmed details and close politely.",
@@ -159,6 +159,32 @@ export function buildOpeningLine(context: VoiceAgentContext) {
   const addressPart = addressValue ? ` for the ${assetLabel.toLowerCase()} at ${addressValue}` : ` for your ${assetLabel.toLowerCase()}`;
 
   return `Hello, I am calling from ${context.companyName}. This is about ${promptConfig.request_type}${addressPart}. We are calling to ${promptConfig.call_purpose}. Could you please confirm whether this request can proceed and the details are correct?`;
+}
+
+export function buildOpeningVariants(context: VoiceAgentContext) {
+  const promptConfig = getPromptConfig(context.promptConfig);
+  const assetLabel = promptConfig.asset_label.trim().toLowerCase();
+  const addressValue = context.address.trim() || context.location.trim();
+  const locationPhrase = addressValue ? `at ${addressValue}` : "from your uploaded location";
+  const receiverName = context.contactName?.trim() || "sir or ma'am";
+
+  return [
+    `Namaste ${receiverName}, this is ${context.companyName}. I am calling about the ${promptConfig.request_type} request for the ${assetLabel} ${locationPhrase}. Can I quickly confirm if we can proceed?`,
+    `Hello ${receiverName}, ${context.companyName} side se call hai. This is for ${promptConfig.call_purpose} for the ${assetLabel} ${locationPhrase}. Is now a good time to confirm the details?`,
+    `Hi ${receiverName}, I am calling from ${context.companyName} regarding the ${promptConfig.request_type} request ${locationPhrase}. Could you confirm if the request can proceed now?`,
+    `Namaste, ${context.companyName} se bol raha hoon. ${assetLabel} ${locationPhrase} ke ${promptConfig.request_type} request ke liye short confirmation chahiye. Kya request proceed kar sakta hai?`
+  ];
+}
+
+export function buildOpeningTurnInstruction(context: VoiceAgentContext) {
+  return [
+    "Create the first spoken turn now.",
+    "Do not read any one template verbatim.",
+    "Choose a natural variation from the opening examples or write a similar short line.",
+    "Keep the same business meaning, company name, request type, address or location, and one confirmation question.",
+    "Do not mention internal reference IDs unless the receiver asks.",
+    `Opening examples: ${buildOpeningVariants(context).map((line, index) => `${index + 1}. ${line}`).join(" ")}`
+  ].join(" ");
 }
 
 export function getPromptConfig(input?: Partial<PromptConfig> | null): PromptConfig {

@@ -122,6 +122,7 @@
 - [x] Include prompt enhancement and self-improvement guidance in the OpenAI Realtime system prompt. Spec: [voice agent behavior](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#voice-agent-behavior). Plan: [Task 4 - Wire Settings Into Plivo and Realtime](docs/superpowers/plans/2026-05-28-dashboard-agent-settings-history.md#task-4-wire-settings-into-plivo-and-realtime). Acceptance: [agent settings and history criteria](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#acceptance-criteria).
 - [x] Add receiver attitude detection fields and improvement notes for future-call guidance. Spec: [voice agent behavior](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#voice-agent-behavior). Plan: [Task 2 - Snapshot Settings on Campaign Calls](docs/superpowers/plans/2026-05-28-dashboard-agent-settings-history.md#task-2-snapshot-settings-on-campaign-calls). Acceptance: [agent settings and history criteria](docs/superpowers/specs/2026-05-28-dashboard-agent-settings-history-design.md#acceptance-criteria).
 - [x] Improve explicit-request language switching speed in the realtime bridge. Spec: [switching policy](docs/superpowers/specs/2026-05-27-openai-realtime-multilingual-voice-agent-design.md#switching-policy). Plan: [Realtime session and state machine](docs/superpowers/specs/2026-05-27-openai-realtime-multilingual-voice-agent-design.md#realtime-session-and-state-machine). Acceptance: [multilingual realtime criteria](docs/superpowers/specs/2026-05-27-openai-realtime-multilingual-voice-agent-design.md#acceptance-criteria).
+- [x] Remove repeated verbatim starter behavior, add varied opening-turn guidance, and use the realtime transcription model for live transcript capture.
 - [x] Add deterministic yes/no/unclear classifier fallback.
 - [x] Add AI helper for language detection.
 - [x] Add AI helper for transcript summarization.
@@ -185,6 +186,8 @@
 - [x] Capture callback request datetime/remarks plus missed-call notes and surface them in UI and exports.
 - [x] Add Excel-compatible results export alongside CSV export.
 - [x] Align HTML table export format, filename extension, and MIME type so it is not mislabeled as XLSX.
+- [x] Add browser speaker/mic rehearsal in the workspace so simulated testing can capture a device transcript before live Plivo calls.
+- [x] Add Codex-generated product visuals to the landing page and realtime rehearsal panel.
 - [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
 - [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
 - [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.

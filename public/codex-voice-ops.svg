@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" role="img" aria-labelledby="title desc">
+  <title id="title">Codex generated outbound voice operations board</title>
+  <desc id="desc">A stylized operations desk with live calling waves, transcript cards, and campaign status bars.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#008fff"/>
+      <stop offset="1" stop-color="#003f9e"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff47a"/>
+      <stop offset="1" stop-color="#ffe400"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="720" fill="url(#sky)"/>
+  <rect x="88" y="92" width="784" height="536" rx="34" fill="#ffffff"/>
+  <rect x="124" y="132" width="312" height="456" rx="22" fill="#111111"/>
+  <rect x="464" y="132" width="372" height="96" rx="18" fill="url(#yellow)"/>
+  <rect x="464" y="254" width="172" height="148" rx="18" fill="#eaf5ff"/>
+  <rect x="664" y="254" width="172" height="148" rx="18" fill="#eaf5ff"/>
+  <rect x="464" y="428" width="372" height="160" rx="18" fill="#111111"/>
+  <circle cx="280" cy="282" r="88" fill="#ffe400"/>
+  <path d="M244 292c24 34 60 34 84 0" fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round"/>
+  <rect x="212" y="230" width="136" height="42" rx="21" fill="#111111"/>
+  <path d="M180 424c62-48 138-48 200 0" fill="none" stroke="#ffe400" stroke-width="16" stroke-linecap="round"/>
+  <path d="M164 472c82-64 150-64 232 0" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+  <path d="M490 184h260" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+  <path d="M490 318h98M490 352h118M690 318h96M690 352h70" stroke="#008fff" stroke-width="12" stroke-linecap="round"/>
+  <path d="M498 492h282M498 532h210" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="790" cy="496" r="20" fill="#ffe400"/>
+  <circle cx="810" cy="176" r="18" fill="#111111"/>
+  <circle cx="760" cy="176" r="18" fill="#111111"/>
+</svg>

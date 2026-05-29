@@ -1,4 +1,4 @@
-import { buildOpeningLine, buildVoiceAgentInstructions, type VoiceAgentContext, type VoiceAgentStage } from "@/domain/voice-agent";
+import { buildOpeningLine, buildOpeningTurnInstruction, buildVoiceAgentInstructions, type VoiceAgentContext, type VoiceAgentStage } from "@/domain/voice-agent";
 import { getEffectiveLanguage, isSupportedLanguage, languageLabels, type LanguageCode } from "@/domain/languages";
 
 type AgentSessionState = {
@@ -26,7 +26,7 @@ const callLaterMarkers = ["call later", "later", "baad mein", "baad me", "callba
 export function createAgentSessionState(languageHint: string): AgentSessionState {
   return {
     stage: "opening",
-    selectedLanguage: getEffectiveLanguage(languageHint, "en"),
+    selectedLanguage: getEffectiveLanguage(languageHint, "hi"),
     followUpCount: 0,
     dispositionHint: null,
     shouldClose: false
@@ -46,7 +46,8 @@ export function buildInitialAgentPrompt(context: VoiceAgentContext, state: Agent
       responseGoal: `Introduce yourself, mention the ${requestType} request and ${callPurpose}, then ask whether the request can proceed and the details are correct.`,
       latestReceiverReply: ""
     }),
-    openingLine: buildOpeningLine(context)
+    openingLine: buildOpeningLine(context),
+    openingInstruction: buildOpeningTurnInstruction(context)
   };
 }
 
