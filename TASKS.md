@@ -2,6 +2,7 @@
 
 ## Progress Summaries
 - [2026-05-26 progress summary](docs/daily-summary-2026-05-26.md)
+- [2026-05-29 progress summary](docs/daily-summary-2026-05-29.md)
 
 ## Phase 1: Project Setup
 - [x] Create Codex-optimized repository scaffold.

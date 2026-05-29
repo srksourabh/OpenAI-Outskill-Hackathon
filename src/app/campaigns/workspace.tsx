@@ -112,6 +112,14 @@ type SpeechWindow = Window & {
   webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
 };
 
+type RehearsalAnalysis = {
+  consent: "granted" | "denied" | "unclear";
+  availability: "available" | "busy" | "unclear";
+  sentiment: "positive" | "negative" | "neutral";
+  goalCaptured: boolean;
+  nextAction: string;
+};
+
 const defaultPromptConfig: {
   companyName: string;
   callPurpose: string;
@@ -1037,6 +1045,7 @@ function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
   const [listening, setListening] = useState(false);
   const [spokenLine, setSpokenLine] = useState("");
   const [transcript, setTranscript] = useState("");
+  const analysis = useMemo(() => analyzeRehearsalTranscript(transcript), [transcript]);
 
   function startRehearsal() {
     if (typeof window === "undefined") return;
@@ -1107,7 +1116,7 @@ function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
           <p className="text-xs font-black uppercase tracking-wide text-surface">Realtime rehearsal</p>
           <h2 className="mt-1 text-2xl font-black">Device speaker and mic simulation</h2>
           <p className="mt-2 text-sm text-muted">
-            This browser rehearsal plays a varied agent opener through the device speaker, then captures your reply from the mic so you can check transcript readiness before a live provider call.
+            This browser rehearsal plays a varied agent opener through the device speaker, asks for consent and availability, then captures your reply from the mic for transcript and sentiment checks.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink" onClick={startRehearsal} type="button">
@@ -1128,6 +1137,16 @@ function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
             Captured mic transcript
             <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" readOnly value={transcript || "Transcript will appear here after you speak."} />
           </label>
+          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+            <RehearsalChip label="Consent" value={analysis.consent} tone={analysis.consent === "granted" ? "good" : analysis.consent === "denied" ? "warn" : "neutral"} />
+            <RehearsalChip label="Availability" value={analysis.availability} tone={analysis.availability === "available" ? "good" : analysis.availability === "busy" ? "warn" : "neutral"} />
+            <RehearsalChip label="Sentiment" value={analysis.sentiment} tone={analysis.sentiment === "positive" ? "good" : analysis.sentiment === "negative" ? "warn" : "neutral"} />
+            <RehearsalChip label="Goal" value={analysis.goalCaptured ? "captured" : "pending"} tone={analysis.goalCaptured ? "good" : "neutral"} />
+          </div>
+          <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm">
+            <span className="font-black">Suggested next action: </span>
+            {analysis.nextAction}
+          </div>
         </div>
         <img alt="Codex generated voice rehearsal loop" className="h-full min-h-72 w-full object-cover" src="/codex-realtime-loop.svg" />
       </div>
@@ -1141,11 +1160,53 @@ function buildDeviceRehearsalOpening(campaign?: Campaign) {
   const purpose = campaign?.prompt_config.call_purpose ?? "validate merchant details and confirm service readiness";
   const asset = campaign?.prompt_config.asset_label ?? "POS machine";
   const variants = [
-    `Namaste, ${company} se call hai. ${asset} ke ${requestType} request ke liye short confirmation chahiye. Kya abhi baat kar sakte hain?`,
-    `Hello, I am calling from ${company} about the ${requestType} request for your ${asset}. I just need a quick confirmation so the team can proceed.`,
-    `${company} side se quick verification call hai. We are calling to ${purpose}. Can you confirm if the request can proceed now?`
+    `Namaste, ${company} se call hai. ${asset} ke ${requestType} request ke liye short confirmation chahiye. Is it okay to continue this voice test, and are you available now?`,
+    `Hello, I am calling from ${company} about the ${requestType} request for your ${asset}. Do I have your consent to continue this test, and can you confirm if the request can proceed now?`,
+    `${company} side se quick verification call hai. We are calling to ${purpose}. Please say if you consent to continue, whether you are available, and whether the request can proceed.`
   ];
   return variants[Math.floor(Math.random() * variants.length)] ?? variants[0];
+}
+
+function analyzeRehearsalTranscript(value: string): RehearsalAnalysis {
+  const text = value.toLowerCase();
+  const hasConsentYes = /(yes|haan|ha|ok|okay|sure|consent|agree|continue|allowed|theek hai)/.test(text);
+  const hasConsentNo = /(no|nahi|nahin|do not|don't|stop|not consent|not allowed)/.test(text);
+  const available = /(available|free|can talk|boliye|talk now|abhi|yes|haan|ready|proceed)/.test(text);
+  const busy = /(busy|meeting|later|call back|callback|driving|not now|baad|kal|tomorrow)/.test(text);
+  const positive = /(yes|haan|ready|sure|ok|okay|thank|proceed|available|consent|agree)/.test(text);
+  const negative = /(no|nahi|nahin|busy|stop|angry|later|not ready|do not|don't)/.test(text);
+  const goalCaptured = (hasConsentYes || hasConsentNo) && (available || busy || /ready|not ready|proceed/.test(text));
+
+  const consent = hasConsentNo ? "denied" : hasConsentYes ? "granted" : "unclear";
+  const availability = busy ? "busy" : available ? "available" : "unclear";
+  const sentiment = negative && !positive ? "negative" : positive && !negative ? "positive" : "neutral";
+
+  let nextAction = "Ask one short follow-up for consent and availability before treating the rehearsal as passed.";
+  if (consent === "denied") {
+    nextAction = "Stop the call flow and mark the contact for manual review or do-not-call handling.";
+  } else if (consent === "granted" && availability === "available") {
+    nextAction = "Proceed with the readiness question and save transcript evidence.";
+  } else if (availability === "busy") {
+    nextAction = "Ask for a callback time and save follow-up needed.";
+  }
+
+  return { consent, availability, sentiment, goalCaptured, nextAction };
+}
+
+function RehearsalChip({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "neutral" }) {
+  const className =
+    tone === "good"
+      ? "border-green-300 bg-green-100 text-green-800"
+      : tone === "warn"
+        ? "border-amber-300 bg-amber-100 text-amber-800"
+        : "border-line bg-white text-ink";
+
+  return (
+    <div className={`rounded-md border px-3 py-2 text-sm ${className}`}>
+      <div className="text-xs font-bold uppercase">{label}</div>
+      <div className="mt-1 font-black">{value}</div>
+    </div>
+  );
 }
 
 function resolveBrowserSpeechLanguage(language: string) {

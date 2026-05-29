@@ -42,11 +42,11 @@ export async function GET() {
     detail: plivoConfigured ? "Plivo credentials configured." : "Missing one or more Plivo credentials."
   });
 
-  const voiceBridgeConfigured = env.voiceBridgePublicWsUrl.includes("replace-with-voice-bridge-host") ? "warn" : "ok";
+  const voiceBridgeStatus = resolveVoiceBridgeStatus(env.voiceBridgePublicWsUrl);
   components.push({
     name: "Voice bridge",
-    status: voiceBridgeConfigured,
-    detail: voiceBridgeConfigured === "ok" ? "Configured." : "Not configured."
+    status: voiceBridgeStatus.status,
+    detail: voiceBridgeStatus.detail
   });
 
   const apiKeyConfigured = Boolean(env.adminApiKey && !env.adminApiKey.startsWith("replace-with"));
@@ -75,4 +75,39 @@ export async function GET() {
     },
     components
   });
+}
+
+function resolveVoiceBridgeStatus(value: string): HealthComponent {
+  const normalized = value.trim();
+  const isPlaceholder = normalized.includes("replace-with-voice-bridge-host") || normalized.includes("replace-with-render-service");
+
+  if (isPlaceholder) {
+    return {
+      name: "Voice bridge",
+      status: "warn",
+      detail: "Missing public Render WebSocket URL. Expected format: wss://your-render-service.onrender.com/plivo/audio-stream."
+    };
+  }
+
+  if (!normalized.startsWith("wss://")) {
+    return {
+      name: "Voice bridge",
+      status: "warn",
+      detail: "Voice bridge URL must use secure WebSocket format for live provider audio."
+    };
+  }
+
+  if (!normalized.endsWith("/plivo/audio-stream")) {
+    return {
+      name: "Voice bridge",
+      status: "warn",
+      detail: "Voice bridge URL must point to the Plivo audio stream path."
+    };
+  }
+
+  return {
+    name: "Voice bridge",
+    status: "ok",
+    detail: "Configured for secure Plivo audio streaming."
+  };
 }

@@ -109,6 +109,7 @@ export function buildVoiceAgentInstructions(
     "Stop speaking when the receiver interrupts, listen, and then continue with the shortest useful response.",
     "Detect the receiver attitude as rude, polite, busy, confused, cooperative, suspicious, or unknown, then adapt calmly.",
     "If the receiver is rude, stay calm and brief. If busy, ask for a better callback time. If confused, explain the company and purpose once. If cooperative, move quickly. If suspicious, identify the company and reference without over-talking.",
+    "At the start, confirm the receiver is available to talk. If the operator policy requires consent for recording or transcription, ask for consent before continuing.",
     `Tone: ${agentSettings.tone}.`,
     `Voice preset: ${agentSettings.voice_preset}.`,
     "Open in the selected language for this turn. Hindi is the default safe language, English is secondary, and other supported Indian languages are available only on explicit request.",
@@ -133,7 +134,7 @@ export function buildVoiceAgentInstructions(
     `Selected language for this turn: ${selectedLanguage}.`,
     `Current stage: ${stage}.`,
     `Receiver name if needed: ${context.contactName ?? "sir/ma'am"}.`,
-    `Goal: complete a polite merchant verification call for the ${promptConfig.request_type} request, confirm the required details, and collect missing information without sounding robotic.`,
+    `Goal: complete a polite merchant verification call for the ${promptConfig.request_type} request, confirm availability and readiness, and collect missing information without sounding robotic.`,
     `Opening meaning to preserve without repeating it word-for-word: "${buildOpeningLine(context)}"`,
     "Ask only one question at a time.",
     "Do not sound robotic, repetitive, or overly scripted.",
@@ -169,10 +170,10 @@ export function buildOpeningVariants(context: VoiceAgentContext) {
   const receiverName = context.contactName?.trim() || "sir or ma'am";
 
   return [
-    `Namaste ${receiverName}, this is ${context.companyName}. I am calling about the ${promptConfig.request_type} request for the ${assetLabel} ${locationPhrase}. Can I quickly confirm if we can proceed?`,
-    `Hello ${receiverName}, ${context.companyName} side se call hai. This is for ${promptConfig.call_purpose} for the ${assetLabel} ${locationPhrase}. Is now a good time to confirm the details?`,
-    `Hi ${receiverName}, I am calling from ${context.companyName} regarding the ${promptConfig.request_type} request ${locationPhrase}. Could you confirm if the request can proceed now?`,
-    `Namaste, ${context.companyName} se bol raha hoon. ${assetLabel} ${locationPhrase} ke ${promptConfig.request_type} request ke liye short confirmation chahiye. Kya request proceed kar sakta hai?`
+    `Namaste ${receiverName}, this is ${context.companyName}. I am calling about the ${promptConfig.request_type} request for the ${assetLabel} ${locationPhrase}. Is this a good time, and can I quickly confirm if we can proceed?`,
+    `Hello ${receiverName}, ${context.companyName} side se call hai. This is for ${promptConfig.call_purpose} for the ${assetLabel} ${locationPhrase}. Do I have your consent to continue, and is now a good time to confirm the details?`,
+    `Hi ${receiverName}, I am calling from ${context.companyName} regarding the ${promptConfig.request_type} request ${locationPhrase}. Are you available now, and could you confirm if the request can proceed?`,
+    `Namaste, ${context.companyName} se bol raha hoon. ${assetLabel} ${locationPhrase} ke ${promptConfig.request_type} request ke liye short confirmation chahiye. Kya abhi baat kar sakte hain, aur request proceed kar sakta hai?`
   ];
 }
 
