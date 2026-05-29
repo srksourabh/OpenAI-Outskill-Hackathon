@@ -33,7 +33,7 @@ describe("quick check defaults", () => {
 
     expect(formData.get("company_name")).toBe("UDS Ops");
     expect(formData.get("default_language")).toBe("hi");
-    expect(formData.get("provider")).toBe("plivo");
+    expect(formData.get("provider")).toBe("simulated");
     expect(formData.get("asset_label")).toBe("card machine");
     expect(formData.get("voice_preset")).toBe("openai_custom");
     expect(formData.get("voice_id")).toBe("voice_custom_123");

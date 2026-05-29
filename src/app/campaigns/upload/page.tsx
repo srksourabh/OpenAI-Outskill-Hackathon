@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { getSessionRole } from "@/lib/session";
-import { CampaignWorkspace } from "./workspace";
+import { CampaignWorkspace } from "../workspace";
 
-export default async function CampaignsPage() {
+export default async function UploadCampaignPage() {
   const role = await getSessionRole();
   if (!role) {
     redirect("/login");
   }
-  return <CampaignWorkspace view="overview" />;
+  return <CampaignWorkspace view="upload" />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
 import { buildPromptStudioPreview } from "@/domain/voice-agent";
 import { buildQuickCheckFormData, parsePhoneList, resolveQuickCheckDefaults } from "./quick-check";
@@ -110,6 +111,7 @@ const defaultAgentSettings: AgentSettings = {
 };
 
 const productName = "eDial";
+const selectedCampaignStorageKey = "edial:selected-campaign";
 const openAiBuiltInVoices = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
 const languageOptions = [
   ["hi", "Hindi"],
@@ -126,13 +128,26 @@ const languageOptions = [
   ["as", "Assamese"]
 ] as const;
 
+const workspaceNavigation = [
+  { href: "/campaigns", label: "Overview" },
+  { href: "/campaigns/new", label: "New Campaign" },
+  { href: "/campaigns/upload", label: "Upload" },
+  { href: "/campaigns/results", label: "Results" },
+  { href: "/campaigns/settings", label: "Agent Behavior" },
+  { href: "/campaigns/exports", label: "Exports" },
+  { href: "/health", label: "Health" }
+] as const;
+
 function resolveVoiceId(voicePreset: AgentSettings["voice_preset"], voiceId: string) {
   if (voicePreset === "indian_female_natural") return "marin";
   if (voicePreset === "indian_male_natural") return "cedar";
   return voiceId.trim() || "marin";
 }
 
-export function CampaignWorkspace() {
+export type CampaignWorkspaceView = "overview" | "new" | "upload" | "results" | "settings" | "exports";
+
+export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
+  const pathname = usePathname();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [results, setResults] = useState<CampaignResults | null>(null);
@@ -140,8 +155,11 @@ export function CampaignWorkspace() {
   const [message, setMessage] = useState("");
   const [session, setSession] = useState<SessionState>({ authenticated: false, role: null });
   const [uploadSummary, setUploadSummary] = useState<UploadSummary | null>(null);
+  const [selectedContactIdsByCampaign, setSelectedContactIdsByCampaign] = useState<Record<string, string[]>>({});
 
   const selected = useMemo(() => campaigns.find((campaign) => campaign.id === selectedId) ?? campaigns[0], [campaigns, selectedId]);
+  const selectedContactIds = selected ? selectedContactIdsByCampaign[selected.id] ?? [] : [];
+  const campaignSelection = useMemo(() => selected?.contacts.map((contact) => String(contact.id)) ?? [], [selected]);
 
   useEffect(() => {
     void loadSession();
@@ -150,6 +168,12 @@ export function CampaignWorkspace() {
 
   useEffect(() => {
     if (selected?.id) void loadResults(selected.id);
+  }, [selected?.id]);
+
+  useEffect(() => {
+    if (!selected?.id) return;
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(selectedCampaignStorageKey, selected.id);
   }, [selected?.id]);
 
   const canManage = session.role === "admin";
@@ -171,7 +195,11 @@ export function CampaignWorkspace() {
     }
     const data = (await response.json()) as { campaigns: Campaign[] };
     setCampaigns(data.campaigns);
-    if (!selectedId && data.campaigns[0]) setSelectedId(data.campaigns[0].id);
+    if (!selectedId && data.campaigns[0]) {
+      const storedCampaignId = typeof window === "undefined" ? "" : window.sessionStorage.getItem(selectedCampaignStorageKey) ?? "";
+      const nextSelection = data.campaigns.find((campaign) => campaign.id === storedCampaignId)?.id ?? data.campaigns[0].id;
+      setSelectedId(nextSelection);
+    }
   }
 
   async function loadResults(campaignId: string) {
@@ -194,17 +222,22 @@ export function CampaignWorkspace() {
     setUploadSummary(data.import_summary as UploadSummary);
     setMessage(`Imported ${data.import_summary.imported} contacts. Invalid: ${data.import_summary.invalid}. Duplicates: ${data.import_summary.duplicates}.`);
     await loadCampaigns();
-    setSelectedId(data.campaign.id);
+    selectCampaign(data.campaign.id);
   }
 
-  async function postAction(path: string) {
+  async function startCampaign(contactIds?: string[]) {
     if (!selected) return;
     if (!canManage) {
       setMessage("Only admin users can run campaign actions.");
       return;
     }
     setBusy(true);
-    const response = await fetch(path, { method: "POST", body: JSON.stringify({ count: 8 }) });
+    setMessage(contactIds?.length ? `Starting ${contactIds.length} selected contact${contactIds.length === 1 ? "" : "s"}...` : "Starting campaign...");
+    const response = await fetch(`/api/campaigns/${selected.id}/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contactIds?.length ? { contact_ids: contactIds } : {})
+    });
     const data = await response.json().catch(() => ({}));
     setBusy(false);
     if (!response.ok) {
@@ -212,7 +245,8 @@ export function CampaignWorkspace() {
       return;
     }
     setCampaigns((current) => current.map((campaign) => (campaign.id === data.campaign.id ? data.campaign : campaign)));
-    setMessage("Campaign updated.");
+    setSelectedContactIdsByCampaign((current) => ({ ...current, [data.campaign.id]: [] }));
+    setMessage(contactIds?.length ? "Selected contacts started." : "Campaign updated.");
     await loadResults(data.campaign.id);
   }
 
@@ -244,7 +278,7 @@ export function CampaignWorkspace() {
     company_name: string;
     default_language: string;
     concurrency_limit: number;
-    provider: "plivo";
+    provider: "simulated" | "plivo";
     prompt_config: Campaign["prompt_config"];
     agent_settings: AgentSettings;
   }) {
@@ -266,14 +300,53 @@ export function CampaignWorkspace() {
       return;
     }
     setCampaigns((current) => [data.campaign as Campaign, ...current]);
-    setSelectedId((data.campaign as Campaign).id);
+    selectCampaign((data.campaign as Campaign).id);
     setMessage("Campaign draft created. Add contacts with quick check or file upload.");
   }
 
+  function selectCampaign(campaignId: string) {
+    setSelectedId(campaignId);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(selectedCampaignStorageKey, campaignId);
+    }
+  }
+
+  function toggleContactSelection(contactId: string) {
+    if (!selected) return;
+    setSelectedContactIdsByCampaign((current) => {
+      const existing = current[selected.id] ?? [];
+      const next = existing.includes(contactId) ? existing.filter((id) => id !== contactId) : [...existing, contactId];
+      return { ...current, [selected.id]: next };
+    });
+  }
+
+  function toggleAllVisibleContacts(contactIds: string[]) {
+    if (!selected) return;
+    setSelectedContactIdsByCampaign((current) => {
+      const existing = current[selected.id] ?? [];
+      const everyVisibleSelected = contactIds.every((contactId) => existing.includes(contactId));
+      const next = everyVisibleSelected ? existing.filter((contactId) => !contactIds.includes(contactId)) : Array.from(new Set([...existing, ...contactIds]));
+      return { ...current, [selected.id]: next };
+    });
+  }
+
+  function downloadTranscript(call: Campaign["calls"][number]) {
+    if (!call.transcript_text || typeof window === "undefined") return;
+    const blob = new Blob([call.transcript_text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `transcript-${call.id}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const header = getWorkspaceHeader(view);
+
   return (
-    <main className="min-h-dvh overflow-x-hidden bg-surface text-white">
+    <main className="min-h-dvh overflow-x-hidden bg-surface pb-20 text-white lg:pb-0">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
-        <aside className="border-b border-white/50 bg-panel p-5 text-ink lg:border-b-0 lg:border-r-4 lg:border-accent">
+        <aside className="border-b border-white/50 bg-panel p-5 text-ink lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto lg:border-b-0 lg:border-r-4 lg:border-accent">
           <div className="text-xs font-black uppercase tracking-wide text-surface">Autonomous Calling Agent</div>
           <div className="mt-2 text-2xl font-black">{productName}</div>
           <p className="mt-2 text-sm text-muted">Multilingual outbound AI campaigns with synced agent controls and callback tracking.</p>
@@ -281,12 +354,9 @@ export function CampaignWorkspace() {
             Signed in as: <span className="font-semibold uppercase">{session.role ?? "guest"}</span>
           </div>
           <nav className="mt-8 space-y-2 text-sm">
-            <Link className="block rounded-md bg-surface px-3 py-2 font-black text-white" href="/campaigns">Campaigns</Link>
-            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#upload">Upload</a>
-            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#agent-settings">Agent Settings</a>
-            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#results">Results</a>
-            <a className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="#downloads">Downloads</a>
-            <Link className="block rounded-md px-3 py-2 font-semibold text-ink hover:bg-accent" href="/health">Health</Link>
+            {workspaceNavigation.map((item) => (
+              <TopNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+            ))}
           </nav>
         </aside>
 
@@ -294,25 +364,25 @@ export function CampaignWorkspace() {
           <header className="flex flex-col gap-4 border-b border-white/50 pb-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-sm font-black uppercase tracking-wide text-accent">Live operations workspace</p>
-              <h1 className="mt-2 text-5xl font-black leading-tight tracking-[-0.62px] text-accent">{productName} Command Center</h1>
-              <p className="mt-2 text-base text-white">Single number, number list, or CSV upload with mirrored agent configuration and campaign controls.</p>
+              <h1 className="mt-2 text-5xl font-black leading-tight text-accent">{header.title}</h1>
+              <p className="mt-2 text-base text-white">{header.description}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {canManage ? (
+              {canManage && view === "results" ? (
                 <button
                   className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50"
-                  disabled={!selected || busy}
-                  onClick={() => postAction(`/api/campaigns/${selected?.id}/start`)}
+                  disabled={!selected || busy || campaignSelection.length === 0}
+                  onClick={() => void startCampaign(selectedContactIds.length ? selectedContactIds : campaignSelection)}
                 >
-                  Start live campaign
+                  {selectedContactIds.length ? `Start ${selectedContactIds.length} selected` : "Start listed contacts"}
                 </button>
               ) : null}
-              {selected ? (
+              {selected && view !== "exports" ? (
                 <a className="rounded-md bg-white px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${selected.id}/export`}>
                   Export CSV
                 </a>
               ) : null}
-              {selected ? (
+              {selected && view !== "exports" ? (
                 <a className="rounded-md border-2 border-white px-4 py-2 text-sm font-black text-white" href={`/api/campaigns/${selected.id}/export?format=html`}>
                   Export HTML
                 </a>
@@ -320,24 +390,87 @@ export function CampaignWorkspace() {
             </div>
           </header>
 
-          <div className="mt-5 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} />
-            <div className="min-w-0 space-y-5">
-              <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} />
-              <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={setSelectedId} />
-              {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
-              {uploadSummary ? <UploadSummaryPanel summary={uploadSummary} /> : null}
-              {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
-              {selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-              {selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-              {selected ? <DownloadsPanel campaign={selected} /> : null}
-              {selected ? <ResultsTable rows={results?.rows ?? []} /> : null}
-            </div>
+          <div className="mt-5 space-y-5">
+            {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
+            <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={selectCampaign} />
+            {view === "overview" ? <StartHerePanel canManage={canManage} selected={selected} /> : null}
+            {uploadSummary && view === "upload" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
+            {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
+            {view === "new" ? <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} /> : null}
+            {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
+            {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+            {view === "exports" && selected ? <DownloadsPanel campaign={selected} /> : null}
+            {view === "results" && selected ? (
+              <ResultsTable
+                rows={results?.rows ?? []}
+                canManage={canManage}
+                selectedContactIds={selectedContactIds}
+                onToggleContact={toggleContactSelection}
+                onToggleAll={toggleAllVisibleContacts}
+                onDownloadTranscript={downloadTranscript}
+                onStartSelected={() => void startCampaign(selectedContactIds.length ? selectedContactIds : campaignSelection)}
+                busy={busy}
+              />
+            ) : null}
           </div>
         </section>
       </div>
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t-2 border-accent bg-panel text-center text-xs font-black text-ink shadow-2xl lg:hidden">
+        {workspaceNavigation.slice(0, 5).map((item) => (
+          <Link className={`px-2 py-3 ${pathname === item.href ? "bg-accent" : ""}`} href={item.href} key={item.href}>
+            {item.label.replace(" Campaign", "")}
+          </Link>
+        ))}
+      </nav>
     </main>
   );
+}
+
+function TopNavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const active = pathname === href;
+  return (
+    <Link className={`block rounded-md px-3 py-2 ${active ? "bg-surface font-black text-white" : "font-semibold text-ink hover:bg-accent"}`} href={href}>
+      {label}
+    </Link>
+  );
+}
+
+function getWorkspaceHeader(view: CampaignWorkspaceView) {
+  if (view === "new") {
+    return {
+      title: `${productName} New Campaign`,
+      description: "Create a fresh campaign shell first, then move to upload or results when you are ready to run it."
+    };
+  }
+  if (view === "upload") {
+    return {
+      title: `${productName} Upload Workspace`,
+      description: "Upload CSV or Excel files, or create a quick single-number / list-based campaign without touching a database-heavy flow."
+    };
+  }
+  if (view === "settings") {
+    return {
+      title: `${productName} Agent Behavior`,
+      description: "Change the agent voice, tone, language, and saved prompt behavior, then keep those settings for future calls."
+    };
+  }
+  if (view === "results") {
+    return {
+      title: `${productName} Live Results`,
+      description: "See uploaded rows inside the UI, select a few contacts, start the campaign, and watch status and transcript evidence update clearly."
+    };
+  }
+  if (view === "exports") {
+    return {
+      title: `${productName} Exports`,
+      description: "Download campaign outputs instantly for operators, with transcript-ready result files and minimal backend dependency."
+    };
+  }
+  return {
+    title: `${productName} Command Center`,
+    description: "Use the left navigation to move through campaign setup, upload, live results, agent behavior, and exports as separate pages."
+  };
 }
 
 function UploadPanel({
@@ -424,7 +557,7 @@ function UploadPanel({
       <div>
         <p className="text-xs font-black uppercase tracking-wide text-surface">Upload</p>
         <h2 className="mt-1 text-2xl font-black">Intake and agent setup</h2>
-        <p className="mt-1 text-sm text-muted">Use one number, a list of numbers, or spreadsheet upload. Agent options here mirror the campaign Agent Settings panel.</p>
+        <p className="mt-1 text-sm text-muted">Use one number, a list of numbers, or spreadsheet upload. Prompt text lives in Prompt Studio so there is one place to edit it.</p>
         <a className="mt-3 inline-flex rounded-md bg-accent px-3 py-2 text-sm font-black text-ink" href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>
@@ -499,6 +632,7 @@ function UploadPanel({
             <label className="block text-sm font-medium">
               Calling mode
               <select className="mt-1 w-full rounded-md border-2 border-surface px-3 py-2" name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+                <option value="simulated">Instant demo run</option>
                 <option value="plivo">Plivo live call</option>
               </select>
             </label>
@@ -546,23 +680,14 @@ function UploadPanel({
                 <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
               </label>
             ) : null}
-            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}.</p>
-            <label className="mt-3 block text-sm font-medium">
-              Prompt enhancement
-              <textarea
-                className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
-                maxLength={1200}
-                name="prompt_enhancement"
-                value={manualPromptEnhancement}
-                onChange={(event) => setManualPromptEnhancement(event.target.value)}
-              />
-            </label>
+            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}. Use Prompt Studio after creation for script guidance.</p>
             <label className="mt-3 flex items-center gap-2 text-sm font-medium">
               <input type="checkbox" checked={manualSelfImprove} onChange={(event) => setManualSelfImprove(event.target.checked)} />
               Self-improve future calls from short call notes
             </label>
           </div>
           <input name="voice_id" type="hidden" value={resolveVoiceId(manualVoicePreset, manualVoiceId)} readOnly />
+          <input name="prompt_enhancement" type="hidden" value={manualPromptEnhancement} readOnly />
           <input name="self_improve_enabled" type="hidden" value={String(manualSelfImprove)} readOnly />
           <label className="mt-3 block text-sm font-medium">
             Concurrency limit
@@ -655,6 +780,7 @@ function UploadPanel({
             <label className="block text-sm font-medium">
               Calling mode
               <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+                <option value="simulated">Instant demo run</option>
                 <option value="plivo">Plivo live call</option>
               </select>
             </label>
@@ -697,16 +823,7 @@ function UploadPanel({
                 <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
               </label>
             ) : null}
-            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}.</p>
-            <label className="mt-3 block text-sm font-medium">
-              Prompt enhancement
-              <textarea
-                className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
-                maxLength={1200}
-                value={manualPromptEnhancement}
-                onChange={(event) => setManualPromptEnhancement(event.target.value)}
-              />
-            </label>
+            <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}. Use Prompt Studio after creation for script guidance.</p>
             <label className="mt-3 flex items-center gap-2 text-sm font-medium">
               <input checked={manualSelfImprove} type="checkbox" onChange={(event) => setManualSelfImprove(event.target.checked)} />
               Self-improve future calls from short call notes
@@ -742,6 +859,51 @@ function UploadPanel({
   );
 }
 
+function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?: Campaign }) {
+  const steps = canManage
+    ? [
+        ["1", "Create or choose a campaign", selected ? `Selected: ${selected.name}` : "Use New Campaign if you are starting fresh."],
+        ["2", "Add contacts", "Use quick single-number intake, paste a list, or upload CSV/XLSX."],
+        ["3", "Start and review", "Run bounded simultaneous calls, then inspect sentiment, QA, callback notes, and exports."]
+      ]
+    : [
+        ["1", "Choose an existing campaign", selected ? `Selected: ${selected.name}` : "Ask an admin to create a campaign first."],
+        ["2", "Review outcomes", "Open Results to inspect call status, sentiment, transcript, and callback notes."],
+        ["3", "Download exports", "Use Exports for operations handoff files when campaign data is ready."]
+      ];
+
+  return (
+    <section className="scroll-mt-6 rounded-2xl bg-accent p-5 text-ink" id="start">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-surface">Start here</p>
+          <h2 className="mt-1 text-3xl font-black">{canManage ? "Run the demo from left to right" : "Review the campaign workspace"}</h2>
+          <p className="mt-1 max-w-3xl text-sm font-semibold">
+            {canManage
+              ? "This page is the product workspace. Begin with a campaign, add contacts, start simultaneous calls, then review sentiment and exports."
+              : "User access is read-only, so start with campaign results and exports after an admin creates or starts a campaign."}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {canManage ? <Link className="rounded-md bg-surface px-3 py-2 text-sm font-black text-white" href="/campaigns/new">New campaign</Link> : null}
+          <Link className="rounded-md border-2 border-surface px-3 py-2 text-sm font-black text-ink" href={canManage ? "/campaigns/upload" : "/campaigns/results"}>
+            {canManage ? "Add contacts" : "Open results"}
+          </Link>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {steps.map(([number, title, body]) => (
+          <article className="rounded-md bg-white p-4" key={title}>
+            <div className="text-xs font-black uppercase text-surface">Step {number}</div>
+            <h3 className="mt-1 text-lg font-black">{title}</h3>
+            <p className="mt-1 text-sm text-muted">{body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CreateCampaignPanel({
   busy,
   defaults,
@@ -756,7 +918,7 @@ function CreateCampaignPanel({
     company_name: string;
     default_language: string;
     concurrency_limit: number;
-    provider: "plivo";
+    provider: "simulated" | "plivo";
     prompt_config: Campaign["prompt_config"];
     agent_settings: AgentSettings;
   }) => void;
@@ -764,7 +926,7 @@ function CreateCampaignPanel({
   const [name, setName] = useState("New readiness campaign");
   const [company, setCompany] = useState(defaults?.company_name ?? "UDS");
   const [language, setLanguage] = useState(defaults?.default_language ?? "hi");
-  const [provider, setProvider] = useState<"plivo">("plivo");
+  const [provider, setProvider] = useState<"simulated" | "plivo">(defaults?.provider === "plivo" ? "plivo" : "simulated");
   const [concurrency, setConcurrency] = useState(defaults?.concurrency_limit ?? 5);
   const [assetLabel, setAssetLabel] = useState(defaults?.prompt_config.asset_label ?? "POS machine");
   const [referenceLabel, setReferenceLabel] = useState(defaults?.prompt_config.reference_label ?? "POS machine number");
@@ -776,7 +938,7 @@ function CreateCampaignPanel({
     if (!defaults) return;
     setCompany(defaults.company_name);
     setLanguage(defaults.default_language);
-    setProvider("plivo");
+    setProvider(defaults.provider === "plivo" ? "plivo" : "simulated");
     setConcurrency(defaults.concurrency_limit);
     setAssetLabel(defaults.prompt_config.asset_label);
     setReferenceLabel(defaults.prompt_config.reference_label);
@@ -810,7 +972,7 @@ function CreateCampaignPanel({
   }
 
   return (
-    <section className="rounded-2xl bg-panel p-5 text-ink">
+    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="new-campaign">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-surface">Campaign draft</p>
@@ -840,7 +1002,8 @@ function CreateCampaignPanel({
         </label>
         <label className="text-sm font-medium">
           Provider
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={provider} onChange={() => setProvider("plivo")}>
+          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={provider} onChange={(event) => setProvider(event.target.value as "simulated" | "plivo")}>
+            <option value="simulated">Instant demo run</option>
             <option value="plivo">Plivo live call</option>
           </select>
         </label>
@@ -920,7 +1083,7 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
     ["Retry eligible", stats.retryEligible ?? 0]
   ];
   return (
-    <section className="rounded-2xl bg-panel text-ink">
+    <section className="scroll-mt-6 rounded-2xl bg-panel text-ink" id="overview">
       <div className="border-b-2 border-line p-5">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-black">{campaign.name}</h2>
@@ -998,7 +1161,7 @@ function PromptStudioPanel({
   }
 
   return (
-    <section className="rounded-2xl bg-panel p-5 text-ink" id="agent-settings">
+    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="prompt-studio">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-surface">Prompt Studio</p>
@@ -1078,12 +1241,12 @@ function AgentSettingsPanel({
   }
 
   return (
-    <section className="rounded-2xl bg-panel p-5 text-ink">
+    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="settings">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-surface">Agent Settings</p>
           <h2 className="mt-1 text-2xl font-black">Agent settings</h2>
-          <p className="text-sm text-muted">Saved changes apply to future calls only.</p>
+          <p className="text-sm text-muted">Saved changes apply to future calls only. Prompt guidance is edited in Prompt Studio.</p>
         </div>
         {campaign.self_improvement_notes ? <div className="max-w-xl text-sm text-muted">{campaign.self_improvement_notes}</div> : null}
       </div>
@@ -1123,20 +1286,14 @@ function AgentSettingsPanel({
             <option value="assertive_respectful">Assertive but respectful</option>
           </select>
         </label>
-        <label className="block text-sm font-medium md:col-span-2">
-          Prompt enhancement
-          <textarea
-            className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2"
-            maxLength={1200}
-            placeholder="Extra call guidance appended to the system prompt for future calls."
-            value={promptEnhancement}
-            onChange={(event) => setPromptEnhancement(event.target.value)}
-          />
-        </label>
+        <input type="hidden" value={promptEnhancement} readOnly />
         <label className="flex items-center gap-2 text-sm font-medium">
           <input checked={selfImprove} type="checkbox" onChange={(event) => setSelfImprove(event.target.checked)} />
           Self-improve future calls from short call notes
         </label>
+        <a className="text-sm font-black text-surface" href="#prompt-studio">
+          Edit prompt guidance in Prompt Studio
+        </a>
         <div className="flex justify-end md:col-span-2">
           <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
             Save agent settings
@@ -1150,7 +1307,7 @@ function AgentSettingsPanel({
 
 function DownloadsPanel({ campaign }: { campaign: Campaign }) {
   return (
-    <section className="rounded-2xl bg-panel p-5 text-ink" id="downloads">
+    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="exports">
       <p className="text-xs font-black uppercase tracking-wide text-surface">Downloads</p>
       <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -1170,7 +1327,25 @@ function DownloadsPanel({ campaign }: { campaign: Campaign }) {
   );
 }
 
-function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
+function ResultsTable({
+  rows,
+  canManage,
+  selectedContactIds,
+  onToggleContact,
+  onToggleAll,
+  onDownloadTranscript,
+  onStartSelected,
+  busy
+}: {
+  rows: CampaignResults["rows"];
+  canManage: boolean;
+  selectedContactIds: string[];
+  onToggleContact: (contactId: string) => void;
+  onToggleAll: (contactIds: string[]) => void;
+  onDownloadTranscript: (call: Campaign["calls"][number]) => void;
+  onStartSelected: () => void;
+  busy: boolean;
+}) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dispositionFilter, setDispositionFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
@@ -1179,12 +1354,43 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
     () => filterResultRows(rows, { status: statusFilter, disposition: dispositionFilter, language: languageFilter, qa: qaFilter }),
     [rows, statusFilter, dispositionFilter, languageFilter, qaFilter]
   );
+  const visibleContactIds = filteredRows.map((row) => String(row.contact_id));
+  const everyVisibleSelected = visibleContactIds.length > 0 && visibleContactIds.every((contactId) => selectedContactIds.includes(contactId));
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-panel text-ink" id="results">
+    <section className="scroll-mt-6 overflow-hidden rounded-2xl bg-panel text-ink" id="results">
       <div className="border-b-2 border-line p-5">
         <p className="text-xs font-black uppercase tracking-wide text-surface">Results</p>
         <h2 className="mt-1 text-2xl font-black">Results and uploaded details</h2>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3 text-white">
+          <div className="text-sm font-semibold">
+            {selectedContactIds.length > 0
+              ? `${selectedContactIds.length} contact${selectedContactIds.length === 1 ? "" : "s"} selected for start`
+              : "Select uploaded contacts here, then start only those calls."}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {canManage ? (
+              <button
+                className="rounded-md bg-accent px-3 py-2 text-sm font-black text-ink disabled:opacity-50"
+                disabled={busy || visibleContactIds.length === 0}
+                onClick={() => onToggleAll(visibleContactIds)}
+                type="button"
+              >
+                {everyVisibleSelected ? "Clear visible" : "Select visible"}
+              </button>
+            ) : null}
+            {canManage ? (
+              <button
+                className="rounded-md border-2 border-white px-3 py-2 text-sm font-black text-white disabled:opacity-50"
+                disabled={busy || visibleContactIds.length === 0}
+                onClick={onStartSelected}
+                type="button"
+              >
+                {selectedContactIds.length > 0 ? "Start selected" : "Start visible"}
+              </button>
+            ) : null}
+          </div>
+        </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <label className="text-sm font-medium">
             Status
@@ -1243,13 +1449,24 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
       <div className="space-y-3 p-4 md:hidden">
         {filteredRows.length === 0 ? <div className="py-4 text-center text-sm text-muted">No results match the current filters.</div> : null}
         {filteredRows.map((row) => (
-          <article className="rounded-2xl border-2 border-line p-3" key={String(row.contact_id)}>
+          <article className={`rounded-2xl border-2 p-3 ${resolveRowHighlight(row.call?.status ?? "not_queued")}`} key={String(row.contact_id)}>
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-semibold">{String(row.provider_name ?? "")}</div>
-                <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
+              <div className="flex items-start gap-3">
+                {canManage ? (
+                  <input
+                    aria-label={`Select ${String(row.provider_name ?? "contact")}`}
+                    checked={selectedContactIds.includes(String(row.contact_id))}
+                    className="mt-1 h-4 w-4"
+                    onChange={() => onToggleContact(String(row.contact_id))}
+                    type="checkbox"
+                  />
+                ) : null}
+                <div>
+                  <div className="font-semibold">{String(row.provider_name ?? "")}</div>
+                  <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
+                </div>
               </div>
-              <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">{row.call?.status ?? "not queued"}</span>
+              <StatusBadge status={row.call?.status ?? "not_queued"} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <InfoField label="Location" value={String(row.location ?? "")} />
@@ -1261,23 +1478,28 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
               <InfoField label="Disposition" value={row.call?.disposition ?? "unknown"} />
               <InfoField label="Next action" value={row.call?.next_action ?? "none"} />
               <InfoField label="Callback at" value={formatDateTime(row.call?.callback_requested_at)} />
-              <InfoField label="Missed note" value={row.call?.missed_call_note || "-"} />
+              <InfoField label="Transcript" value={resolveTranscriptLabel(row.call?.transcript_status)} />
             </div>
             {row.call ? <QaBadge call={row.call} /> : null}
             <div className="mt-3 text-sm text-muted">{row.call?.summary_text ?? "No remarks yet."}</div>
-            <div className="mt-3 text-sm">
-              {row.call ? <a className="mr-3 font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+            <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              {row.call ? <a className="font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
               {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>Open recording</a> : "Recording pending"}
+              {row.call?.transcript_text ? (
+                <button className="font-black text-surface" onClick={() => onDownloadTranscript(row.call!)} type="button">
+                  Download transcript
+                </button>
+              ) : null}
             </div>
             {row.call ? <CallHistoryDetails call={row.call} /> : null}
           </article>
         ))}
       </div>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1200px] text-left text-sm">
+        <table className="w-full min-w-[1320px] text-left text-sm">
           <thead className="bg-surface text-white">
             <tr>
-              {["Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "QA", "Next", "Callback", "Recording", "Remarks"].map((header) => (
+              {["Pick", "Name", "Phone", "Location", "Order", "Lang", "Status", "Disposition", "Detected", "QA", "Next", "Transcript", "Recording", "Remarks"].map((header) => (
                 <th className="border-b border-line px-3 py-2 font-semibold" key={header}>{header}</th>
               ))}
             </tr>
@@ -1285,27 +1507,37 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
           <tbody>
             {filteredRows.map((row) => (
               <Fragment key={String(row.contact_id)}>
-                <tr className="border-b border-line">
-                  <td className="px-3 py-2">{String(row.provider_name ?? "")}</td>
+                <tr className={`border-b ${resolveTableRowHighlight(row.call?.status ?? "not_queued")}`}>
+                  <td className="px-3 py-2">
+                    {canManage ? <input checked={selectedContactIds.includes(String(row.contact_id))} onChange={() => onToggleContact(String(row.contact_id))} type="checkbox" /> : "-"}
+                  </td>
+                  <td className="px-3 py-2 font-semibold">{String(row.provider_name ?? "")}</td>
                   <td className="px-3 py-2 font-mono">{String(row.phone ?? "")}</td>
                   <td className="px-3 py-2">{String(row.location ?? "")}</td>
                   <td className="px-3 py-2">{String(row.order_id ?? "")}</td>
                   <td className="px-3 py-2">{String(row.language_hint ?? "")}</td>
-                  <td className="px-3 py-2">{row.call?.status ?? "not queued"}</td>
+                  <td className="px-3 py-2"><StatusBadge status={row.call?.status ?? "not_queued"} /></td>
                   <td className="px-3 py-2">{row.call?.disposition ?? "unknown"}</td>
                   <td className="px-3 py-2">{row.call?.detected_language ?? ""}</td>
                   <td className="px-3 py-2">{row.call ? <QaBadge call={row.call} compact /> : "-"}</td>
                   <td className="px-3 py-2">{row.call?.next_action ?? "none"}</td>
-                  <td className="px-3 py-2">{formatDateTime(row.call?.callback_requested_at)}</td>
+                  <td className="px-3 py-2">{resolveTranscriptLabel(row.call?.transcript_status)}</td>
                   <td className="px-3 py-2">
-                    {row.call ? <a className="mr-2 font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
-                    {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>recording</a> : "none"}
+                    <div className="flex flex-wrap gap-2">
+                      {row.call ? <a className="font-black text-surface" href={`/campaigns/calls/${row.call.id}`}>detail</a> : null}
+                      {row.call?.recording_url ? <a className="font-black text-surface" href={row.call.recording_url}>recording</a> : <span>none</span>}
+                      {row.call?.transcript_text ? (
+                        <button className="font-black text-surface" onClick={() => onDownloadTranscript(row.call!)} type="button">
+                          transcript
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="max-w-[280px] px-3 py-2">{row.call?.callback_remarks || row.call?.missed_call_note || row.call?.summary_text || ""}</td>
                 </tr>
                 {row.call ? (
                   <tr className="border-b border-line bg-surface/60">
-                    <td className="px-3 py-2" colSpan={13}>
+                    <td className="px-3 py-2" colSpan={14}>
                       <CallHistoryDetails call={row.call} />
                     </td>
                   </tr>
@@ -1314,7 +1546,7 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
             ))}
             {filteredRows.length === 0 ? (
               <tr>
-                <td className="px-3 py-8 text-center text-muted" colSpan={13}>No results match the current filters.</td>
+                <td className="px-3 py-8 text-center text-muted" colSpan={14}>No results match the current filters.</td>
               </tr>
             ) : null}
           </tbody>
@@ -1322,6 +1554,35 @@ function ResultsTable({ rows }: { rows: CampaignResults["rows"] }) {
       </div>
     </section>
   );
+}
+
+function resolveTranscriptLabel(transcriptStatus: string | undefined) {
+  if (transcriptStatus === "realtime") return "Whisper transcript ready";
+  if (transcriptStatus === "simulated") return "Demo transcript ready";
+  return "Transcript pending";
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return <span className={`rounded-md px-2 py-1 text-xs font-black ${resolveStatusBadgeClassName(status)}`}>{status.replace(/_/g, " ")}</span>;
+}
+
+function resolveStatusBadgeClassName(status: string) {
+  if (status === "completed") return "bg-success text-white";
+  if (status === "ringing" || status === "initiated" || status === "answered") return "bg-accent text-ink";
+  if (status === "queued") return "border border-line bg-white text-ink";
+  if (status === "not_picked" || status === "not_connected" || status === "voicemail") return "bg-amber-100 text-amber-800";
+  if (status === "invalid_number" || status === "failed") return "bg-red-100 text-red-700";
+  return "border border-line bg-white text-ink";
+}
+
+function resolveRowHighlight(status: string) {
+  if (status === "completed") return "border-success bg-green-50";
+  return "border-line";
+}
+
+function resolveTableRowHighlight(status: string) {
+  if (status === "completed") return "border-line bg-green-50 font-semibold";
+  return "border-line";
 }
 
 function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {

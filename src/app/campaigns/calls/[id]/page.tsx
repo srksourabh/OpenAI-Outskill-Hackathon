@@ -19,7 +19,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
   if (!campaign || !call || !contact) {
     return (
       <main className="min-h-dvh bg-surface p-6 text-white">
-        <Link className="text-sm font-black text-accent" href="/campaigns">Back to campaigns</Link>
+        <Link className="text-sm font-black text-accent" href="/campaigns/results">Back to results</Link>
         <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
           <h1 className="text-xl font-black">Call not found</h1>
         </section>
@@ -29,7 +29,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="min-h-dvh bg-surface p-6 text-white">
-      <Link className="text-sm font-black text-accent" href="/campaigns">Back to campaigns</Link>
+      <Link className="text-sm font-black text-accent" href="/campaigns/results">Back to results</Link>
       <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -37,7 +37,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             <h1 className="mt-1 text-4xl font-black tracking-[-0.62px]">{contact.provider_name}</h1>
             <p className="mt-1 font-mono text-sm text-muted">{contact.phone}</p>
           </div>
-          <span className="rounded-md bg-accent px-3 py-2 text-sm font-black">{call.status}</span>
+          <span className={`rounded-md px-3 py-2 text-sm font-black ${call.status === "completed" ? "bg-success text-white" : "bg-accent text-ink"}`}>{call.status}</span>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <Info label="Campaign" value={campaign.name} />
@@ -66,6 +66,15 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         </div>
         <Evidence title="Summary" value={call.summary_text || "No summary yet."} />
         <Evidence title="Transcript" value={call.transcript_text || "Transcript pending."} />
+        {call.transcript_text ? (
+          <a
+            className="mt-4 inline-flex rounded-md bg-surface px-4 py-2 text-sm font-black text-white"
+            download={`transcript-${call.id}.txt`}
+            href={`data:text/plain;charset=utf-8,${encodeURIComponent(call.transcript_text)}`}
+          >
+            Download transcript
+          </a>
+        ) : null}
         <Evidence title="Recording" value={call.recording_url || "Recording pending."} />
         <div className="mt-5 rounded-2xl border-2 border-line p-4">
           <h2 className="text-sm font-black">Status history</h2>

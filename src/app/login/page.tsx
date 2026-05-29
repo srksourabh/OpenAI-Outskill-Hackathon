@@ -35,8 +35,8 @@ export default function LoginPage() {
       <section className="mx-auto w-full max-w-5xl">
         <div className="max-w-3xl">
           <p className="text-sm font-black uppercase tracking-wide text-accent">Hackathon access</p>
-          <h1 className="mt-2 text-5xl font-black leading-tight tracking-[-0.62px] text-accent">Sign in to eDial</h1>
-          <p className="mt-3 text-lg leading-7 text-white">Use one of these demo accounts to review the product in a polished operations workspace.</p>
+          <h1 className="mt-2 text-5xl font-black leading-tight text-accent">Sign in to eDial</h1>
+          <p className="mt-3 text-lg leading-7 text-white">Use one of these demo accounts to open the campaign workspace at the Start Here guide.</p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {DEMO_LOGIN_ACCOUNTS.map((account) => (

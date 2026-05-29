@@ -43,8 +43,8 @@ export function resolveQuickCheckDefaults(campaign?: QuickCheckCampaignDefaults 
     companyName: campaign?.company_name?.trim() || fallbackPromptConfig.companyName,
     promptConfig,
     agentSettings: getAgentSettings(campaign?.agent_settings ?? fallbackAgentSettings),
-    language: campaign?.default_language || "en",
-    provider: "plivo"
+    language: campaign?.default_language || "hi",
+    provider: campaign?.provider === "plivo" ? "plivo" : "simulated"
   };
 }
 

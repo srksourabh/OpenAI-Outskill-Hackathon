@@ -5,23 +5,20 @@ import { plivoAdapter } from "@/services/providers";
 import type { CallRecord, Campaign } from "./types";
 import { buildCallAgentSnapshot, buildStatusHistory } from "./engine";
 
-export async function startCampaignLive(campaign: Campaign) {
+export async function startCampaignLive(campaign: Campaign, contactIds?: string[]) {
   validateLiveCallingSetup();
 
   if (campaign.provider !== "plivo") {
     throw new Error(`Live calling is not configured for provider "${campaign.provider}".`);
   }
 
-  if (campaign.status === "running" && campaign.calls.length > 0) {
-    return campaign;
-  }
-
   const now = new Date().toISOString();
+  const targetContactIds = new Set((contactIds?.length ? contactIds : campaign.contacts.map((contact) => contact.id)).filter((contactId) => campaign.contacts.some((contact) => contact.id === contactId)));
   const existingContactIds = new Set(campaign.calls.map((call) => call.contact_id));
   const nextCalls = [...campaign.calls];
 
   for (const contact of campaign.contacts) {
-    if (existingContactIds.has(contact.id)) continue;
+    if (!targetContactIds.has(contact.id) || existingContactIds.has(contact.id)) continue;
 
     nextCalls.push({
       id: randomUUID(),
@@ -47,11 +44,18 @@ export async function startCampaignLive(campaign: Campaign) {
     });
   }
 
+  if (nextCalls.length === campaign.calls.length) {
+    return campaign;
+  }
+
+  const activeCount = nextCalls.filter((call) => ["initiated", "ringing", "answered"].includes(call.status)).length;
+  let remainingStartSlots = Math.max(0, campaign.concurrency_limit - activeCount);
   const startedCalls = await Promise.all(
-    nextCalls.map(async (call, index) => {
-      if (call.status !== "queued" || index >= campaign.concurrency_limit) {
+    nextCalls.map(async (call) => {
+      if (call.status !== "queued" || remainingStartSlots <= 0) {
         return call;
       }
+      remainingStartSlots -= 1;
 
       const contact = findContact(campaign, call.contact_id);
       const answerUrl = buildSignedCallbackUrl("/api/plivo/answer", call.id, {

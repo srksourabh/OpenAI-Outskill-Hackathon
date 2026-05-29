@@ -77,17 +77,21 @@ export function createCampaignFromContacts(input: CreateCampaignInput): Campaign
   };
 }
 
-export function startCampaign(campaign: Campaign): Campaign {
-  if (campaign.status === "running" && campaign.calls.length > 0) return campaign;
+export function startCampaign(campaign: Campaign, contactIds?: string[]): Campaign {
   const now = new Date().toISOString();
+  const targetContactIds = new Set((contactIds?.length ? contactIds : campaign.contacts.map((contact) => contact.id)).filter((contactId) => campaign.contacts.some((contact) => contact.id === contactId)));
   const existingContactIds = new Set(campaign.calls.map((call) => call.contact_id));
+  const activeCount = campaign.calls.filter((call) => ["initiated", "ringing", "answered"].includes(call.status)).length;
+  const initialAvailableSlots = Math.max(0, campaign.concurrency_limit - activeCount);
   const newCalls = campaign.contacts
-    .filter((contact) => !existingContactIds.has(contact.id))
-    .map((contact, index): CallRecord => ({
+    .filter((contact) => targetContactIds.has(contact.id) && !existingContactIds.has(contact.id))
+    .map((contact, index): CallRecord => {
+      const shouldStartNow = index < initialAvailableSlots;
+      return {
       id: randomUUID(),
       campaign_id: campaign.id,
       contact_id: contact.id,
-      status: index < campaign.concurrency_limit ? "ringing" : "queued",
+      status: shouldStartNow ? "ringing" : "queued",
       disposition: "unknown",
       next_action: "none",
       attempt_number: 1,
@@ -99,12 +103,17 @@ export function startCampaign(campaign: Campaign): Campaign {
       detected_language: contact.language_hint,
       recording_url: "",
       retry_eligible: false,
-      last_call_time: index < campaign.concurrency_limit ? now : null,
+      last_call_time: shouldStartNow ? now : null,
       provider_call_id: null,
       ...buildCallAgentSnapshot(campaign),
-      status_history: buildStatusHistory(index < campaign.concurrency_limit ? "ringing" : "queued", now),
+      status_history: buildStatusHistory(shouldStartNow ? "ringing" : "queued", now),
       updated_at: now
-    }));
+    };
+    });
+
+  if (newCalls.length === 0) {
+    return campaign;
+  }
 
   return {
     ...campaign,
@@ -115,14 +124,21 @@ export function startCampaign(campaign: Campaign): Campaign {
 
 export function simulateCallOutcomes(
   campaign: Campaign,
-  options: number | { count?: number; transcripts?: string[] } = campaign.calls.length
+  options: number | { count?: number; transcripts?: string[]; contactIds?: string[] } = campaign.calls.length
 ): Campaign {
   const count = typeof options === "number" ? options : options.count ?? campaign.calls.length;
   const transcripts = typeof options === "number" ? demoTranscripts : options.transcripts ?? demoTranscripts;
+  const targetContactIds = new Set(typeof options === "number" ? campaign.calls.map((call) => call.contact_id) : options.contactIds?.length ? options.contactIds : campaign.calls.map((call) => call.contact_id));
   let completed = 0;
   const now = new Date().toISOString();
   const calls = campaign.calls.map((call, index) => {
-    if (completed >= count || call.status === "completed" || call.status === "invalid_number" || call.status === "not_picked") {
+    if (
+      completed >= count ||
+      !targetContactIds.has(call.contact_id) ||
+      call.status === "completed" ||
+      call.status === "invalid_number" ||
+      call.status === "not_picked"
+    ) {
       return call;
     }
 
