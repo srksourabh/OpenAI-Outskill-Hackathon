@@ -8,7 +8,7 @@ export default function HomePage() {
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
           <div>
             <h1 className="max-w-4xl text-5xl font-black leading-tight text-accent sm:text-6xl">
-              Simultaneous call sentiment analysis for outbound operations.
+              smart outbound calling tool to check feasibility and sentiment analysis, many calls at a time
             </h1>
             <p className="mt-5 max-w-3xl text-lg leading-7 text-white sm:text-xl">
               Create bounded parallel call campaigns, detect receiver sentiment, monitor campaign health, capture callback commitments, and export every outcome with transcript-ready auditability.
