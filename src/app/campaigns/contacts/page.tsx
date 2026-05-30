@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { getSessionRole } from "@/lib/session";
+import { CampaignWorkspace } from "../workspace";
 
-export default async function NewCampaignPage() {
+export default async function ContactsCampaignPage() {
   const role = await getSessionRole();
   if (!role) {
     redirect("/login");
   }
-  redirect("/campaigns/settings");
+  return <CampaignWorkspace view="contacts" />;
 }

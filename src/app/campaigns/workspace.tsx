@@ -189,14 +189,19 @@ const languageOptions = [
 ] as const;
 
 const workspaceNavigation = [
-  { href: "/campaigns", label: "Home" },
-  { href: "/campaigns/new", label: "Setup" },
-  { href: "/campaigns/upload", label: "Add contacts" },
-  { href: "/campaigns/results", label: "Results" },
-  { href: "/campaigns/settings", label: "Voice" },
-  { href: "/campaigns/exports", label: "Exports" },
-  { href: "/health", label: "Health" }
+  { href: "/campaigns/contacts", label: "Contacts" },
+  { href: "/campaigns/settings", label: "Agent settings" },
+  { href: "/campaigns/results", label: "Results" }
 ] as const;
+
+const neumorphicRaised = "bg-[#E0E5EC] shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]";
+const neumorphicRaisedSmall = "bg-[#E0E5EC] shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]";
+const neumorphicInset = "bg-[#E0E5EC] shadow-[inset_6px_6px_10px_rgb(163,177,198,0.6),inset_-6px_-6px_10px_rgba(255,255,255,0.5)]";
+const focusRing = "focus:outline-none focus:ring-2 focus:ring-[#6C63FF] focus:ring-offset-2 focus:ring-offset-[#E0E5EC]";
+const formControl = `${neumorphicInset} ${focusRing} mt-1 w-full rounded-2xl border-0 px-4 py-3 text-[#3D4852] placeholder:text-[#6B7280]`;
+const primaryAction = `${neumorphicRaisedSmall} ${focusRing} rounded-2xl bg-[#6C63FF] px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#8B84FF] disabled:cursor-not-allowed disabled:opacity-50`;
+const secondaryAction = `${neumorphicRaisedSmall} ${focusRing} rounded-2xl px-5 py-3 text-sm font-black text-[#3D4852] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50`;
+const softChip = `${neumorphicInset} rounded-2xl px-3 py-2 text-xs font-black text-[#3D4852]`;
 
 function resolveVoiceId(voicePreset: AgentSettings["voice_preset"], voiceId: string) {
   if (voicePreset === "indian_female_natural") return "marin";
@@ -211,7 +216,7 @@ function splitChecklistText(value: string) {
     .filter(Boolean);
 }
 
-export type CampaignWorkspaceView = "overview" | "new" | "upload" | "results" | "settings" | "exports";
+export type CampaignWorkspaceView = "contacts" | "settings" | "results";
 
 export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
   const pathname = usePathname();
@@ -462,67 +467,39 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
   const header = getWorkspaceHeader(view);
 
   return (
-    <main className="min-h-dvh overflow-x-hidden bg-surface pb-20 text-white lg:pb-0">
-      <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
-        <aside className="border-b border-white/50 bg-panel p-5 text-ink lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto lg:border-b-0 lg:border-r-4 lg:border-accent">
-          <div className="text-xs font-black uppercase tracking-wide text-surface">Calling Agent</div>
-          <div className="mt-2 text-2xl font-black">{productName}</div>
-          <p className="mt-2 text-sm text-muted">Add numbers, start calls, review outcomes.</p>
-          <div className="mt-4 rounded-md bg-accent px-3 py-2 text-xs font-bold">
-            Signed in as: <span className="font-semibold uppercase">{session.role ?? "guest"}</span>
+    <main className="min-h-dvh overflow-x-hidden bg-[#E0E5EC] px-4 pb-24 pt-4 text-[#3D4852] sm:px-6 lg:pb-8">
+      <div className="mx-auto max-w-7xl">
+        <header className={`${neumorphicRaised} rounded-[32px] p-5 sm:p-7`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#6B7280]">Outbound calling workspace</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-[#3D4852] sm:text-5xl">{header.title}</h1>
+              <p className="mt-2 max-w-2xl text-sm font-medium text-[#6B7280] sm:text-base">{header.description}</p>
+            </div>
+            <div className={`${neumorphicInset} rounded-2xl px-4 py-3 text-sm font-bold text-[#3D4852]`}>
+              Signed in as <span className="uppercase text-[#6C63FF]">{session.role ?? "guest"}</span>
+            </div>
           </div>
-          <nav className="mt-8 space-y-2 text-sm">
+          <nav className="mt-6 grid gap-3 text-sm font-black sm:grid-cols-3">
             {workspaceNavigation.map((item) => (
               <TopNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
             ))}
           </nav>
-        </aside>
+        </header>
 
-        <section className="min-w-0 p-4 sm:p-6">
-          <header className="flex flex-col gap-4 border-b border-white/50 pb-5 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <p className="text-sm font-black uppercase tracking-wide text-accent">Workspace</p>
-              <h1 className="mt-2 text-3xl font-black leading-tight text-accent sm:text-4xl">{header.title}</h1>
-              <p className="mt-2 text-base text-white">{header.description}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {canManage && view === "results" ? (
-                <button
-                  className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50"
-                  disabled={!selected || busy || campaignSelection.length === 0}
-                  onClick={() => void startCampaign(selectedContactIds.length ? selectedContactIds : campaignSelection)}
-                >
-                  {selectedContactIds.length ? `Start ${selectedContactIds.length} selected` : "Start listed contacts"}
-                </button>
-              ) : null}
-              {selected && view !== "exports" ? (
-                <a className="rounded-md bg-white px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${selected.id}/export`}>
-                  Export CSV
-                </a>
-              ) : null}
-              {selected && view !== "exports" ? (
-                <a className="rounded-md border-2 border-white px-4 py-2 text-sm font-black text-white" href={`/api/campaigns/${selected.id}/export?format=html`}>
-                  Export HTML
-                </a>
-              ) : null}
-            </div>
-          </header>
-
-          <div className="mt-5 space-y-5">
-            {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
-            <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={selectCampaign} />
-            {view === "overview" ? <StartHerePanel canManage={canManage} selected={selected} /> : null}
-            {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
-            {uploadSummary && view === "upload" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
-            {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
-            {view === "new" ? <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} /> : null}
-            {view === "new" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-            {view === "new" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-            {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-            {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
-            {view === "settings" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
-            {view === "exports" && selected ? <DownloadsPanel campaign={selected} /> : null}
-            {view === "results" && selected ? (
+        <section className="mt-6 space-y-6">
+          {message ? <div className={`${neumorphicInset} rounded-2xl px-5 py-4 text-sm font-bold text-[#3D4852]`}>{message}</div> : null}
+          <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={selectCampaign} />
+          {view === "contacts" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
+          {uploadSummary && view === "contacts" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
+          {view === "contacts" && selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : null}
+          {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+          {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
+          {view === "settings" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
+          {view === "results" && selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : null}
+          {view === "results" && selected ? (
+            <div className="grid gap-6">
+              <DownloadsPanel campaign={selected} />
               <ResultsTable
                 rows={results?.rows ?? []}
                 canManage={canManage}
@@ -533,14 +510,15 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
                 onStartSelected={() => void startCampaign(selectedContactIds.length ? selectedContactIds : campaignSelection)}
                 busy={busy}
               />
-            ) : null}
-          </div>
+            </div>
+          ) : null}
+          {!selected ? <EmptyState /> : null}
         </section>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t-2 border-accent bg-panel text-center text-xs font-black text-ink shadow-2xl lg:hidden">
-        {workspaceNavigation.slice(0, 5).map((item) => (
-          <Link className={`px-2 py-3 ${pathname === item.href ? "bg-accent" : ""}`} href={item.href} key={item.href}>
-            {item.label.replace(" Campaign", "")}
+      <nav className={`${neumorphicRaised} fixed inset-x-3 bottom-3 z-20 grid grid-cols-3 rounded-[24px] p-2 text-center text-xs font-black text-[#3D4852] lg:hidden`}>
+        {workspaceNavigation.map((item) => (
+          <Link className={`rounded-2xl px-2 py-3 ${pathname === item.href ? "bg-[#6C63FF] text-white" : ""}`} href={item.href} key={item.href}>
+            {item.label}
           </Link>
         ))}
       </nav>
@@ -563,46 +541,41 @@ function getErrorMessage(payload: Record<string, unknown> | null, fallback: stri
 function TopNavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
   const active = pathname === href;
   return (
-    <Link className={`block rounded-md px-3 py-2 ${active ? "bg-surface font-black text-white" : "font-semibold text-ink hover:bg-accent"}`} href={href}>
+    <Link
+      className={`block rounded-2xl px-4 py-3 text-center transition duration-300 ease-out ${focusRing} ${
+        active
+          ? "bg-[#6C63FF] text-white shadow-[inset_3px_3px_6px_rgb(75,68,200,0.45),inset_-3px_-3px_6px_rgba(255,255,255,0.2)]"
+          : `${neumorphicRaisedSmall} hover:-translate-y-0.5 hover:shadow-[12px_12px_20px_rgb(163,177,198,0.7),-12px_-12px_20px_rgba(255,255,255,0.6)]`
+      }`}
+      href={href}
+    >
       {label}
     </Link>
   );
 }
 
 function getWorkspaceHeader(view: CampaignWorkspaceView) {
-  if (view === "new") {
+  if (view === "contacts") {
     return {
-      title: "Setup",
-      description: "Set the basic campaign defaults. Most users can leave these as-is."
-    };
-  }
-  if (view === "upload") {
-    return {
-      title: "Add contacts",
-      description: "Enter one number, paste a list, or upload a file."
+      title: "Contacts",
+      description: "Add a single mobile number or upload a contact file. This is the only place operators add people to call."
     };
   }
   if (view === "results") {
     return {
       title: "Results",
-      description: "Review call status, summaries, transcripts, and next actions."
-    };
-  }
-  if (view === "exports") {
-    return {
-      title: "Exports",
-      description: "Download the handoff files for operations."
+      description: "Review call outcomes, transcripts, summaries, and download exports from one screen."
     };
   }
   if (view === "settings") {
     return {
-      title: "Voice",
-      description: "Tune the agent only when you need to change the call behavior."
+      title: "Agent settings",
+      description: "Control voice, tone, language, prompt behavior, and rehearsal from one settings page."
     };
   }
   return {
-    title: "Home",
-    description: "Follow the simple path: add contacts, start calls, review results, export."
+    title: "Contacts",
+    description: "Add contacts, tune the agent, then review results."
   };
 }
 
@@ -696,32 +669,32 @@ function UploadPanel({
   }
 
   return (
-    <section className="rounded-2xl bg-panel p-5 text-ink" id="upload">
+    <section className={`${neumorphicRaised} rounded-[32px] p-5 text-[#3D4852] sm:p-7`} id="upload">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-surface">Add contacts</p>
+        <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Add contacts</p>
         <h2 className="mt-1 text-2xl font-black">Who should the agent call?</h2>
         <p className="mt-1 text-sm text-muted">Start with one number for a quick check, paste many numbers, or upload a CSV/XLSX file.</p>
-        <a className="mt-3 inline-flex rounded-md bg-accent px-3 py-2 text-sm font-black text-ink" href="/sample-mobile-upload.csv" download>
+        <a className={`${secondaryAction} mt-4 inline-flex`} href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 rounded-md border-2 border-surface p-1 text-sm">
+      <div className={`${neumorphicInset} mt-5 grid grid-cols-3 gap-2 rounded-[24px] p-2 text-sm`}>
         <button
-          className={`rounded px-2 py-2 font-black ${intakeMode === "single" ? "bg-surface text-white" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "single" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("single")}
         >
           One number
         </button>
         <button
-          className={`rounded px-2 py-2 font-black ${intakeMode === "list" ? "bg-surface text-white" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "list" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("list")}
         >
           Paste list
         </button>
         <button
-          className={`rounded px-2 py-2 font-black ${intakeMode === "file" ? "bg-surface text-white" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "file" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("file")}
         >
@@ -743,19 +716,19 @@ function UploadPanel({
         >
           <label className="block text-sm font-medium">
             Campaign name
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" value={fileCampaignName} onChange={(event) => setFileCampaignName(event.target.value)} />
+            <input className={formControl} name="campaign_name" value={fileCampaignName} onChange={(event) => setFileCampaignName(event.target.value)} />
           </label>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Calling mode
-              <select className="mt-1 w-full rounded-md border-2 border-surface px-3 py-2" name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+              <select className={formControl} name="provider" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
                 <option value="simulated">Instant demo run</option>
                 <option value="plivo">Plivo live call</option>
               </select>
             </label>
             <label className="block text-sm font-medium">
               Default language
-              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="default_language" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
+              <select className={formControl} name="default_language" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
                 {languageOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -766,12 +739,12 @@ function UploadPanel({
           </div>
           <label className="mt-3 block text-sm font-medium">
             Contact file
-            <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
+            <input className={formControl} name="file" type="file" accept=".csv,.xlsx" required />
           </label>
           <label className="mt-3 block text-sm font-medium">
             Simultaneous calls
             <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              className={formControl}
               min={1}
               max={25}
               name="concurrency_limit"
@@ -783,47 +756,47 @@ function UploadPanel({
               }}
             />
           </label>
-          <details className="mt-4 rounded-md border border-line bg-white p-3">
-            <summary className="cursor-pointer text-sm font-black text-surface">Advanced script and voice settings</summary>
+          <details className={`${neumorphicInset} mt-4 rounded-[24px] p-4`}>
+            <summary className="cursor-pointer text-sm font-black text-[#38B2AC]">Advanced script and voice settings</summary>
             <label className="mt-3 block text-sm font-medium">
               Company name
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+              <input className={formControl} name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
             </label>
             <label className="mt-3 block text-sm font-medium">
               Call purpose
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="call_purpose" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+              <input className={formControl} name="call_purpose" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
             </label>
             <label className="mt-3 block text-sm font-medium">
               Request type
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="request_type" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+              <input className={formControl} name="request_type" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
             </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="block text-sm font-medium">
                 Asset label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+                <input className={formControl} name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
               </label>
               <label className="block text-sm font-medium">
                 Reference label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+                <input className={formControl} name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
               </label>
               <label className="block text-sm font-medium">
                 Address label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="address_label" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
+                <input className={formControl} name="address_label" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
               </label>
             </div>
             <label className="mt-3 block text-sm font-medium">
               Confirmation checklist
-              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="confirmation_points" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
+              <textarea className={`${formControl} min-h-24`} name="confirmation_points" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
             </label>
             <label className="mt-3 block text-sm font-medium">
               Information to collect
-              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="collection_points" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
+              <textarea className={`${formControl} min-h-24`} name="collection_points" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
             </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
                 Voice preset
                 <select
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  className={formControl}
                   name="voice_preset"
                   value={manualVoicePreset}
                   onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}
@@ -835,7 +808,7 @@ function UploadPanel({
               </label>
               <label className="block text-sm font-medium">
                 Tone
-                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="tone" value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
+                <select className={formControl} name="tone" value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
                   <option value="warm">Warm</option>
                   <option value="polite">Polite</option>
                   <option value="direct">Direct</option>
@@ -847,7 +820,7 @@ function UploadPanel({
             {manualVoicePreset === "openai_custom" ? (
               <label className="mt-3 block text-sm font-medium">
                 OpenAI custom voice ID
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
+                <input className={formControl} placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
               </label>
             ) : null}
             <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}. Use Prompt Studio after creation for script guidance.</p>
@@ -859,7 +832,7 @@ function UploadPanel({
           <input name="voice_id" type="hidden" value={resolveVoiceId(manualVoicePreset, manualVoiceId)} readOnly />
           <input name="prompt_enhancement" type="hidden" value={manualPromptEnhancement} readOnly />
           <input name="self_improve_enabled" type="hidden" value={String(manualSelfImprove)} readOnly />
-          <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy || !canManage}>
+          <button className={`${primaryAction} mt-4 w-full`} disabled={busy || !canManage}>
             Upload and validate
           </button>
         </form>
@@ -875,13 +848,13 @@ function UploadPanel({
           </div>
           <label className="block text-sm font-medium">
             Campaign name
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCampaignName} onChange={(event) => setManualCampaignName(event.target.value)} />
+            <input className={formControl} value={manualCampaignName} onChange={(event) => setManualCampaignName(event.target.value)} />
           </label>
           {intakeMode === "single" ? (
             <label className="block text-sm font-medium">
               Mobile number
               <input
-                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                className={formControl}
                 placeholder="+919876543210 or 9876543210"
                 value={manualPhone}
                 onChange={(event) => setManualPhone(event.target.value)}
@@ -891,7 +864,7 @@ function UploadPanel({
             <label className="block text-sm font-medium">
               Mobile numbers
               <textarea
-                className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+                className={`${formControl} min-h-28`}
                 placeholder={"+919876543210\n9876543211\n9876543212"}
                 value={manualPhoneList}
                 onChange={(event) => setManualPhoneList(event.target.value)}
@@ -901,14 +874,14 @@ function UploadPanel({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Calling mode
-              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
+              <select className={formControl} value={manualProvider} onChange={(event) => setManualProvider(event.target.value)}>
                 <option value="simulated">Instant demo run</option>
                 <option value="plivo">Plivo live call</option>
               </select>
             </label>
             <label className="block text-sm font-medium">
               Preferred language
-              <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
+              <select className={formControl} value={manualLanguage} onChange={(event) => setManualLanguage(event.target.value)}>
                 {languageOptions.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -920,7 +893,7 @@ function UploadPanel({
           <label className="block text-sm font-medium">
             Simultaneous calls
             <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              className={formControl}
               min={1}
               max={25}
               type="number"
@@ -931,48 +904,48 @@ function UploadPanel({
               }}
             />
           </label>
-          <details className="rounded-md border border-line bg-white p-3">
-            <summary className="cursor-pointer text-sm font-black text-surface">Advanced script and voice settings</summary>
+          <details className={`${neumorphicInset} rounded-[24px] p-4`}>
+            <summary className="cursor-pointer text-sm font-black text-[#38B2AC]">Advanced script and voice settings</summary>
             <label className="mt-3 block text-sm font-medium">
               Company name
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+              <input className={formControl} value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
             </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
                 Call purpose
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+                <input className={formControl} value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
               </label>
               <label className="block text-sm font-medium">
                 Request type
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+                <input className={formControl} value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
               </label>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="block text-sm font-medium">
                 Asset label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+                <input className={formControl} value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
               </label>
               <label className="block text-sm font-medium">
                 Reference label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+                <input className={formControl} value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
               </label>
               <label className="block text-sm font-medium">
                 Address label
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
+                <input className={formControl} value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
               </label>
             </div>
             <label className="mt-3 block text-sm font-medium">
               Confirmation checklist
-              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
+              <textarea className={`${formControl} min-h-24`} value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
             </label>
             <label className="mt-3 block text-sm font-medium">
               Information to collect
-              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
+              <textarea className={`${formControl} min-h-24`} value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
             </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
                 Voice preset
-                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualVoicePreset} onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
+                <select className={formControl} value={manualVoicePreset} onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
                   <option value="indian_female_natural">Indian female natural</option>
                   <option value="indian_male_natural">Indian male natural</option>
                   <option value="openai_custom">OpenAI custom voice</option>
@@ -980,7 +953,7 @@ function UploadPanel({
               </label>
               <label className="block text-sm font-medium">
                 Tone
-                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
+                <select className={formControl} value={manualTone} onChange={(event) => setManualTone(event.target.value as AgentSettings["tone"])}>
                   <option value="warm">Warm</option>
                   <option value="polite">Polite</option>
                   <option value="direct">Direct</option>
@@ -992,7 +965,7 @@ function UploadPanel({
             {manualVoicePreset === "openai_custom" ? (
               <label className="mt-3 block text-sm font-medium">
                 OpenAI custom voice ID
-                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
+                <input className={formControl} placeholder="voice_1234" value={manualVoiceId} onChange={(event) => setManualVoiceId(event.target.value)} />
               </label>
             ) : null}
             <p className="mt-2 text-xs text-muted">Built-in IDs you can use: {openAiBuiltInVoices.join(", ")}. Use Prompt Studio after creation for script guidance.</p>
@@ -1002,7 +975,7 @@ function UploadPanel({
             </label>
           </details>
           <button
-            className="w-full rounded-md border border-line bg-panel px-4 py-2 font-semibold disabled:opacity-50"
+            className={`${primaryAction} w-full`}
             disabled={
               busy || (intakeMode === "single" ? !manualPhone.trim() : parsePhoneList(manualPhoneList).length === 0)
                 || !canManage
@@ -1133,32 +1106,32 @@ function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
   }
 
   return (
-    <section className="scroll-mt-6 overflow-hidden rounded-2xl bg-panel text-ink" id="device-voice-test">
+    <section className={`${neumorphicRaised} scroll-mt-6 overflow-hidden rounded-[32px] text-[#3D4852]`} id="device-voice-test">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_320px]">
-        <div className="p-5">
-          <p className="text-xs font-black uppercase tracking-wide text-surface">Realtime rehearsal</p>
+        <div className="p-5 sm:p-7">
+          <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Realtime rehearsal</p>
           <h2 className="mt-1 text-2xl font-black">Device speaker and mic simulation</h2>
           <p className="mt-2 text-sm text-muted">
             This browser rehearsal plays a varied agent opener through the device speaker, asks for consent and availability, then captures your reply from the mic for transcript and sentiment checks.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink" onClick={startRehearsal} type="button">
+            <button className={primaryAction} onClick={startRehearsal} type="button">
               Start speaker and mic test
             </button>
-            <button className="rounded-md border-2 border-surface px-4 py-2 text-sm font-black text-surface disabled:opacity-50" disabled={!listening && !spokenLine} onClick={stopRehearsal} type="button">
+            <button className={secondaryAction} disabled={!listening && !spokenLine} onClick={stopRehearsal} type="button">
               Stop
             </button>
           </div>
-          <div className="mt-4 rounded-md border border-line bg-white p-3 text-sm font-semibold">{status}</div>
+          <div className={`${neumorphicInset} mt-4 rounded-[20px] p-4 text-sm font-semibold`}>{status}</div>
           {spokenLine ? (
-            <div className="mt-3 rounded-md border border-line bg-surface p-3 text-white">
-              <div className="text-xs font-bold uppercase text-white/70">Spoken opening</div>
+            <div className={`${neumorphicInset} mt-3 rounded-[20px] p-4`}>
+              <div className="text-xs font-bold uppercase text-muted">Spoken opening</div>
               <p className="mt-1 text-sm">{spokenLine}</p>
             </div>
           ) : null}
           <label className="mt-3 block text-sm font-medium">
             Captured mic transcript
-            <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" readOnly value={transcript || "Transcript will appear here after you speak."} />
+            <textarea className={`${formControl} min-h-28`} readOnly value={transcript || "Transcript will appear here after you speak."} />
           </label>
           <div className="mt-3 grid gap-2 sm:grid-cols-4">
             <RehearsalChip label="Consent" value={analysis.consent} tone={analysis.consent === "granted" ? "good" : analysis.consent === "denied" ? "warn" : "neutral"} />
@@ -1166,7 +1139,7 @@ function DeviceVoiceRehearsalPanel({ selected }: { selected?: Campaign }) {
             <RehearsalChip label="Sentiment" value={analysis.sentiment} tone={analysis.sentiment === "positive" ? "good" : analysis.sentiment === "negative" ? "warn" : "neutral"} />
             <RehearsalChip label="Goal" value={analysis.goalCaptured ? "captured" : "pending"} tone={analysis.goalCaptured ? "good" : "neutral"} />
           </div>
-          <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm">
+          <div className={`${neumorphicInset} mt-3 rounded-[20px] p-4 text-sm`}>
             <span className="font-black">Suggested next action: </span>
             {analysis.nextAction}
           </div>
@@ -1222,10 +1195,10 @@ function RehearsalChip({ label, value, tone }: { label: string; value: string; t
       ? "border-green-300 bg-green-100 text-green-800"
       : tone === "warn"
         ? "border-amber-300 bg-amber-100 text-amber-800"
-        : "border-line bg-white text-ink";
+        : "border-[#D1D8E0] bg-[#E0E5EC] text-[#3D4852]";
 
   return (
-    <div className={`rounded-md border px-3 py-2 text-sm ${className}`}>
+    <div className={`rounded-[20px] border px-4 py-3 text-sm ${className}`}>
       <div className="text-xs font-bold uppercase">{label}</div>
       <div className="mt-1 font-black">{value}</div>
     </div>
@@ -1433,9 +1406,9 @@ function CreateCampaignPanel({
 function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: Campaign[]; selectedId: string; onSelect: (id: string) => void }) {
   if (campaigns.length === 0) return null;
   return (
-    <label className="block rounded-2xl bg-panel p-5 text-sm font-bold text-ink">
+    <label className={`${neumorphicRaised} block rounded-[32px] p-5 text-sm font-bold text-[#3D4852]`}>
       Active campaign
-      <select className="mt-2 w-full rounded-md border border-line px-3 py-2" value={selectedId} onChange={(event) => onSelect(event.target.value)}>
+      <select className={formControl} value={selectedId} onChange={(event) => onSelect(event.target.value)}>
         {campaigns.map((campaign) => (
           <option key={campaign.id} value={campaign.id}>
             {campaign.name}
@@ -1458,22 +1431,22 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
     ["Retry eligible", stats.retryEligible ?? 0]
   ];
   return (
-    <section className="scroll-mt-6 rounded-2xl bg-panel text-ink" id="overview">
-      <div className="border-b-2 border-line p-5">
+    <section className={`${neumorphicRaised} scroll-mt-6 rounded-[32px] text-[#3D4852]`} id="overview">
+      <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-black">{campaign.name}</h2>
-          <span className="rounded-md bg-accent px-2 py-1 text-xs font-black">{campaign.status}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Default: {campaign.default_language}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Request: {campaign.prompt_config.request_type}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Concurrency: {campaign.concurrency_limit}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
-          <span className="rounded-md border-2 border-line px-2 py-1 text-xs font-bold">Self-improve: {campaign.agent_settings?.self_improve_enabled ? "on" : "off"}</span>
+          <span className="rounded-2xl bg-[#6C63FF] px-3 py-2 text-xs font-black text-white">{campaign.status}</span>
+          <span className={softChip}>Default: {campaign.default_language}</span>
+          <span className={softChip}>Request: {campaign.prompt_config.request_type}</span>
+          <span className={softChip}>Concurrency: {campaign.concurrency_limit}</span>
+          <span className={softChip}>Voice: {campaign.agent_settings?.voice_preset ?? "indian_female_natural"}</span>
+          <span className={softChip}>Tone: {campaign.agent_settings?.tone ?? "warm"}</span>
+          <span className={softChip}>Self-improve: {campaign.agent_settings?.self_improve_enabled ? "on" : "off"}</span>
         </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 p-4 pt-0 sm:grid-cols-4 xl:grid-cols-8">
         {metrics.map(([label, value]) => (
-          <div className="border-b border-r border-line p-3" key={label}>
+          <div className={`${neumorphicInset} rounded-[24px] p-4`} key={label}>
             <div className="text-xs text-muted">{label}</div>
             <div className="mt-1 text-3xl font-black tabular-nums">{value}</div>
           </div>
@@ -1558,14 +1531,14 @@ function PromptStudioPanel({
   }
 
   return (
-    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="prompt-studio">
+    <section className={`${neumorphicRaised} scroll-mt-6 rounded-[32px] p-5 text-[#3D4852] sm:p-7`} id="prompt-studio">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-surface">Prompt Studio</p>
+          <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Prompt Studio</p>
           <h2 className="mt-1 text-2xl font-black">Prompt Studio</h2>
           <p className="text-sm text-muted">Edit your operator prompt and preview the blended system prompt for future calls.</p>
         </div>
-        <button className="rounded-md bg-accent px-3 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy} onClick={copyPreview} type="button">
+        <button className={secondaryAction} disabled={busy} onClick={copyPreview} type="button">
           {copied ? "Copied" : "Copy preview"}
         </button>
       </div>
@@ -1573,19 +1546,19 @@ function PromptStudioPanel({
         <label className="block text-sm font-medium">
           Prompt window
           <textarea
-            className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+            className={`${formControl} min-h-28`}
             maxLength={1200}
             placeholder="Add operational guidance that should blend into the system prompt."
             value={promptEnhancement}
             onChange={(event) => setPromptEnhancement(event.target.value)}
           />
         </label>
-        <div className="rounded-2xl border-2 border-line p-3">
+        <div className={`${neumorphicInset} rounded-[24px] p-4`}>
           <div className="text-xs text-muted">Blended system prompt preview</div>
           <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap font-sans text-sm">{blendedPromptPreview}</pre>
         </div>
         <div className="flex justify-end">
-          <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
+          <button className={primaryAction} disabled={busy || !canManage}>
             Save prompt window
           </button>
         </div>
@@ -1675,10 +1648,10 @@ function AgentSettingsPanel({
   }
 
   return (
-    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="settings">
+    <section className={`${neumorphicRaised} scroll-mt-6 rounded-[32px] p-5 text-[#3D4852] sm:p-7`} id="settings">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-surface">Agent Settings</p>
+          <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Agent Settings</p>
           <h2 className="mt-1 text-2xl font-black">Agent settings</h2>
           <p className="text-sm text-muted">Saved changes apply to future calls only. Prompt guidance is edited in Prompt Studio.</p>
         </div>
@@ -1687,11 +1660,11 @@ function AgentSettingsPanel({
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submit}>
         <label className="block text-sm font-medium">
           Company name
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
+          <input className={formControl} value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
         </label>
         <label className="block text-sm font-medium">
           Voice preset
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={voicePreset} onChange={(event) => setVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
+          <select className={formControl} value={voicePreset} onChange={(event) => setVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
             <option value="indian_female_natural">Indian female natural</option>
             <option value="indian_male_natural">Indian male natural</option>
             <option value="openai_custom">OpenAI custom voice ID</option>
@@ -1699,7 +1672,7 @@ function AgentSettingsPanel({
         </label>
         <label className="block text-sm font-medium">
           Default language
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select className={formControl} value={language} onChange={(event) => setLanguage(event.target.value)}>
             {languageOptions.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -1709,34 +1682,34 @@ function AgentSettingsPanel({
         </label>
         <label className="block text-sm font-medium">
           Call purpose
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={callPurpose} onChange={(event) => setCallPurpose(event.target.value)} />
+          <input className={formControl} value={callPurpose} onChange={(event) => setCallPurpose(event.target.value)} />
         </label>
         <label className="block text-sm font-medium">
           Request type
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={requestType} onChange={(event) => setRequestType(event.target.value)} />
+          <input className={formControl} value={requestType} onChange={(event) => setRequestType(event.target.value)} />
         </label>
         <label className="block text-sm font-medium">
           Asset label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={assetLabel} onChange={(event) => setAssetLabel(event.target.value)} />
+          <input className={formControl} value={assetLabel} onChange={(event) => setAssetLabel(event.target.value)} />
         </label>
         <label className="block text-sm font-medium">
           Reference label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={referenceLabel} onChange={(event) => setReferenceLabel(event.target.value)} />
+          <input className={formControl} value={referenceLabel} onChange={(event) => setReferenceLabel(event.target.value)} />
         </label>
         <label className="block text-sm font-medium">
           Address label
-          <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={addressLabel} onChange={(event) => setAddressLabel(event.target.value)} />
+          <input className={formControl} value={addressLabel} onChange={(event) => setAddressLabel(event.target.value)} />
         </label>
         {voicePreset === "openai_custom" ? (
           <label className="block text-sm font-medium">
             OpenAI custom voice ID
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" placeholder="voice_1234" value={voiceId} onChange={(event) => setVoiceId(event.target.value)} />
+            <input className={formControl} placeholder="voice_1234" value={voiceId} onChange={(event) => setVoiceId(event.target.value)} />
           </label>
         ) : null}
         {voicePreset === "openai_custom" ? <p className="text-xs text-muted md:col-span-2">Built-in voice IDs: {openAiBuiltInVoices.join(", ")}.</p> : null}
         <label className="block text-sm font-medium">
           Tone
-          <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={tone} onChange={(event) => setTone(event.target.value as AgentSettings["tone"])}>
+          <select className={formControl} value={tone} onChange={(event) => setTone(event.target.value as AgentSettings["tone"])}>
             <option value="warm">Warm</option>
             <option value="polite">Polite</option>
             <option value="direct">Direct</option>
@@ -1747,21 +1720,21 @@ function AgentSettingsPanel({
         <input type="hidden" value={promptEnhancement} readOnly />
         <label className="block text-sm font-medium md:col-span-2">
           Confirmations to capture
-          <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" value={confirmationPoints} onChange={(event) => setConfirmationPoints(event.target.value)} />
+          <textarea className={`${formControl} min-h-28`} value={confirmationPoints} onChange={(event) => setConfirmationPoints(event.target.value)} />
         </label>
         <label className="block text-sm font-medium md:col-span-2">
           Information to collect
-          <textarea className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2" value={collectionPoints} onChange={(event) => setCollectionPoints(event.target.value)} />
+          <textarea className={`${formControl} min-h-28`} value={collectionPoints} onChange={(event) => setCollectionPoints(event.target.value)} />
         </label>
         <label className="flex items-center gap-2 text-sm font-medium">
           <input checked={selfImprove} type="checkbox" onChange={(event) => setSelfImprove(event.target.checked)} />
           Self-improve future calls from short call notes
         </label>
-        <a className="text-sm font-black text-surface" href="#prompt-studio">
+        <a className="text-sm font-black text-[#6C63FF]" href="#prompt-studio">
           Edit prompt guidance in Prompt Studio
         </a>
         <div className="flex justify-end md:col-span-2">
-          <button className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink disabled:opacity-50" disabled={busy || !canManage}>
+          <button className={primaryAction} disabled={busy || !canManage}>
             Save agent settings
           </button>
         </div>
@@ -1773,18 +1746,18 @@ function AgentSettingsPanel({
 
 function DownloadsPanel({ campaign }: { campaign: Campaign }) {
   return (
-    <section className="scroll-mt-6 rounded-2xl bg-panel p-5 text-ink" id="exports">
-      <p className="text-xs font-black uppercase tracking-wide text-surface">Downloads</p>
+    <section className={`${neumorphicRaised} scroll-mt-6 rounded-[32px] p-5 text-[#3D4852] sm:p-7`} id="exports">
+      <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Downloads</p>
       <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-black">Export campaign results</h2>
           <p className="mt-1 text-sm text-muted">Download normal result exports for operations handoff. Raw secrets and provider payloads stay out of these files.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a className="rounded-md bg-accent px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${campaign.id}/export`}>
+          <a className={primaryAction} href={`/api/campaigns/${campaign.id}/export`}>
             Download CSV
           </a>
-          <a className="rounded-md border-2 border-line px-4 py-2 text-sm font-black text-ink" href={`/api/campaigns/${campaign.id}/export?format=html`}>
+          <a className={secondaryAction} href={`/api/campaigns/${campaign.id}/export?format=html`}>
             Download HTML
           </a>
         </div>
@@ -1831,11 +1804,11 @@ function ResultsTable({
   };
 
   return (
-    <section className="scroll-mt-6 overflow-hidden rounded-2xl bg-panel text-ink" id="results">
-      <div className="border-b-2 border-line p-5">
-        <p className="text-xs font-black uppercase tracking-wide text-surface">Results</p>
+    <section className={`${neumorphicRaised} scroll-mt-6 overflow-hidden rounded-[32px] text-[#3D4852]`} id="results">
+      <div className="p-5 sm:p-7">
+        <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Results</p>
         <h2 className="mt-1 text-2xl font-black">Results and uploaded details</h2>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3 text-white">
+        <div className={`${neumorphicInset} mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[24px] px-4 py-4`}>
           <div className="text-sm font-semibold">
             {selectedContactIds.length > 0
               ? `${selectedContactIds.length} contact${selectedContactIds.length === 1 ? "" : "s"} selected for start`
@@ -1844,7 +1817,7 @@ function ResultsTable({
           <div className="flex flex-wrap gap-2">
             {canManage ? (
               <button
-                className="rounded-md bg-accent px-3 py-2 text-sm font-black text-ink disabled:opacity-50"
+                className={secondaryAction}
                 disabled={busy || visibleContactIds.length === 0}
                 onClick={() => onToggleAll(visibleContactIds)}
                 type="button"
@@ -1854,7 +1827,7 @@ function ResultsTable({
             ) : null}
             {canManage ? (
               <button
-                className="rounded-md border-2 border-white px-3 py-2 text-sm font-black text-white disabled:opacity-50"
+                className={primaryAction}
                 disabled={busy || visibleContactIds.length === 0}
                 onClick={onStartSelected}
                 type="button"
@@ -1867,7 +1840,7 @@ function ResultsTable({
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <label className="text-sm font-medium">
             Status
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <select className={formControl} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="all">All statuses</option>
               <option value="not_queued">Not queued</option>
               <option value="queued">Queued</option>
@@ -1883,7 +1856,7 @@ function ResultsTable({
           </label>
           <label className="text-sm font-medium">
             Disposition
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={dispositionFilter} onChange={(event) => setDispositionFilter(event.target.value)}>
+            <select className={formControl} value={dispositionFilter} onChange={(event) => setDispositionFilter(event.target.value)}>
               <option value="all">All dispositions</option>
               <option value="confirmed_pickup">Confirmed pickup</option>
               <option value="follow_up_needed">Follow-up needed</option>
@@ -1898,7 +1871,7 @@ function ResultsTable({
           </label>
           <label className="text-sm font-medium">
             Language
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={languageFilter} onChange={(event) => setLanguageFilter(event.target.value)}>
+            <select className={formControl} value={languageFilter} onChange={(event) => setLanguageFilter(event.target.value)}>
               <option value="all">All languages</option>
               {languageOptions.map(([value, label]) => (
                 <option key={value} value={value}>
@@ -1909,7 +1882,7 @@ function ResultsTable({
           </label>
           <label className="text-sm font-medium">
             QA verification
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={qaFilter} onChange={(event) => setQaFilter(event.target.value)}>
+            <select className={formControl} value={qaFilter} onChange={(event) => setQaFilter(event.target.value)}>
               <option value="all">All QA scores</option>
               <option value="pass">Pass</option>
               <option value="warn">Warn</option>
@@ -1926,9 +1899,9 @@ function ResultsTable({
             ["Completed", liveCounts.completed],
             ["Transcript ready", liveCounts.transcriptReady]
           ].map(([label, value]) => (
-            <div className="rounded-xl border border-white/20 bg-white/10 px-3 py-3" key={String(label)}>
-              <div className="text-xs font-bold uppercase tracking-wide text-white/70">{label}</div>
-              <div className="mt-1 text-2xl font-black text-white">{value}</div>
+            <div className={`${neumorphicInset} rounded-[24px] px-4 py-4`} key={String(label)}>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted">{label}</div>
+              <div className="mt-1 text-2xl font-black">{value}</div>
             </div>
           ))}
         </div>
@@ -1939,7 +1912,7 @@ function ResultsTable({
           const rowStatus = row.call?.status ?? "not_queued";
           const selectedForStart = selectedContactIds.includes(String(row.contact_id));
           return (
-            <article className={`rounded-2xl border-2 bg-white/95 p-4 shadow-sm ${resolveRowHighlight(rowStatus)}`} key={String(row.contact_id)}>
+            <article className={`${neumorphicRaisedSmall} rounded-[28px] p-4 ${resolveRowHighlight(rowStatus)}`} key={String(row.contact_id)}>
               <div className="grid gap-4 lg:grid-cols-[52px_minmax(0,1.5fr)_minmax(280px,1fr)]">
                 <div className="flex items-start justify-center pt-1">
                   {canManage ? (
@@ -1957,7 +1930,7 @@ function ResultsTable({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className={`text-lg ${rowStatus === "completed" ? "font-black text-green-700" : "font-black text-ink"}`}>{String(row.provider_name ?? "Unnamed contact")}</h3>
-                    <span className="rounded-md border border-line px-2 py-1 text-xs font-bold text-muted">{String(row.language_hint ?? "-")}</span>
+                    <span className={softChip}>{String(row.language_hint ?? "-")}</span>
                     {row.call ? <QaBadge call={row.call} /> : null}
                   </div>
                   <div className="mt-1 font-mono text-sm text-muted">{String(row.phone ?? "")}</div>
@@ -1973,15 +1946,15 @@ function ResultsTable({
                     <InfoField label="Summary" value={row.call?.summary_text || "No remarks yet."} />
                   </div>
                 </div>
-                <div className="rounded-2xl bg-surface p-4 text-white">
+                <div className={`${neumorphicInset} rounded-[24px] p-4`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <div className="text-xs font-bold uppercase tracking-wide text-white/70">Live status</div>
+                      <div className="text-xs font-bold uppercase tracking-wide text-muted">Live status</div>
                       <div className="mt-2">
                         <StatusBadge status={rowStatus} />
                       </div>
                     </div>
-                    {selectedForStart ? <span className="rounded-md bg-accent px-2 py-1 text-xs font-black text-ink">Selected</span> : null}
+                    {selectedForStart ? <span className="rounded-2xl bg-[#6C63FF] px-3 py-2 text-xs font-black text-white">Selected</span> : null}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <LiveStateChip label={resolveTranscriptLabel(row.call?.transcript_status)} tone={(row.call?.transcript_status ?? "missing") === "missing" ? "neutral" : "good"} />
@@ -1989,21 +1962,21 @@ function ResultsTable({
                     <LiveStateChip label={row.call ? `Attitude: ${row.call.receiver_attitude}` : "Awaiting call"} tone={row.call?.receiver_attitude === "rude" ? "warn" : "neutral"} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    {row.call ? <a className="font-black text-accent" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
-                    {row.call?.recording_url ? <a className="font-black text-accent" href={row.call.recording_url}>Open recording</a> : <span className="text-white/70">Recording pending</span>}
+                    {row.call ? <a className="font-black text-[#6C63FF]" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+                    {row.call?.recording_url ? <a className="font-black text-[#6C63FF]" href={row.call.recording_url}>Open recording</a> : <span className="text-muted">Recording pending</span>}
                     {row.call?.transcript_text ? (
-                      <button className="font-black text-accent" onClick={() => onDownloadTranscript(row.call!)} type="button">
+                      <button className="font-black text-[#6C63FF]" onClick={() => onDownloadTranscript(row.call!)} type="button">
                         Download transcript
                       </button>
                     ) : null}
                   </div>
                   {row.call?.status_history?.length ? (
-                    <div className="mt-4 rounded-xl border border-white/15 p-3">
-                      <div className="text-xs font-bold uppercase tracking-wide text-white/70">Status trail</div>
-                      <ol className="mt-2 space-y-1 text-sm text-white/90">
+                    <div className={`${neumorphicRaisedSmall} mt-4 rounded-[20px] p-3`}>
+                      <div className="text-xs font-bold uppercase tracking-wide text-muted">Status trail</div>
+                      <ol className="mt-2 space-y-1 text-sm">
                         {row.call.status_history.slice(-4).map((item, itemIndex) => (
                           <li key={`${item.status}-${item.at}-${itemIndex}`}>
-                            <span className="font-semibold">{item.status}</span> <span className="text-white/60">{formatDateTime(item.at)}</span>
+                            <span className="font-semibold">{item.status}</span> <span className="text-muted">{formatDateTime(item.at)}</span>
                           </li>
                         ))}
                       </ol>
@@ -2027,7 +2000,7 @@ function resolveTranscriptLabel(transcriptStatus: string | undefined) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  return <span className={`rounded-md px-2 py-1 text-xs font-black ${resolveStatusBadgeClassName(status)}`}>{status.replace(/_/g, " ")}</span>;
+  return <span className={`rounded-2xl px-3 py-2 text-xs font-black ${resolveStatusBadgeClassName(status)}`}>{status.replace(/_/g, " ")}</span>;
 }
 
 function LiveStateChip({ label, tone }: { label: string; tone: "good" | "warn" | "neutral" }) {
@@ -2036,23 +2009,23 @@ function LiveStateChip({ label, tone }: { label: string; tone: "good" | "warn" |
       ? "border-green-300 bg-green-100 text-green-800"
       : tone === "warn"
         ? "border-amber-300 bg-amber-100 text-amber-800"
-        : "border-white/20 bg-white/10 text-white";
+        : "border-[#D1D8E0] bg-[#E0E5EC] text-[#3D4852]";
 
-  return <span className={`rounded-md border px-2 py-1 text-xs font-bold ${className}`}>{label}</span>;
+  return <span className={`rounded-2xl border px-3 py-2 text-xs font-bold ${className}`}>{label}</span>;
 }
 
 function resolveStatusBadgeClassName(status: string) {
   if (status === "completed") return "bg-success text-white";
-  if (status === "ringing" || status === "initiated" || status === "answered") return "bg-accent text-ink";
-  if (status === "queued") return "border border-line bg-white text-ink";
+  if (status === "ringing" || status === "initiated" || status === "answered") return "bg-[#6C63FF] text-white";
+  if (status === "queued") return "bg-[#E0E5EC] text-[#3D4852] shadow-[inset_3px_3px_6px_rgb(163,177,198,0.6),inset_-3px_-3px_6px_rgba(255,255,255,0.5)]";
   if (status === "not_picked" || status === "not_connected" || status === "voicemail") return "bg-amber-100 text-amber-800";
   if (status === "invalid_number" || status === "failed") return "bg-red-100 text-red-700";
-  return "border border-line bg-white text-ink";
+  return "bg-[#E0E5EC] text-[#3D4852] shadow-[inset_3px_3px_6px_rgb(163,177,198,0.6),inset_-3px_-3px_6px_rgba(255,255,255,0.5)]";
 }
 
 function resolveRowHighlight(status: string) {
-  if (status === "completed") return "border-success bg-green-50";
-  return "border-line";
+  if (status === "completed") return "ring-2 ring-green-300";
+  return "";
 }
 
 function resolveTableRowHighlight(status: string) {
@@ -2063,7 +2036,7 @@ function resolveTableRowHighlight(status: string) {
 function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
   return (
     <details className="mt-3 text-sm">
-      <summary className="cursor-pointer font-medium text-accent">Call history and transcript</summary>
+      <summary className="cursor-pointer font-medium text-[#6C63FF]">Call history and transcript</summary>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <InfoField label="Live status" value={call.status} />
         <InfoField label="Last call" value={call.last_call_time ?? "-"} />
@@ -2076,7 +2049,7 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
         <InfoField label="Tone" value={call.tone_snapshot ?? "-"} />
         <InfoField label="Transcript" value={call.transcript_status ?? "missing"} />
       </div>
-      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+      <div className={`${neumorphicInset} mt-3 rounded-[20px] p-3`}>
         <div className="text-xs text-muted">Behavior verification</div>
         <div className="mt-2 grid gap-2 md:grid-cols-4">
           <InfoField label="Language QA" value={call.qa_language_status ?? "warn"} />
@@ -2086,16 +2059,16 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
         </div>
       </div>
       {call.prompt_enhancement_snapshot ? (
-        <div className="mt-3 rounded-md border border-line bg-panel p-3">
+        <div className={`${neumorphicInset} mt-3 rounded-[20px] p-3`}>
           <div className="text-xs text-muted">Prompt enhancement snapshot</div>
           <div className="mt-1 whitespace-pre-wrap">{call.prompt_enhancement_snapshot}</div>
         </div>
       ) : null}
-      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+      <div className={`${neumorphicInset} mt-3 rounded-[20px] p-3`}>
         <div className="text-xs text-muted">Transcript text</div>
         <pre className="mt-1 whitespace-pre-wrap font-sans text-sm">{call.transcript_text || "Transcript pending."}</pre>
       </div>
-      <div className="mt-3 rounded-md border border-line bg-panel p-3">
+      <div className={`${neumorphicInset} mt-3 rounded-[20px] p-3`}>
         <div className="text-xs text-muted">Status history</div>
         <ol className="mt-2 space-y-1">
           {(call.status_history ?? []).map((item, index) => (
@@ -2106,7 +2079,7 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
         </ol>
       </div>
       {call.improvement_note ? (
-        <div className="mt-3 rounded-md border border-line bg-panel p-3">
+        <div className={`${neumorphicInset} mt-3 rounded-[20px] p-3`}>
           <div className="text-xs text-muted">Self-improvement note</div>
           <div className="mt-1">{call.improvement_note}</div>
         </div>
@@ -2117,7 +2090,7 @@ function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
 
 function QaBadge({ call, compact = false }: { call: Campaign["calls"][number]; compact?: boolean }) {
   if ((call.transcript_status ?? "missing") === "missing") {
-    return <span className="inline-flex rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">QA pending</span>;
+    return <span className={`${softChip} inline-flex`}>QA pending</span>;
   }
   const score = call.qa_score ?? 0;
   const level = score >= 75 ? "pass" : score >= 50 ? "warn" : "fail";
@@ -2129,15 +2102,15 @@ function QaBadge({ call, compact = false }: { call: Campaign["calls"][number]; c
         ? "bg-amber-50 text-amber-700 border-amber-200"
         : "bg-red-50 text-red-700 border-red-200";
 
-  return <span className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${className}`}>{compact ? score : label}</span>;
+  return <span className={`inline-flex rounded-2xl border px-3 py-2 text-xs font-medium ${className}`}>{compact ? score : label}</span>;
 }
 
 function UploadSummaryPanel({ summary }: { summary: UploadSummary }) {
   return (
-    <section className="rounded-lg border border-line bg-panel p-4">
+    <section className={`${neumorphicRaised} rounded-[32px] p-5`}>
       <div className="flex flex-wrap gap-2 text-xs">
         {summary.source_columns.map((column) => (
-          <span className="rounded bg-surface px-2 py-1" key={column}>{column}</span>
+          <span className={softChip} key={column}>{column}</span>
         ))}
       </div>
       {summary.invalid_rows.length > 0 ? (
@@ -2145,7 +2118,7 @@ function UploadSummaryPanel({ summary }: { summary: UploadSummary }) {
           <h3 className="text-sm font-semibold">Invalid rows</h3>
           <div className="mt-2 space-y-2">
             {summary.invalid_rows.slice(0, 5).map((row) => (
-              <div className="rounded-md border border-line bg-surface p-3 text-sm" key={`invalid-${row.source_row_number}`}>
+              <div className={`${neumorphicInset} rounded-[20px] p-3 text-sm`} key={`invalid-${row.source_row_number}`}>
                 <div className="font-medium">Row {row.source_row_number}</div>
                 <div className="mt-1 text-muted">{row.errors.join(", ")}</div>
               </div>
@@ -2158,7 +2131,7 @@ function UploadSummaryPanel({ summary }: { summary: UploadSummary }) {
           <h3 className="text-sm font-semibold">Duplicate rows</h3>
           <div className="mt-2 space-y-2">
             {summary.duplicate_rows.slice(0, 5).map((row) => (
-              <div className="rounded-md border border-line bg-surface p-3 text-sm" key={`duplicate-${row.source_row_number}`}>
+              <div className={`${neumorphicInset} rounded-[20px] p-3 text-sm`} key={`duplicate-${row.source_row_number}`}>
                 <div className="font-medium">Row {row.source_row_number}</div>
                 <div className="mt-1 text-muted">{row.errors.join(", ")}</div>
               </div>
@@ -2188,7 +2161,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function EmptyState() {
   return (
-    <section className="rounded-lg border border-dashed border-line bg-panel p-8 text-center">
+    <section className={`${neumorphicInset} rounded-[32px] p-8 text-center`}>
       <h2 className="text-lg font-semibold">No campaign yet</h2>
       <p className="mt-2 text-sm text-muted">Upload an Excel or CSV contact list to begin the live operations workflow.</p>
     </section>

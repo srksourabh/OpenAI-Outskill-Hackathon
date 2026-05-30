@@ -5,18 +5,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: "#008FFF",
-        panel: "#FFFFFF",
-        ink: "#111111",
-        muted: "#424242",
-        line: "#008FFF",
-        rail: "#FFFFFF",
-        accent: "#FFE400",
-        "accent-strong": "#F4D800",
-        warning: "#FFE400",
+        surface: "#E0E5EC",
+        panel: "#E0E5EC",
+        ink: "#3D4852",
+        muted: "#6B7280",
+        line: "transparent",
+        rail: "#E0E5EC",
+        accent: "#6C63FF",
+        "accent-strong": "#8B84FF",
+        warning: "#F59E0B",
         danger: "#B42318",
         success: "#0A7A3D",
-        info: "#008FFF"
+        info: "#38B2AC"
       }
     }
   },

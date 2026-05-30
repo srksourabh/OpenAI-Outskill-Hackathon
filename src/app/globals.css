@@ -1,13 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
-  --color-sky-canvas: #008fff;
-  --color-sunshine-accent: #ffe400;
-  --color-paper-white: #ffffff;
-  --color-charcoal-text: #111111;
+  --color-sky-canvas: #e0e5ec;
+  --color-sunshine-accent: #6c63ff;
+  --color-paper-white: #e0e5ec;
+  --color-charcoal-text: #3d4852;
 }
 
 * {
@@ -19,7 +21,7 @@ body {
   overflow-x: hidden;
   background: var(--color-sky-canvas);
   color: var(--color-charcoal-text);
-  font-family: Montserrat, Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "DM Sans", "Plus Jakarta Sans", "Segoe UI", sans-serif;
 }
 
 button,

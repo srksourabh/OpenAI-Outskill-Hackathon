@@ -190,15 +190,10 @@
 - [x] Add browser speaker/mic rehearsal in the workspace so simulated testing can capture a device transcript before live Plivo calls.
 - [x] Add Codex-generated product visuals to the landing page and realtime rehearsal panel.
 - [x] Simplify the campaign workspace UX with clearer navigation labels, a smaller page header, contact-first upload flow, and collapsed advanced script/voice settings.
-- [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
-- [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
-- [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.
-- [ ] Design parity pass: extend results filters with provider, retry eligibility, transcript availability, recording availability, and search by name/phone/order/location.
-- [ ] Design parity pass: preserve results filters in URL query params instead of component-only state.
-- [ ] Design parity pass: add a live activity event feed with source tags (system, provider webhook, cron, admin, simulated).
-- [ ] Design parity pass: add export builder controls (disposition/status filters, include alternate phone/summary/recording URL) and preview rows before generation.
-- [ ] Design parity pass: add provider readiness statuses and masked secret statuses in a dedicated settings surface.
-- [ ] Design parity pass: add accessibility sweep items from `design.md` (skip link, icon-button accessible names, aria-live for live updates/toasts, keyboard flow checks).
+- [x] Consolidate the workspace into three user-facing pages only: Contacts, Agent settings, and Results.
+- [x] Redirect legacy Campaigns, Upload, New Campaign, and Exports routes into the new three-page flow.
+- [x] Apply the requested Neumorphism / Soft UI visual system across the active workspace surfaces.
+- [x] Omit the previously planned extra workspace sections so the MVP stays simple and demo-ready.
 
 ### Acceptance Criteria
 - [x] Dashboard shows the hackathon golden path states from seeded or uploaded contacts.
