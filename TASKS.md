@@ -176,6 +176,7 @@
 - [x] Hide simulated mode from normal dashboard operations while keeping backend helpers available.
 - [x] Allow authenticated user role to download normal campaign exports without write permissions.
 - [x] Add front-page product landing, SEO metadata, privacy page, and sitemap output.
+- [x] Update landing page hero headline for feasibility checks, sentiment analysis, and parallel outbound calling.
 - [x] Add health dashboard page with component readiness status (store, OpenAI, Plivo, voice bridge, auth).
 - [x] Add explicit campaign draft creation panel with connected agent/prompt defaults.
 - [x] Capture callback request datetime/remarks plus missed-call notes and surface them in UI and exports.

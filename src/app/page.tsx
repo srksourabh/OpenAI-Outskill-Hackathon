@@ -8,7 +8,7 @@ export default function HomePage() {
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
           <div>
             <h1 className="max-w-4xl text-5xl font-black leading-tight tracking-[-0.62px] text-accent sm:text-6xl">
-              Bright outbound operations, one call at a time.
+              smart outbound calling tool to check feasibility and sentiment analysis, many calls at a time
             </h1>
             <p className="mt-5 max-w-3xl text-lg leading-7 text-white sm:text-xl">
           Create campaigns, configure agent prompt behavior, monitor system health, capture callback commitments, and export every call outcome with transcript-ready auditability.
