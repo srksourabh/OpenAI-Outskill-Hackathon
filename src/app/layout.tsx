@@ -8,7 +8,10 @@ export const metadata: Metadata = {
     template: "%s | eDial"
   },
   description:
-    "eDial is an autonomous outbound calling platform with campaign control, agent prompt tuning, health monitoring, and call outcome exports for operations teams.",
+    "eDial is an outbound AI calling MVP for feasibility checks, sentiment analysis, parallel campaign calling, and operations-ready exports.",
+  icons: {
+    icon: "/favicon.svg"
+  },
   keywords: [
     "autonomous calling agent",
     "outbound call campaign",

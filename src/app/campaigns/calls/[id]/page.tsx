@@ -18,9 +18,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
 
   if (!campaign || !call || !contact) {
     return (
-      <main className="min-h-dvh bg-surface p-6 text-white">
+      <main className="min-h-dvh bg-surface p-6 text-ink">
         <Link className="text-sm font-black text-accent" href="/campaigns/results">Back to results</Link>
-        <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
+        <section className="mt-6 rounded-[28px] bg-panel p-6 text-ink shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]">
           <h1 className="text-xl font-black">Call not found</h1>
         </section>
       </main>
@@ -28,13 +28,13 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <main className="min-h-dvh bg-surface p-6 text-white">
+    <main className="min-h-dvh bg-surface p-6 text-ink">
       <Link className="text-sm font-black text-accent" href="/campaigns/results">Back to results</Link>
-      <section className="mt-6 rounded-2xl bg-panel p-6 text-ink">
+      <section className="mt-6 rounded-[32px] bg-panel p-6 text-ink shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-surface">Call detail</p>
-            <h1 className="mt-1 text-4xl font-black tracking-[-0.62px]">{contact.provider_name}</h1>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted">MVP call detail</p>
+            <h1 className="mt-1 text-4xl font-black text-accent">{contact.provider_name}</h1>
             <p className="mt-1 font-mono text-sm text-muted">{contact.phone}</p>
           </div>
           <span className={`rounded-md px-3 py-2 text-sm font-black ${call.status === "completed" ? "bg-success text-white" : "bg-accent text-ink"}`}>{call.status}</span>
@@ -55,7 +55,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           <Info label="Missed call note" value={call.missed_call_note || "-"} />
           <Info label="Attempt" value={String(call.attempt_number)} />
         </div>
-        <div className="mt-5 rounded-2xl border-2 border-line p-4">
+        <div className="mt-5 rounded-[24px] bg-panel p-4 shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">
           <h2 className="text-sm font-black">Behavior Verification</h2>
           <div className="mt-3 grid gap-4 md:grid-cols-4">
             <Info label="Language QA" value={call.qa_language_status ?? "warn"} />
@@ -68,7 +68,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         <Evidence title="Transcript" value={call.transcript_text || "Transcript pending."} />
         {call.transcript_text ? (
           <a
-            className="mt-4 inline-flex rounded-md bg-surface px-4 py-2 text-sm font-black text-white"
+            className="mt-4 inline-flex rounded-2xl bg-accent px-4 py-2 text-sm font-black text-white shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]"
             download={`transcript-${call.id}.txt`}
             href={`data:text/plain;charset=utf-8,${encodeURIComponent(call.transcript_text)}`}
           >
@@ -76,7 +76,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
           </a>
         ) : null}
         <Evidence title="Recording" value={call.recording_url || "Recording pending."} />
-        <div className="mt-5 rounded-2xl border-2 border-line p-4">
+        <div className="mt-5 rounded-[24px] bg-panel p-4 shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">
           <h2 className="text-sm font-black">Status history</h2>
           <ol className="mt-3 space-y-2 text-sm">
             {call.status_history.map((item, index) => (
@@ -102,7 +102,7 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function Evidence({ title, value }: { title: string; value: string }) {
   return (
-    <div className="mt-5 rounded-2xl border-2 border-line p-4">
+    <div className="mt-5 rounded-[24px] bg-panel p-4 shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">
       <h2 className="text-sm font-black">{title}</h2>
       <pre className="mt-2 whitespace-pre-wrap font-sans text-sm">{value}</pre>
     </div>

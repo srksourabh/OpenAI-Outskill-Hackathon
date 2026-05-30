@@ -43,7 +43,8 @@ export function AppShellHeader() {
             eDial
           </Link>
           <nav className="hidden items-center gap-2 text-sm md:flex">
-            <TopLink href="/campaigns" label="Campaigns" pathname={pathname} />
+            <TopLink href="/campaigns/contacts" label="Contacts" pathname={pathname} />
+            <TopLink href="/campaigns/results" label="Results" pathname={pathname} />
             <TopLink href="/health" label="Health" pathname={pathname} />
             <TopLink href="/privacy" label="Privacy" pathname={pathname} />
           </nav>
@@ -68,7 +69,7 @@ export function AppShellHeader() {
 }
 
 function TopLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
-  const active = pathname.startsWith(href);
+  const active = pathname === href || (href === "/campaigns/contacts" && pathname === "/campaigns");
   return (
     <Link className={`rounded-2xl px-4 py-3 ${active ? "bg-[#E0E5EC] font-bold text-[#3D4852] shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]" : "text-[#6B7280] hover:text-[#3D4852]"}`} href={href}>
       {label}

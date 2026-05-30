@@ -193,6 +193,7 @@ const workspaceNavigation = [
   { href: "/campaigns/settings", label: "Agent settings" },
   { href: "/campaigns/results", label: "Results" }
 ] as const;
+const mvpWorkspaceSteps = ["Upload or paste contacts", "Tune Hindi-first agent", "Run parallel calls", "Review sentiment", "Export handoff"];
 
 const neumorphicRaised = "bg-[#E0E5EC] shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]";
 const neumorphicRaisedSmall = "bg-[#E0E5EC] shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]";
@@ -485,6 +486,14 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
               <TopNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
             ))}
           </nav>
+          <div className={`${neumorphicInset} mt-5 grid gap-2 rounded-[24px] p-3 text-xs font-black text-[#3D4852] sm:grid-cols-5`}>
+            {mvpWorkspaceSteps.map((step, index) => (
+              <div className="rounded-2xl px-3 py-2" key={step}>
+                <span className="mr-2 text-[#0F766E]">0{index + 1}</span>
+                {step}
+              </div>
+            ))}
+          </div>
         </header>
 
         <section className="mt-6 space-y-6">
@@ -558,19 +567,19 @@ function getWorkspaceHeader(view: CampaignWorkspaceView) {
   if (view === "contacts") {
     return {
       title: "Contacts",
-      description: "Add a single mobile number or upload a contact file. This is the only place operators add people to call."
+      description: "Start the MVP here: add one number, paste many numbers, or upload a CSV/XLSX sheet for feasibility calls."
     };
   }
   if (view === "results") {
     return {
       title: "Results",
-      description: "Review call outcomes, transcripts, summaries, and download exports from one screen."
+      description: "Review feasibility, sentiment, transcript evidence, callback notes, and export the operations handoff."
     };
   }
   if (view === "settings") {
     return {
       title: "Agent settings",
-      description: "Control voice, tone, language, prompt behavior, and rehearsal from one settings page."
+      description: "Set the Hindi-first voice, tone, checklist, and prompt rules that every future call will use."
     };
   }
   return {
@@ -671,9 +680,9 @@ function UploadPanel({
   return (
     <section className={`${neumorphicRaised} rounded-[32px] p-5 text-[#3D4852] sm:p-7`} id="upload">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">Add contacts</p>
-        <h2 className="mt-1 text-2xl font-black">Who should the agent call?</h2>
-        <p className="mt-1 text-sm text-muted">Start with one number for a quick check, paste many numbers, or upload a CSV/XLSX file.</p>
+        <p className="text-xs font-black uppercase tracking-wide text-[#38B2AC]">MVP intake</p>
+        <h2 className="mt-1 text-2xl font-black">Add people to call for readiness checks</h2>
+        <p className="mt-1 text-sm text-muted">Start with one number, paste many numbers, or upload a CSV/XLSX contact sheet. The MVP validates contacts before calls begin.</p>
         <a className={`${secondaryAction} mt-4 inline-flex`} href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>

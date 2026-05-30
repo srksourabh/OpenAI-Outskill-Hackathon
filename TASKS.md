@@ -196,6 +196,8 @@
 - [x] Apply the requested Neumorphism / Soft UI visual system across the active workspace surfaces.
 - [x] Omit the previously planned extra workspace sections so the MVP stays simple and demo-ready.
 - [x] Replace the purple/white accent treatment with a higher-contrast teal/ink palette for better readability.
+- [x] Align public, login, health, call-detail, and workspace UI surfaces to the MVP workflow and Soft UI visual system.
+- [x] Point the top navigation at the active MVP Contacts and Results pages and add a favicon for cleaner browser QA.
 
 ### Acceptance Criteria
 - [x] Dashboard shows the hackathon golden path states from seeded or uploaded contacts.

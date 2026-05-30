@@ -46,21 +46,21 @@ export default function HealthPage() {
   }, []);
 
   return (
-    <main className="min-h-dvh bg-surface px-4 py-8 text-white">
+    <main className="min-h-dvh bg-surface px-4 py-8 text-ink">
       <section className="mx-auto w-full max-w-7xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[32px] bg-panel p-6 shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]">
           <div>
-            <p className="text-sm font-black uppercase tracking-wide text-accent">Operations readiness</p>
-            <h1 className="mt-2 text-5xl font-black leading-tight tracking-[-0.62px] text-accent">System Health</h1>
-            <p className="mt-2 text-base text-white">Track component readiness for campaigns, AI, telephony, and exports.</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted">MVP readiness</p>
+            <h1 className="mt-2 text-4xl font-black leading-tight text-accent sm:text-5xl">System Health</h1>
+            <p className="mt-2 max-w-2xl text-base text-muted">Track whether the campaign store, calling workflow, AI analysis, telephony, and exports are ready for the demo path.</p>
           </div>
-          <button className="rounded-md bg-white px-4 py-3 text-sm font-black text-ink" onClick={() => void loadHealth()} type="button">
+          <button className="rounded-2xl bg-accent px-5 py-3 text-sm font-black text-white shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]" onClick={() => void loadHealth()} type="button">
             Refresh
           </button>
         </div>
 
-        {loading ? <p className="mt-6 text-sm text-white">Loading health checks...</p> : null}
-        {error ? <p className="mt-6 rounded-md bg-white px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
+        {loading ? <p className="mt-6 rounded-2xl bg-panel px-4 py-3 text-sm font-bold text-muted shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">Loading health checks...</p> : null}
+        {error ? <p className="mt-6 rounded-2xl bg-panel px-4 py-3 text-sm font-semibold text-red-700 shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">{error}</p> : null}
 
         {health ? (
           <>
@@ -72,7 +72,7 @@ export default function HealthPage() {
             <p className="mt-3 text-xs text-muted">Last checked at: {health.checked_at}</p>
             <div className="mt-6 grid gap-3 md:grid-cols-2">
               {health.components.map((component) => (
-                <article className="rounded-2xl bg-panel p-5 text-ink" key={component.name}>
+                <article className="rounded-[28px] bg-panel p-5 text-ink shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]" key={component.name}>
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-lg font-semibold">{component.name}</h2>
                     <StatusPill status={component.status} />
@@ -104,7 +104,7 @@ function StatCard({ label, value, level }: { label: string; value: string; level
     level === "ok" ? "border-green-200" : level === "warn" ? "border-amber-200" : "border-red-200";
 
   return (
-    <article className={`rounded-2xl border-2 bg-panel p-5 text-ink ${styles}`}>
+    <article className={`rounded-[28px] border-2 bg-panel p-5 text-ink shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)] ${styles}`}>
       <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-2 text-3xl font-black">{value}</p>
     </article>
