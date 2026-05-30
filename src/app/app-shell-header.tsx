@@ -39,7 +39,7 @@ export function AppShellHeader() {
     <header className="border-b border-[#D1D8E0] bg-[#E0E5EC] text-[#3D4852]">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link className="rounded-2xl bg-[#6C63FF] px-4 py-3 text-lg font-black text-white shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]" href="/">
+          <Link className="rounded-2xl bg-[#0F766E] px-4 py-3 text-lg font-black text-[#F8FAFC] shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]" href="/">
             eDial
           </Link>
           <nav className="hidden items-center gap-2 text-sm md:flex">
@@ -51,7 +51,7 @@ export function AppShellHeader() {
         <div className="flex items-center gap-2 text-sm">
           {session.authenticated ? (
             <>
-              <span className="rounded-2xl bg-[#E0E5EC] px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#6C63FF] shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">{session.role}</span>
+              <span className="rounded-2xl bg-[#E0E5EC] px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#0F766E] shadow-[inset_4px_4px_8px_rgb(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)]">{session.role}</span>
               <button className="rounded-2xl bg-[#E0E5EC] px-4 py-3 font-semibold text-[#3D4852] shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]" onClick={logout} type="button">
                 Sign out
               </button>

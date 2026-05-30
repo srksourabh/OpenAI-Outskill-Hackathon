@@ -197,9 +197,9 @@ const workspaceNavigation = [
 const neumorphicRaised = "bg-[#E0E5EC] shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)]";
 const neumorphicRaisedSmall = "bg-[#E0E5EC] shadow-[5px_5px_10px_rgb(163,177,198,0.6),-5px_-5px_10px_rgba(255,255,255,0.5)]";
 const neumorphicInset = "bg-[#E0E5EC] shadow-[inset_6px_6px_10px_rgb(163,177,198,0.6),inset_-6px_-6px_10px_rgba(255,255,255,0.5)]";
-const focusRing = "focus:outline-none focus:ring-2 focus:ring-[#6C63FF] focus:ring-offset-2 focus:ring-offset-[#E0E5EC]";
+const focusRing = "focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:ring-offset-2 focus:ring-offset-[#E0E5EC]";
 const formControl = `${neumorphicInset} ${focusRing} mt-1 w-full rounded-2xl border-0 px-4 py-3 text-[#3D4852] placeholder:text-[#6B7280]`;
-const primaryAction = `${neumorphicRaisedSmall} ${focusRing} rounded-2xl bg-[#6C63FF] px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#8B84FF] disabled:cursor-not-allowed disabled:opacity-50`;
+const primaryAction = `${neumorphicRaisedSmall} ${focusRing} rounded-2xl bg-[#0F766E] px-5 py-3 text-sm font-black text-[#F8FAFC] transition hover:-translate-y-0.5 hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-50`;
 const secondaryAction = `${neumorphicRaisedSmall} ${focusRing} rounded-2xl px-5 py-3 text-sm font-black text-[#3D4852] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50`;
 const softChip = `${neumorphicInset} rounded-2xl px-3 py-2 text-xs font-black text-[#3D4852]`;
 
@@ -477,7 +477,7 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
               <p className="mt-2 max-w-2xl text-sm font-medium text-[#6B7280] sm:text-base">{header.description}</p>
             </div>
             <div className={`${neumorphicInset} rounded-2xl px-4 py-3 text-sm font-bold text-[#3D4852]`}>
-              Signed in as <span className="uppercase text-[#6C63FF]">{session.role ?? "guest"}</span>
+              Signed in as <span className="uppercase text-[#0F766E]">{session.role ?? "guest"}</span>
             </div>
           </div>
           <nav className="mt-6 grid gap-3 text-sm font-black sm:grid-cols-3">
@@ -517,7 +517,7 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
       </div>
       <nav className={`${neumorphicRaised} fixed inset-x-3 bottom-3 z-20 grid grid-cols-3 rounded-[24px] p-2 text-center text-xs font-black text-[#3D4852] lg:hidden`}>
         {workspaceNavigation.map((item) => (
-          <Link className={`rounded-2xl px-2 py-3 ${pathname === item.href ? "bg-[#6C63FF] text-white" : ""}`} href={item.href} key={item.href}>
+          <Link className={`rounded-2xl px-2 py-3 ${pathname === item.href ? "bg-[#0F766E] text-[#F8FAFC]" : ""}`} href={item.href} key={item.href}>
             {item.label}
           </Link>
         ))}
@@ -544,7 +544,7 @@ function TopNavLink({ href, label, pathname }: { href: string; label: string; pa
     <Link
       className={`block rounded-2xl px-4 py-3 text-center transition duration-300 ease-out ${focusRing} ${
         active
-          ? "bg-[#6C63FF] text-white shadow-[inset_3px_3px_6px_rgb(75,68,200,0.45),inset_-3px_-3px_6px_rgba(255,255,255,0.2)]"
+          ? "bg-[#0F766E] text-[#F8FAFC] shadow-[inset_3px_3px_6px_rgb(4,120,87,0.45),inset_-3px_-3px_6px_rgba(255,255,255,0.2)]"
           : `${neumorphicRaisedSmall} hover:-translate-y-0.5 hover:shadow-[12px_12px_20px_rgb(163,177,198,0.7),-12px_-12px_20px_rgba(255,255,255,0.6)]`
       }`}
       href={href}
@@ -680,21 +680,21 @@ function UploadPanel({
       </div>
       <div className={`${neumorphicInset} mt-5 grid grid-cols-3 gap-2 rounded-[24px] p-2 text-sm`}>
         <button
-          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "single" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "single" ? "bg-[#0F766E] text-[#F8FAFC] shadow-[inset_4px_4px_8px_rgb(4,120,87,0.3)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("single")}
         >
           One number
         </button>
         <button
-          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "list" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "list" ? "bg-[#0F766E] text-[#F8FAFC] shadow-[inset_4px_4px_8px_rgb(4,120,87,0.3)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("list")}
         >
           Paste list
         </button>
         <button
-          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "file" ? "bg-[#6C63FF] text-white shadow-[inset_4px_4px_8px_rgb(69,62,189,0.25)]" : "text-muted"}`}
+          className={`rounded-2xl px-2 py-3 font-black transition ${focusRing} ${intakeMode === "file" ? "bg-[#0F766E] text-[#F8FAFC] shadow-[inset_4px_4px_8px_rgb(4,120,87,0.3)]" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("file")}
         >
@@ -1016,7 +1016,7 @@ function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canManage ? <Link className="rounded-md bg-surface px-3 py-2 text-sm font-black text-white" href="/campaigns/upload">Add contacts</Link> : null}
+          {canManage ? <Link className="rounded-md bg-[#0F766E] px-3 py-2 text-sm font-black text-[#F8FAFC]" href="/campaigns/upload">Add contacts</Link> : null}
           <Link className="rounded-md border-2 border-surface px-3 py-2 text-sm font-black text-ink" href={canManage ? "/campaigns/upload" : "/campaigns/results"}>
             {canManage ? "Upload file" : "Open results"}
           </Link>
@@ -1024,7 +1024,7 @@ function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {steps.map(([number, title, body]) => (
-          <article className="rounded-md bg-white p-4" key={title}>
+          <article className="rounded-md bg-[#E0E5EC] p-4" key={title}>
             <div className="text-xs font-black uppercase text-surface">Step {number}</div>
             <h3 className="mt-1 text-lg font-black">{title}</h3>
             <p className="mt-1 text-sm text-muted">{body}</p>
@@ -1435,7 +1435,7 @@ function MetricBand({ campaign, stats }: { campaign: Campaign; stats: Record<str
       <div className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-2xl font-black">{campaign.name}</h2>
-          <span className="rounded-2xl bg-[#6C63FF] px-3 py-2 text-xs font-black text-white">{campaign.status}</span>
+          <span className="rounded-2xl bg-[#0F766E] px-3 py-2 text-xs font-black text-[#F8FAFC]">{campaign.status}</span>
           <span className={softChip}>Default: {campaign.default_language}</span>
           <span className={softChip}>Request: {campaign.prompt_config.request_type}</span>
           <span className={softChip}>Concurrency: {campaign.concurrency_limit}</span>
@@ -1730,7 +1730,7 @@ function AgentSettingsPanel({
           <input checked={selfImprove} type="checkbox" onChange={(event) => setSelfImprove(event.target.checked)} />
           Self-improve future calls from short call notes
         </label>
-        <a className="text-sm font-black text-[#6C63FF]" href="#prompt-studio">
+        <a className="text-sm font-black text-[#0F766E]" href="#prompt-studio">
           Edit prompt guidance in Prompt Studio
         </a>
         <div className="flex justify-end md:col-span-2">
@@ -1954,7 +1954,7 @@ function ResultsTable({
                         <StatusBadge status={rowStatus} />
                       </div>
                     </div>
-                    {selectedForStart ? <span className="rounded-2xl bg-[#6C63FF] px-3 py-2 text-xs font-black text-white">Selected</span> : null}
+                    {selectedForStart ? <span className="rounded-2xl bg-[#0F766E] px-3 py-2 text-xs font-black text-[#F8FAFC]">Selected</span> : null}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <LiveStateChip label={resolveTranscriptLabel(row.call?.transcript_status)} tone={(row.call?.transcript_status ?? "missing") === "missing" ? "neutral" : "good"} />
@@ -1962,10 +1962,10 @@ function ResultsTable({
                     <LiveStateChip label={row.call ? `Attitude: ${row.call.receiver_attitude}` : "Awaiting call"} tone={row.call?.receiver_attitude === "rude" ? "warn" : "neutral"} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    {row.call ? <a className="font-black text-[#6C63FF]" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
-                    {row.call?.recording_url ? <a className="font-black text-[#6C63FF]" href={row.call.recording_url}>Open recording</a> : <span className="text-muted">Recording pending</span>}
+                    {row.call ? <a className="font-black text-[#0F766E]" href={`/campaigns/calls/${row.call.id}`}>Open detail</a> : null}
+                    {row.call?.recording_url ? <a className="font-black text-[#0F766E]" href={row.call.recording_url}>Open recording</a> : <span className="text-muted">Recording pending</span>}
                     {row.call?.transcript_text ? (
-                      <button className="font-black text-[#6C63FF]" onClick={() => onDownloadTranscript(row.call!)} type="button">
+                      <button className="font-black text-[#0F766E]" onClick={() => onDownloadTranscript(row.call!)} type="button">
                         Download transcript
                       </button>
                     ) : null}
@@ -2015,8 +2015,8 @@ function LiveStateChip({ label, tone }: { label: string; tone: "good" | "warn" |
 }
 
 function resolveStatusBadgeClassName(status: string) {
-  if (status === "completed") return "bg-success text-white";
-  if (status === "ringing" || status === "initiated" || status === "answered") return "bg-[#6C63FF] text-white";
+  if (status === "completed") return "bg-success text-[#F8FAFC]";
+  if (status === "ringing" || status === "initiated" || status === "answered") return "bg-[#0F766E] text-[#F8FAFC]";
   if (status === "queued") return "bg-[#E0E5EC] text-[#3D4852] shadow-[inset_3px_3px_6px_rgb(163,177,198,0.6),inset_-3px_-3px_6px_rgba(255,255,255,0.5)]";
   if (status === "not_picked" || status === "not_connected" || status === "voicemail") return "bg-amber-100 text-amber-800";
   if (status === "invalid_number" || status === "failed") return "bg-red-100 text-red-700";
@@ -2036,7 +2036,7 @@ function resolveTableRowHighlight(status: string) {
 function CallHistoryDetails({ call }: { call: Campaign["calls"][number] }) {
   return (
     <details className="mt-3 text-sm">
-      <summary className="cursor-pointer font-medium text-[#6C63FF]">Call history and transcript</summary>
+      <summary className="cursor-pointer font-medium text-[#0F766E]">Call history and transcript</summary>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <InfoField label="Live status" value={call.status} />
         <InfoField label="Last call" value={call.last_call_time ?? "-"} />

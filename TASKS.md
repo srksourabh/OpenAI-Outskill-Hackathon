@@ -194,6 +194,7 @@
 - [x] Redirect legacy Campaigns, Upload, New Campaign, and Exports routes into the new three-page flow.
 - [x] Apply the requested Neumorphism / Soft UI visual system across the active workspace surfaces.
 - [x] Omit the previously planned extra workspace sections so the MVP stays simple and demo-ready.
+- [x] Replace the purple/white accent treatment with a higher-contrast teal/ink palette for better readability.
 
 ### Acceptance Criteria
 - [x] Dashboard shows the hackathon golden path states from seeded or uploaded contacts.

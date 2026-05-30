@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
   --color-sky-canvas: #e0e5ec;
-  --color-sunshine-accent: #6c63ff;
+  --color-sunshine-accent: #0f766e;
   --color-paper-white: #e0e5ec;
   --color-charcoal-text: #3d4852;
 }
@@ -36,5 +36,5 @@ a {
 
 ::selection {
   background: var(--color-sunshine-accent);
-  color: var(--color-charcoal-text);
+  color: #f8fafc;
 }
