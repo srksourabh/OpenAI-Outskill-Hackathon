@@ -1,0 +1,224 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "eDial" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - link "Campaigns" [ref=e7] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Health" [ref=e8] [cursor=pointer]:
+            - /url: /health
+          - link "Privacy" [ref=e9] [cursor=pointer]:
+            - /url: /privacy
+      - generic [ref=e10]:
+        - generic [ref=e93]: admin
+        - button "Sign out" [ref=e94] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - complementary [ref=e14]:
+        - generic [ref=e15]: Autonomous Calling Agent
+        - generic [ref=e16]: eDial
+        - paragraph [ref=e17]: Multilingual outbound AI campaigns with synced agent controls and callback tracking.
+        - generic [ref=e18]: "Signed in as: admin"
+        - navigation [ref=e19]:
+          - link "Overview" [ref=e20] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Campaign Setup" [ref=e21] [cursor=pointer]:
+            - /url: /campaigns/new
+          - link "Upload" [ref=e22] [cursor=pointer]:
+            - /url: /campaigns/upload
+          - link "Results" [ref=e23] [cursor=pointer]:
+            - /url: /campaigns/results
+          - link "Settings" [ref=e24] [cursor=pointer]:
+            - /url: /campaigns/settings
+          - link "Exports" [ref=e25] [cursor=pointer]:
+            - /url: /campaigns/exports
+          - link "Health" [ref=e26] [cursor=pointer]:
+            - /url: /health
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - paragraph [ref=e30]: Live operations workspace
+            - heading "eDial Upload Workspace" [level=1] [ref=e31]
+            - paragraph [ref=e32]: Upload CSV or Excel files, or create a quick single-number / list-based campaign without touching a database-heavy flow.
+          - generic [ref=e95]:
+            - link "Export CSV" [ref=e96] [cursor=pointer]:
+              - /url: /api/campaigns/32b611b2-032c-4a77-8fab-63387c334ac7/export
+            - link "Export HTML" [ref=e97] [cursor=pointer]:
+              - /url: /api/campaigns/32b611b2-032c-4a77-8fab-63387c334ac7/export?format=html
+        - generic [ref=e33]:
+          - generic [ref=e146]: Fresh number created and started.
+          - generic [ref=e98]:
+            - text: Active campaign
+            - combobox "Active campaign" [ref=e99]:
+              - option "Manual number check" [selected]
+              - option "API upload verification 2026-05-30T08:09:50.354Z"
+              - option "API verification draft 2026-05-30T08:09:50.354Z"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780020611"
+              - option "Manual Check 1780020512"
+              - option "Stored campaign"
+              - option "Manual number check QA 1779951412852"
+              - option "Manual number check"
+              - option "Live Plivo check"
+              - option "Manual number check"
+              - option "Demo showcase"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+          - generic [ref=e148]:
+            - generic [ref=e149]: phone
+            - generic [ref=e150]: language_hint
+            - generic [ref=e151]: provider_name
+            - generic [ref=e152]: location
+            - generic [ref=e153]: machine_count
+            - generic [ref=e154]: order_id
+          - generic [ref=e100]:
+            - generic [ref=e102]:
+              - heading "Manual number check" [level=2] [ref=e155]
+              - generic [ref=e104]: completed
+              - generic [ref=e105]: "Default: hi"
+              - generic [ref=e106]: "Request: de-installation"
+              - generic [ref=e107]: "Concurrency: 5"
+              - generic [ref=e108]: "Voice: indian_female_natural"
+              - generic [ref=e109]: "Tone: warm"
+              - generic [ref=e110]: "Self-improve: off"
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - generic [ref=e113]: Contacts
+                - generic [ref=e114]: "1"
+              - generic [ref=e115]:
+                - generic [ref=e116]: Queued
+                - generic [ref=e117]: "0"
+              - generic [ref=e118]:
+                - generic [ref=e119]: Active
+                - generic [ref=e120]: "0"
+              - generic [ref=e121]:
+                - generic [ref=e122]: Completed
+                - generic [ref=e123]: "1"
+              - generic [ref=e124]:
+                - generic [ref=e125]: Confirmed
+                - generic [ref=e126]: "1"
+              - generic [ref=e127]:
+                - generic [ref=e128]: Follow-up
+                - generic [ref=e129]: "0"
+              - generic [ref=e130]:
+                - generic [ref=e131]: Manual review
+                - generic [ref=e132]: "0"
+              - generic [ref=e133]:
+                - generic [ref=e134]: Retry eligible
+                - generic [ref=e135]: "0"
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - paragraph [ref=e39]: Upload
+              - heading "Intake and agent setup" [level=2] [ref=e40]
+              - paragraph [ref=e41]: Use one number, a list of numbers, or spreadsheet upload. Prompt text lives in Prompt Studio so there is one place to edit it.
+              - link "Download sample upload file" [ref=e42] [cursor=pointer]:
+                - /url: /sample-mobile-upload.csv
+            - generic [ref=e43]:
+              - button "Single number" [ref=e44] [cursor=pointer]
+              - button "Number list" [ref=e45] [cursor=pointer]
+              - button "CSV/XLSX upload" [ref=e46] [cursor=pointer]
+            - generic [ref=e47]:
+              - generic [ref=e48]:
+                - heading "Single number intake" [level=3] [ref=e49]
+                - paragraph [ref=e50]: Create a one-contact live campaign without preparing a spreadsheet.
+              - generic [ref=e51]:
+                - text: Campaign name
+                - textbox "Campaign name" [ref=e52]: Manual number check
+              - generic [ref=e53]:
+                - text: Mobile number
+                - textbox "Mobile number" [ref=e54]:
+                  - /placeholder: +919876543210 or 9876543210
+                  - text: "9876543212"
+              - generic [ref=e55]:
+                - text: Company name
+                - textbox "Company name" [ref=e56]: UDS
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - text: Call purpose
+                  - textbox "Call purpose" [ref=e59]: validate merchant details and confirm service readiness
+                - generic [ref=e60]:
+                  - text: Request type
+                  - textbox "Request type" [ref=e61]: de-installation
+              - generic [ref=e62]:
+                - generic [ref=e63]:
+                  - text: Asset label
+                  - textbox "Asset label" [ref=e64]: POS machine
+                - generic [ref=e65]:
+                  - text: Reference label
+                  - textbox "Reference label" [ref=e66]: terminal ID
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - text: Address label
+                  - textbox "Address label" [ref=e69]: service address
+                - generic [ref=e70]:
+                  - text: Confirmation checklist
+                  - textbox "Confirmation checklist" [ref=e71]: Confirm the merchant or store name Confirm the service address or branch location Confirm the device or request reference Confirm whether the request can proceed now
+              - generic [ref=e72]:
+                - text: Information to collect
+                - textbox "Information to collect" [ref=e73]: Readiness confirmation or current status Reason for delay or blocker if not ready Preferred callback time if follow-up is needed Any address correction or landmark note
+              - generic [ref=e74]:
+                - generic [ref=e75]:
+                  - text: Calling mode
+                  - combobox "Calling mode" [ref=e76]:
+                    - option "Instant demo run" [selected]
+                    - option "Plivo live call"
+                - generic [ref=e77]:
+                  - text: Preferred language
+                  - combobox "Preferred language" [ref=e78]:
+                    - option "Hindi" [selected]
+                    - option "English"
+                    - option "Bengali"
+                    - option "Punjabi"
+                    - option "Gujarati"
+                    - option "Marathi"
+                    - option "Tamil"
+                    - option "Telugu"
+                    - option "Malayalam"
+                    - option "Kannada"
+                    - option "Odia"
+                    - option "Assamese"
+              - generic [ref=e79]:
+                - heading "Agent options (mirrors Agent Settings)" [level=3] [ref=e80]
+                - generic [ref=e81]:
+                  - generic [ref=e82]:
+                    - text: Voice preset
+                    - combobox "Voice preset" [ref=e83]:
+                      - option "Indian female natural" [selected]
+                      - option "Indian male natural"
+                      - option "OpenAI custom voice"
+                  - generic [ref=e84]:
+                    - text: Tone
+                    - combobox "Tone" [ref=e85]:
+                      - option "Warm" [selected]
+                      - option "Polite"
+                      - option "Direct"
+                      - option "Patient"
+                      - option "Assertive but respectful"
+                - paragraph [ref=e86]: "Built-in IDs you can use: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar. Use Prompt Studio after creation for script guidance."
+                - generic [ref=e87]:
+                  - checkbox "Self-improve future calls from short call notes" [ref=e88]
+                  - text: Self-improve future calls from short call notes
+              - generic [ref=e89]:
+                - text: Concurrency limit
+                - spinbutton "Concurrency limit" [ref=e90]: "5"
+              - button "Create and start single-number call" [ref=e91] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e141] [cursor=pointer]:
+    - img [ref=e142]
+  - alert [ref=e145]

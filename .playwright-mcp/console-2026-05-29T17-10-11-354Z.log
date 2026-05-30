@@ -526,3 +526,7 @@
 [ 2417474ms] TypeError: Failed to fetch
     at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
     at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480
+[ 2432477ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3002/api/health:0
+[ 2432478ms] TypeError: Failed to fetch
+    at x (http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:282)
+    at http://localhost:3002/_next/static/chunks/app/health/page-a210f48721551a31.js:1:480

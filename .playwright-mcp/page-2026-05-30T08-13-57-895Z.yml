@@ -1,0 +1,170 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "eDial" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - link "Campaigns" [ref=e7] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Health" [ref=e8] [cursor=pointer]:
+            - /url: /health
+          - link "Privacy" [ref=e9] [cursor=pointer]:
+            - /url: /privacy
+      - generic [ref=e10]:
+        - generic [ref=e77]: admin
+        - button "Sign out" [ref=e78] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e72] [cursor=pointer]:
+    - img [ref=e73]
+  - alert [ref=e76]
+  - main [ref=e79]:
+    - generic [ref=e80]:
+      - complementary [ref=e81]:
+        - generic [ref=e82]: Autonomous Calling Agent
+        - generic [ref=e83]: eDial
+        - paragraph [ref=e84]: Multilingual outbound AI campaigns with synced agent controls and callback tracking.
+        - generic [ref=e85]: "Signed in as: admin"
+        - navigation [ref=e86]:
+          - link "Overview" [ref=e87] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Campaign Setup" [ref=e88] [cursor=pointer]:
+            - /url: /campaigns/new
+          - link "Upload" [ref=e89] [cursor=pointer]:
+            - /url: /campaigns/upload
+          - link "Results" [ref=e90] [cursor=pointer]:
+            - /url: /campaigns/results
+          - link "Settings" [ref=e91] [cursor=pointer]:
+            - /url: /campaigns/settings
+          - link "Exports" [ref=e92] [cursor=pointer]:
+            - /url: /campaigns/exports
+          - link "Health" [ref=e93] [cursor=pointer]:
+            - /url: /health
+      - generic [ref=e94]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - paragraph [ref=e97]: Live operations workspace
+            - heading "eDial Command Center" [level=1] [ref=e98]
+            - paragraph [ref=e99]: Use the left navigation to move through campaign setup, upload, live results, agent behavior, and exports as separate pages.
+          - generic [ref=e100]:
+            - link "Export CSV" [ref=e101] [cursor=pointer]:
+              - /url: /api/campaigns/1dee2032-5e5a-4711-9aaa-148af1c01d2a/export
+            - link "Export HTML" [ref=e102] [cursor=pointer]:
+              - /url: /api/campaigns/1dee2032-5e5a-4711-9aaa-148af1c01d2a/export?format=html
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - text: Active campaign
+            - combobox "Active campaign" [ref=e105]:
+              - option "API upload verification 2026-05-30T08:09:50.354Z" [selected]
+              - option "API verification draft 2026-05-30T08:09:50.354Z"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780020611"
+              - option "Manual Check 1780020512"
+              - option "Stored campaign"
+              - option "Manual number check QA 1779951412852"
+              - option "Manual number check"
+              - option "Live Plivo check"
+              - option "Manual number check"
+              - option "Demo showcase"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - paragraph [ref=e109]: Start here
+                - heading "Run the demo from left to right" [level=2] [ref=e110]
+                - paragraph [ref=e111]: This page is the product workspace. Begin with a campaign, add contacts, start simultaneous calls, then review sentiment and exports.
+              - generic [ref=e112]:
+                - link "New campaign" [ref=e113] [cursor=pointer]:
+                  - /url: /campaigns/new
+                - link "Add contacts" [ref=e114] [cursor=pointer]:
+                  - /url: /campaigns/upload
+            - generic [ref=e115]:
+              - article [ref=e116]:
+                - generic [ref=e117]: Step 1
+                - heading "Create or choose a campaign" [level=3] [ref=e118]
+                - paragraph [ref=e119]: "Selected: API upload verification 2026-05-30T08:09:50.354Z"
+              - article [ref=e120]:
+                - generic [ref=e121]: Step 2
+                - heading "Add contacts" [level=3] [ref=e122]
+                - paragraph [ref=e123]: Use quick single-number intake, paste a list, or upload CSV/XLSX.
+              - article [ref=e124]:
+                - generic [ref=e125]: Step 3
+                - heading "Start and review" [level=3] [ref=e126]
+                - paragraph [ref=e127]: Run bounded simultaneous calls, then inspect sentiment, QA, callback notes, and exports.
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - paragraph [ref=e131]: Realtime rehearsal
+              - heading "Device speaker and mic simulation" [level=2] [ref=e132]
+              - paragraph [ref=e133]: This browser rehearsal plays a varied agent opener through the device speaker, asks for consent and availability, then captures your reply from the mic for transcript and sentiment checks.
+              - generic [ref=e134]:
+                - button "Start speaker and mic test" [ref=e135] [cursor=pointer]
+                - button "Stop" [disabled] [ref=e136]
+              - generic [ref=e137]: Ready to test the device speaker and mic.
+              - generic [ref=e138]:
+                - text: Captured mic transcript
+                - textbox "Captured mic transcript" [ref=e139]: Transcript will appear here after you speak.
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - generic [ref=e142]: Consent
+                  - generic [ref=e143]: unclear
+                - generic [ref=e144]:
+                  - generic [ref=e145]: Availability
+                  - generic [ref=e146]: unclear
+                - generic [ref=e147]:
+                  - generic [ref=e148]: Sentiment
+                  - generic [ref=e149]: neutral
+                - generic [ref=e150]:
+                  - generic [ref=e151]: Goal
+                  - generic [ref=e152]: pending
+              - generic [ref=e153]: "Suggested next action: Ask one short follow-up for consent and availability before treating the rehearsal as passed."
+            - img "Codex generated voice rehearsal loop" [ref=e154]
+          - generic [ref=e155]:
+            - generic [ref=e157]:
+              - heading "API upload verification 2026-05-30T08:09:50.354Z" [level=2] [ref=e158]
+              - generic [ref=e159]: completed
+              - generic [ref=e160]: "Default: hi"
+              - generic [ref=e161]: "Request: de-installation"
+              - generic [ref=e162]: "Concurrency: 2"
+              - generic [ref=e163]: "Voice: indian_female_natural"
+              - generic [ref=e164]: "Tone: warm"
+              - generic [ref=e165]: "Self-improve: off"
+            - generic [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: Contacts
+                - generic [ref=e169]: "1"
+              - generic [ref=e170]:
+                - generic [ref=e171]: Queued
+                - generic [ref=e172]: "0"
+              - generic [ref=e173]:
+                - generic [ref=e174]: Active
+                - generic [ref=e175]: "0"
+              - generic [ref=e176]:
+                - generic [ref=e177]: Completed
+                - generic [ref=e178]: "1"
+              - generic [ref=e179]:
+                - generic [ref=e180]: Confirmed
+                - generic [ref=e181]: "1"
+              - generic [ref=e182]:
+                - generic [ref=e183]: Follow-up
+                - generic [ref=e184]: "0"
+              - generic [ref=e185]:
+                - generic [ref=e186]: Manual review
+                - generic [ref=e187]: "0"
+              - generic [ref=e188]:
+                - generic [ref=e189]: Retry eligible
+                - generic [ref=e190]: "0"

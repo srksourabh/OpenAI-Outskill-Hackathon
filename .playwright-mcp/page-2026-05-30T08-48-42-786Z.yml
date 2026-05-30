@@ -1,0 +1,187 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "eDial" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - link "Campaigns" [ref=e7] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Health" [ref=e8] [cursor=pointer]:
+            - /url: /health
+          - link "Privacy" [ref=e9] [cursor=pointer]:
+            - /url: /privacy
+      - generic [ref=e10]:
+        - generic [ref=e66]: admin
+        - button "Sign out" [ref=e67] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e13]:
+      - complementary [ref=e14]:
+        - generic [ref=e15]: Calling Agent
+        - generic [ref=e16]: eDial
+        - paragraph [ref=e17]: Add numbers, start calls, review outcomes.
+        - generic [ref=e18]: "Signed in as: admin"
+        - navigation [ref=e19]:
+          - link "Home" [ref=e20] [cursor=pointer]:
+            - /url: /campaigns
+          - link "Setup" [ref=e21] [cursor=pointer]:
+            - /url: /campaigns/new
+          - link "Add contacts" [ref=e22] [cursor=pointer]:
+            - /url: /campaigns/upload
+          - link "Results" [ref=e23] [cursor=pointer]:
+            - /url: /campaigns/results
+          - link "Voice" [ref=e24] [cursor=pointer]:
+            - /url: /campaigns/settings
+          - link "Exports" [ref=e25] [cursor=pointer]:
+            - /url: /campaigns/exports
+          - link "Health" [ref=e26] [cursor=pointer]:
+            - /url: /health
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - paragraph [ref=e30]: Workspace
+            - heading "Add contacts" [level=1] [ref=e31]
+            - paragraph [ref=e32]: Enter one number, paste a list, or upload a file.
+          - generic [ref=e68]:
+            - link "Export CSV" [ref=e69] [cursor=pointer]:
+              - /url: /api/campaigns/d2b9a63f-b998-4908-9f49-ca2f0e14de36/export
+            - link "Export HTML" [ref=e70] [cursor=pointer]:
+              - /url: /api/campaigns/d2b9a63f-b998-4908-9f49-ca2f0e14de36/export?format=html
+        - generic [ref=e33]:
+          - generic [ref=e119]: Starting the fresh number now...
+          - generic [ref=e71]:
+            - text: Active campaign
+            - combobox "Active campaign" [ref=e72]:
+              - option "Manual number check" [selected]
+              - option "Manual number check"
+              - option "API upload verification 2026-05-30T08:09:50.354Z"
+              - option "API verification draft 2026-05-30T08:09:50.354Z"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780021110176"
+              - option "Manual Check 1780020611"
+              - option "Manual Check 1780020512"
+              - option "Stored campaign"
+              - option "Manual number check QA 1779951412852"
+              - option "Manual number check"
+              - option "Live Plivo check"
+              - option "Manual number check"
+              - option "Demo showcase"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+              - option "Hindi pickup readiness demo"
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - paragraph [ref=e36]: Add contacts
+              - heading "Who should the agent call?" [level=2] [ref=e37]
+              - paragraph [ref=e38]: Start with one number for a quick check, paste many numbers, or upload a CSV/XLSX file.
+              - link "Download sample upload file" [ref=e39] [cursor=pointer]:
+                - /url: /sample-mobile-upload.csv
+            - generic [ref=e40]:
+              - button "One number" [ref=e41] [cursor=pointer]
+              - button "Paste list" [ref=e42] [cursor=pointer]
+              - button "Upload file" [ref=e43] [cursor=pointer]
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - heading "Single number intake" [level=3] [ref=e46]
+                - paragraph [ref=e47]: Create a one-contact live campaign without preparing a spreadsheet.
+              - generic [ref=e48]:
+                - text: Campaign name
+                - textbox "Campaign name" [ref=e49]: Manual number check
+              - generic [ref=e50]:
+                - text: Mobile number
+                - textbox "Mobile number" [ref=e51]:
+                  - /placeholder: +919876543210 or 9876543210
+                  - text: "9876543213"
+              - generic [ref=e52]:
+                - generic [ref=e53]:
+                  - text: Calling mode
+                  - combobox "Calling mode" [ref=e54]:
+                    - option "Instant demo run" [selected]
+                    - option "Plivo live call"
+                - generic [ref=e55]:
+                  - text: Preferred language
+                  - combobox "Preferred language" [ref=e56]:
+                    - option "Hindi" [selected]
+                    - option "English"
+                    - option "Bengali"
+                    - option "Punjabi"
+                    - option "Gujarati"
+                    - option "Marathi"
+                    - option "Tamil"
+                    - option "Telugu"
+                    - option "Malayalam"
+                    - option "Kannada"
+                    - option "Odia"
+                    - option "Assamese"
+              - generic [ref=e57]:
+                - text: Simultaneous calls
+                - spinbutton "Simultaneous calls" [ref=e58]: "5"
+              - group [ref=e59]:
+                - generic "Advanced script and voice settings" [ref=e60] [cursor=pointer]
+                - option "Indian female natural" [selected]
+                - option "Indian male natural"
+                - option "OpenAI custom voice"
+                - option "Warm" [selected]
+                - option "Polite"
+                - option "Direct"
+                - option "Patient"
+                - option "Assertive but respectful"
+              - button "Create and start single-number call" [ref=e61] [cursor=pointer]
+          - generic [ref=e121]:
+            - generic [ref=e122]: phone
+            - generic [ref=e123]: language_hint
+            - generic [ref=e124]: provider_name
+            - generic [ref=e125]: location
+            - generic [ref=e126]: machine_count
+            - generic [ref=e127]: order_id
+          - generic [ref=e73]:
+            - generic [ref=e75]:
+              - heading "Manual number check" [level=2] [ref=e76]
+              - generic [ref=e77]: completed
+              - generic [ref=e78]: "Default: hi"
+              - generic [ref=e79]: "Request: de-installation"
+              - generic [ref=e80]: "Concurrency: 5"
+              - generic [ref=e81]: "Voice: indian_female_natural"
+              - generic [ref=e82]: "Tone: warm"
+              - generic [ref=e83]: "Self-improve: off"
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]: Contacts
+                - generic [ref=e87]: "1"
+              - generic [ref=e88]:
+                - generic [ref=e89]: Queued
+                - generic [ref=e90]: "0"
+              - generic [ref=e91]:
+                - generic [ref=e92]: Active
+                - generic [ref=e93]: "0"
+              - generic [ref=e94]:
+                - generic [ref=e95]: Completed
+                - generic [ref=e96]: "0"
+              - generic [ref=e97]:
+                - generic [ref=e98]: Confirmed
+                - generic [ref=e99]: "0"
+              - generic [ref=e100]:
+                - generic [ref=e101]: Follow-up
+                - generic [ref=e102]: "0"
+              - generic [ref=e103]:
+                - generic [ref=e104]: Manual review
+                - generic [ref=e105]: "0"
+              - generic [ref=e106]:
+                - generic [ref=e107]: Retry eligible
+                - generic [ref=e108]: "0"
+  - button "Open Next.js Dev Tools" [ref=e114] [cursor=pointer]:
+    - img [ref=e115]
+  - alert [ref=e118]
