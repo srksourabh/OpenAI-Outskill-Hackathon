@@ -189,6 +189,7 @@
 - [x] Align HTML table export format, filename extension, and MIME type so it is not mislabeled as XLSX.
 - [x] Add browser speaker/mic rehearsal in the workspace so simulated testing can capture a device transcript before live Plivo calls.
 - [x] Add Codex-generated product visuals to the landing page and realtime rehearsal panel.
+- [x] Simplify the campaign workspace UX with clearer navigation labels, a smaller page header, contact-first upload flow, and collapsed advanced script/voice settings.
 - [ ] Design parity pass: add desktop sidebar entries for New Campaign, Exports, and Settings plus a mobile bottom nav for Campaigns, Upload, Results, and Settings.
 - [ ] Design parity pass: add campaign detail sticky subnav sections (Overview, Calls, Import, Exports, Audit).
 - [ ] Design parity pass: implement status and disposition distribution bars and add concise text summaries near each visualization.
@@ -256,6 +257,7 @@
 - [x] Run `.\scripts\verify.ps1`. Plan: [Task 11 - Update Documentation and Tasks](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-11-update-documentation-and-tasks). Acceptance: [slice criteria](#first-implementation-slice-acceptance-criteria).
 - [x] Deploy the Vercel web app with Hobby-safe cron schedules and confirm `/api/health` responds. Spec: [hosting decision](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#hosting-decision). Plan: [Task 2 - Deploy Vercel Web App](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#task-2-deploy-vercel-web-app). Acceptance: [production smoke test](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#task-6-production-smoke-test).
 - [x] Move the demo file store to a writable temp directory on Vercel so uploads do not fail with `/var/task/.data` write errors. Spec: [hosting decision](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#hosting-decision). Acceptance: [production smoke test](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#task-6-production-smoke-test).
+- [x] Fix Render voice bridge startup to bind the assigned `PORT`, repair the Windows voice-bridge smoke script, and make upload failures show a clear dashboard message instead of leaving the action busy.
 - [x] Perform demo rehearsal with seeded or live contacts. Spec: [realtime Plivo demo](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#realtime-plivo-voice-demo). Plan: [Task 10 - Manual End-to-End Test](docs/superpowers/plans/2026-05-26-realtime-plivo-voice-agent.md#task-10-manual-end-to-end-test). Acceptance: [production smoke test](docs/superpowers/plans/2026-05-27-hosting-distribution-shipping.md#task-6-production-smoke-test).
 
 ## First Implementation Slice

@@ -15,8 +15,6 @@ services:
         sync: false
       - key: VOICE_OUTCOME_SECRET
         sync: false
-      - key: VOICE_BRIDGE_PORT
-        value: "8080"
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_RESPONSES_MODEL

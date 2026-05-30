@@ -9,8 +9,10 @@ import { getBridgeRequestInfo, isVoiceBridgeHealthPath, isVoiceBridgeUpgradePath
 import { appendRealtimeAudio, connectOpenAIRealtime, requestRealtimeResponse, updateRealtimeInstructions } from "./openaiRealtime";
 import { postVoiceOutcome } from "./outcomeClient";
 import { parsePlivoEvent, sendAudioToPlivo } from "./plivoStream";
+import { resolveVoiceBridgeHost, resolveVoiceBridgePort } from "./runtime";
 
-const port = Number(process.env.VOICE_BRIDGE_PORT ?? process.env.PORT ?? 8080);
+const port = resolveVoiceBridgePort(process.env);
+const host = resolveVoiceBridgeHost(process.env);
 const httpServer = createServer((request, response) => {
   const { pathname } = getBridgeRequestInfo(request.url, request.headers.host);
 
@@ -183,8 +185,8 @@ httpServer.on("upgrade", (request, socket, head) => {
   });
 });
 
-httpServer.listen(port, () => {
-  console.log(`Voice bridge listening on ${port}`);
+httpServer.listen(port, host, () => {
+  console.log(`Voice bridge listening on ${host}:${port}`);
 });
 
 function getMediaPayload(event: Record<string, unknown>) {

@@ -91,6 +91,18 @@ type UploadSummary = {
   duplicate_rows: UploadIssue[];
 };
 
+type UploadResponse = {
+  campaign: Campaign;
+  import_summary: UploadSummary;
+  error?: string;
+};
+
+type CampaignActionResponse = {
+  campaign: Campaign;
+  stats: Record<string, number>;
+  error?: string;
+};
+
 type BrowserSpeechRecognition = {
   continuous: boolean;
   interimResults: boolean;
@@ -177,11 +189,11 @@ const languageOptions = [
 ] as const;
 
 const workspaceNavigation = [
-  { href: "/campaigns", label: "Overview" },
-  { href: "/campaigns/new", label: "Campaign Setup" },
-  { href: "/campaigns/upload", label: "Upload" },
+  { href: "/campaigns", label: "Home" },
+  { href: "/campaigns/new", label: "Setup" },
+  { href: "/campaigns/upload", label: "Add contacts" },
   { href: "/campaigns/results", label: "Results" },
-  { href: "/campaigns/settings", label: "Settings" },
+  { href: "/campaigns/settings", label: "Voice" },
   { href: "/campaigns/exports", label: "Exports" },
   { href: "/health", label: "Health" }
 ] as const;
@@ -280,10 +292,10 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
     setMessage("Uploading and validating contacts...");
     setUploadSummary(null);
     const response = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await response.json();
-    if (!response.ok) {
+    const data = await readJsonPayload<UploadResponse>(response);
+    if (!response.ok || !data) {
       setBusy(false);
-      setMessage(data.error ?? "Upload failed");
+      setMessage(getErrorMessage(data, "Upload failed. Please check the file and try again."));
       return;
     }
     setUploadSummary(data.import_summary as UploadSummary);
@@ -301,10 +313,10 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contact_ids: contactIds })
       });
-      const startData = await startResponse.json().catch(() => ({}));
+      const startData = await readJsonPayload<CampaignActionResponse>(startResponse);
       setBusy(false);
-      if (!startResponse.ok) {
-        setMessage(startData.error ?? "Uploaded contacts were saved, but auto-start failed.");
+      if (!startResponse.ok || !startData) {
+        setMessage(getErrorMessage(startData, "Uploaded contacts were saved, but auto-start failed."));
         return;
       }
 
@@ -453,9 +465,9 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
     <main className="min-h-dvh overflow-x-hidden bg-surface pb-20 text-white lg:pb-0">
       <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="border-b border-white/50 bg-panel p-5 text-ink lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto lg:border-b-0 lg:border-r-4 lg:border-accent">
-          <div className="text-xs font-black uppercase tracking-wide text-surface">Autonomous Calling Agent</div>
+          <div className="text-xs font-black uppercase tracking-wide text-surface">Calling Agent</div>
           <div className="mt-2 text-2xl font-black">{productName}</div>
-          <p className="mt-2 text-sm text-muted">Multilingual outbound AI campaigns with synced agent controls and callback tracking.</p>
+          <p className="mt-2 text-sm text-muted">Add numbers, start calls, review outcomes.</p>
           <div className="mt-4 rounded-md bg-accent px-3 py-2 text-xs font-bold">
             Signed in as: <span className="font-semibold uppercase">{session.role ?? "guest"}</span>
           </div>
@@ -469,8 +481,8 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
         <section className="min-w-0 p-4 sm:p-6">
           <header className="flex flex-col gap-4 border-b border-white/50 pb-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-sm font-black uppercase tracking-wide text-accent">Live operations workspace</p>
-              <h1 className="mt-2 text-5xl font-black leading-tight text-accent">{header.title}</h1>
+              <p className="text-sm font-black uppercase tracking-wide text-accent">Workspace</p>
+              <h1 className="mt-2 text-3xl font-black leading-tight text-accent sm:text-4xl">{header.title}</h1>
               <p className="mt-2 text-base text-white">{header.description}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -500,7 +512,7 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
             {message ? <div className="rounded-md bg-white px-4 py-3 text-sm font-semibold text-ink">{message}</div> : null}
             <CampaignSelector campaigns={campaigns} selectedId={selected?.id ?? ""} onSelect={selectCampaign} />
             {view === "overview" ? <StartHerePanel canManage={canManage} selected={selected} /> : null}
-            {view === "overview" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
+            {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
             {uploadSummary && view === "upload" ? <UploadSummaryPanel summary={uploadSummary} /> : null}
             {selected ? <MetricBand campaign={selected} stats={results?.stats ?? {}} /> : <EmptyState />}
             {view === "new" ? <CreateCampaignPanel busy={busy} defaults={selected} canManage={canManage} onCreate={createCampaign} /> : null}
@@ -509,7 +521,6 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
             {view === "settings" && selected ? <AgentSettingsPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
             {view === "settings" && selected ? <PromptStudioPanel busy={busy} canManage={canManage} campaign={selected} onSave={saveAgentSettings} /> : null}
             {view === "settings" ? <DeviceVoiceRehearsalPanel selected={selected} /> : null}
-            {view === "upload" ? <UploadPanel busy={busy} canManage={canManage} campaignDefaults={selected} onUpload={uploadFile} /> : null}
             {view === "exports" && selected ? <DownloadsPanel campaign={selected} /> : null}
             {view === "results" && selected ? (
               <ResultsTable
@@ -537,6 +548,18 @@ export function CampaignWorkspace({ view }: { view: CampaignWorkspaceView }) {
   );
 }
 
+async function readJsonPayload<T extends Record<string, unknown>>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function getErrorMessage(payload: Record<string, unknown> | null, fallback: string) {
+  return typeof payload?.error === "string" && payload.error.trim() ? payload.error : fallback;
+}
+
 function TopNavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
   const active = pathname === href;
   return (
@@ -549,37 +572,37 @@ function TopNavLink({ href, label, pathname }: { href: string; label: string; pa
 function getWorkspaceHeader(view: CampaignWorkspaceView) {
   if (view === "new") {
     return {
-      title: `${productName} Campaign Setup`,
-      description: "Create the campaign and define the live agent behavior in one place, then move to upload or results when you are ready to run it."
+      title: "Setup",
+      description: "Set the basic campaign defaults. Most users can leave these as-is."
     };
   }
   if (view === "upload") {
     return {
-      title: `${productName} Upload Workspace`,
-      description: "Upload CSV or Excel files, or create a quick single-number / list-based campaign without touching a database-heavy flow."
+      title: "Add contacts",
+      description: "Enter one number, paste a list, or upload a file."
     };
   }
   if (view === "results") {
     return {
-      title: `${productName} Live Results`,
-      description: "See uploaded rows inside the UI, select a few contacts, start the campaign, and watch status and transcript evidence update clearly."
+      title: "Results",
+      description: "Review call status, summaries, transcripts, and next actions."
     };
   }
   if (view === "exports") {
     return {
-      title: `${productName} Exports`,
-      description: "Download campaign outputs instantly for operators, with transcript-ready result files and minimal backend dependency."
+      title: "Exports",
+      description: "Download the handoff files for operations."
     };
   }
   if (view === "settings") {
     return {
-      title: `${productName} Voice Lab`,
-      description: "Tune the agent, test the device speaker and mic, and confirm transcript capture before a live Plivo run."
+      title: "Voice",
+      description: "Tune the agent only when you need to change the call behavior."
     };
   }
   return {
-    title: `${productName} Command Center`,
-    description: "Use the left navigation to move through campaign setup, upload, live results, agent behavior, and exports as separate pages."
+    title: "Home",
+    description: "Follow the simple path: add contacts, start calls, review results, export."
   };
 }
 
@@ -675,9 +698,9 @@ function UploadPanel({
   return (
     <section className="rounded-2xl bg-panel p-5 text-ink" id="upload">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-surface">Upload</p>
-        <h2 className="mt-1 text-2xl font-black">Intake and agent setup</h2>
-        <p className="mt-1 text-sm text-muted">Use one number, a list of numbers, or spreadsheet upload. Prompt text lives in Prompt Studio so there is one place to edit it.</p>
+        <p className="text-xs font-black uppercase tracking-wide text-surface">Add contacts</p>
+        <h2 className="mt-1 text-2xl font-black">Who should the agent call?</h2>
+        <p className="mt-1 text-sm text-muted">Start with one number for a quick check, paste many numbers, or upload a CSV/XLSX file.</p>
         <a className="mt-3 inline-flex rounded-md bg-accent px-3 py-2 text-sm font-black text-ink" href="/sample-mobile-upload.csv" download>
           Download sample upload file
         </a>
@@ -688,21 +711,21 @@ function UploadPanel({
           type="button"
           onClick={() => setIntakeMode("single")}
         >
-          Single number
+          One number
         </button>
         <button
           className={`rounded px-2 py-2 font-black ${intakeMode === "list" ? "bg-surface text-white" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("list")}
         >
-          Number list
+          Paste list
         </button>
         <button
           className={`rounded px-2 py-2 font-black ${intakeMode === "file" ? "bg-surface text-white" : "text-muted"}`}
           type="button"
           onClick={() => setIntakeMode("file")}
         >
-          CSV/XLSX upload
+          Upload file
         </button>
       </div>
 
@@ -721,38 +744,6 @@ function UploadPanel({
           <label className="block text-sm font-medium">
             Campaign name
             <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="campaign_name" value={fileCampaignName} onChange={(event) => setFileCampaignName(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Company name
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Call purpose
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="call_purpose" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Request type
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="request_type" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Asset label
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Reference label
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Address label
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="address_label" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Confirmation checklist
-            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="confirmation_points" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Information to collect
-            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="collection_points" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
           </label>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
@@ -773,8 +764,61 @@ function UploadPanel({
               </select>
             </label>
           </div>
-          <div className="mt-3 rounded-2xl border-2 border-surface p-3">
-            <h3 className="text-sm font-semibold">Agent options (mirrors Agent Settings)</h3>
+          <label className="mt-3 block text-sm font-medium">
+            Contact file
+            <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
+          </label>
+          <label className="mt-3 block text-sm font-medium">
+            Simultaneous calls
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              min={1}
+              max={25}
+              name="concurrency_limit"
+              type="number"
+              value={manualConcurrency}
+              onChange={(event) => {
+                const nextValue = Number(event.target.value);
+                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
+              }}
+            />
+          </label>
+          <details className="mt-4 rounded-md border border-line bg-white p-3">
+            <summary className="cursor-pointer text-sm font-black text-surface">Advanced script and voice settings</summary>
+            <label className="mt-3 block text-sm font-medium">
+              Company name
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="company_name" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium">
+              Call purpose
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="call_purpose" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium">
+              Request type
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="request_type" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+            </label>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="block text-sm font-medium">
+                Asset label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="asset_label" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+              </label>
+              <label className="block text-sm font-medium">
+                Reference label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="reference_label" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+              </label>
+              <label className="block text-sm font-medium">
+                Address label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="address_label" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
+              </label>
+            </div>
+            <label className="mt-3 block text-sm font-medium">
+              Confirmation checklist
+              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="confirmation_points" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium">
+              Information to collect
+              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" name="collection_points" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
+            </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
                 Voice preset
@@ -811,29 +855,10 @@ function UploadPanel({
               <input type="checkbox" checked={manualSelfImprove} onChange={(event) => setManualSelfImprove(event.target.checked)} />
               Self-improve future calls from short call notes
             </label>
-          </div>
+          </details>
           <input name="voice_id" type="hidden" value={resolveVoiceId(manualVoicePreset, manualVoiceId)} readOnly />
           <input name="prompt_enhancement" type="hidden" value={manualPromptEnhancement} readOnly />
           <input name="self_improve_enabled" type="hidden" value={String(manualSelfImprove)} readOnly />
-          <label className="mt-3 block text-sm font-medium">
-            Concurrency limit
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              min={1}
-              max={25}
-              name="concurrency_limit"
-              type="number"
-              value={manualConcurrency}
-              onChange={(event) => {
-                const nextValue = Number(event.target.value);
-                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
-              }}
-            />
-          </label>
-          <label className="mt-3 block text-sm font-medium">
-            Contact file
-            <input className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2" name="file" type="file" accept=".csv,.xlsx" required />
-          </label>
           <button className="mt-4 w-full rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy || !canManage}>
             Upload and validate
           </button>
@@ -873,44 +898,6 @@ function UploadPanel({
               />
             </label>
           )}
-          <label className="block text-sm font-medium">
-            Company name
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
-          </label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Call purpose
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
-            </label>
-            <label className="block text-sm font-medium">
-              Request type
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
-            </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Asset label
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
-            </label>
-            <label className="block text-sm font-medium">
-              Reference label
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
-            </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Address label
-              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
-            </label>
-            <label className="block text-sm font-medium">
-              Confirmation checklist
-              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
-            </label>
-          </div>
-          <label className="block text-sm font-medium">
-            Information to collect
-            <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
-          </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Calling mode
@@ -930,10 +917,60 @@ function UploadPanel({
               </select>
             </label>
           </div>
-          <div className="rounded-md border border-line bg-surface p-3">
-            <h3 className="text-sm font-semibold">Agent options (mirrors Agent Settings)</h3>
+          <label className="block text-sm font-medium">
+            Simultaneous calls
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              min={1}
+              max={25}
+              type="number"
+              value={manualConcurrency}
+              onChange={(event) => {
+                const nextValue = Number(event.target.value);
+                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
+              }}
+            />
+          </label>
+          <details className="rounded-md border border-line bg-white p-3">
+            <summary className="cursor-pointer text-sm font-black text-surface">Advanced script and voice settings</summary>
+            <label className="mt-3 block text-sm font-medium">
+              Company name
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCompanyName} onChange={(event) => setManualCompanyName(event.target.value)} />
+            </label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium">
+                Call purpose
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualCallPurpose} onChange={(event) => setManualCallPurpose(event.target.value)} />
+              </label>
+              <label className="block text-sm font-medium">
+                Request type
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualRequestType} onChange={(event) => setManualRequestType(event.target.value)} />
+              </label>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="block text-sm font-medium">
+                Asset label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAssetLabel} onChange={(event) => setManualAssetLabel(event.target.value)} />
+              </label>
+              <label className="block text-sm font-medium">
+                Reference label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualReferenceLabel} onChange={(event) => setManualReferenceLabel(event.target.value)} />
+              </label>
+              <label className="block text-sm font-medium">
+                Address label
+                <input className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualAddressLabel} onChange={(event) => setManualAddressLabel(event.target.value)} />
+              </label>
+            </div>
+            <label className="mt-3 block text-sm font-medium">
+              Confirmation checklist
+              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualConfirmationPoints} onChange={(event) => setManualConfirmationPoints(event.target.value)} />
+            </label>
+            <label className="mt-3 block text-sm font-medium">
+              Information to collect
+              <textarea className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2" value={manualCollectionPoints} onChange={(event) => setManualCollectionPoints(event.target.value)} />
+            </label>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">
                 Voice preset
                 <select className="mt-1 w-full rounded-md border border-line px-3 py-2" value={manualVoicePreset} onChange={(event) => setManualVoicePreset(event.target.value as AgentSettings["voice_preset"])}>
                   <option value="indian_female_natural">Indian female natural</option>
@@ -963,21 +1000,7 @@ function UploadPanel({
               <input checked={manualSelfImprove} type="checkbox" onChange={(event) => setManualSelfImprove(event.target.checked)} />
               Self-improve future calls from short call notes
             </label>
-          </div>
-          <label className="block text-sm font-medium">
-            Concurrency limit
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              min={1}
-              max={25}
-              type="number"
-              value={manualConcurrency}
-              onChange={(event) => {
-                const nextValue = Number(event.target.value);
-                setManualConcurrency(Number.isFinite(nextValue) ? nextValue : 1);
-              }}
-            />
-          </label>
+          </details>
           <button
             className="w-full rounded-md border border-line bg-panel px-4 py-2 font-semibold disabled:opacity-50"
             disabled={
@@ -997,14 +1020,14 @@ function UploadPanel({
 function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?: Campaign }) {
   const steps = canManage
     ? [
-        ["1", "Create or choose a campaign", selected ? `Selected: ${selected.name}` : "Use Campaign Setup if you are starting fresh."],
-        ["2", "Add contacts", "Use quick single-number intake, paste a list, or upload CSV/XLSX."],
-        ["3", "Start and review", "Run bounded simultaneous calls, then inspect sentiment, QA, callback notes, and exports."]
+        ["1", "Add contacts", "Enter one number, paste a list, or upload a file."],
+        ["2", "Calls run", "Use instant demo mode first, then switch to Plivo for live calls."],
+        ["3", "Review results", "Open outcomes and export the handoff file."]
       ]
     : [
-        ["1", "Choose an existing campaign", selected ? `Selected: ${selected.name}` : "Ask an admin to create a campaign first."],
-        ["2", "Review outcomes", "Open Results to inspect call status, sentiment, transcript, and callback notes."],
-        ["3", "Download exports", "Use Exports for operations handoff files when campaign data is ready."]
+        ["1", "Choose a campaign", selected ? `Selected: ${selected.name}` : "Ask an admin to create one first."],
+        ["2", "Review outcomes", "Open Results to inspect the calls."],
+        ["3", "Download exports", "Use Exports for the handoff file."]
       ];
 
   return (
@@ -1012,17 +1035,17 @@ function StartHerePanel({ canManage, selected }: { canManage: boolean; selected?
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-surface">Start here</p>
-          <h2 className="mt-1 text-3xl font-black">{canManage ? "Run the demo from left to right" : "Review the campaign workspace"}</h2>
+          <h2 className="mt-1 text-3xl font-black">{canManage ? "Start with contacts" : "Review the workspace"}</h2>
           <p className="mt-1 max-w-3xl text-sm font-semibold">
             {canManage
-              ? "This page is the product workspace. Begin with a campaign, add contacts, start simultaneous calls, then review sentiment and exports."
-              : "User access is read-only, so start with campaign results and exports after an admin creates or starts a campaign."}
+              ? "For the fastest path, add a number and let the app create and start the campaign automatically."
+              : "User access is read-only, so start with results and exports."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canManage ? <Link className="rounded-md bg-surface px-3 py-2 text-sm font-black text-white" href="/campaigns/new">New campaign</Link> : null}
+          {canManage ? <Link className="rounded-md bg-surface px-3 py-2 text-sm font-black text-white" href="/campaigns/upload">Add contacts</Link> : null}
           <Link className="rounded-md border-2 border-surface px-3 py-2 text-sm font-black text-ink" href={canManage ? "/campaigns/upload" : "/campaigns/results"}>
-            {canManage ? "Add contacts" : "Open results"}
+            {canManage ? "Upload file" : "Open results"}
           </Link>
         </div>
       </div>

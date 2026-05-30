@@ -9,7 +9,8 @@ $out = Join-Path $env:TEMP "voice-bridge-smoke.out.log"
 $err = Join-Path $env:TEMP "voice-bridge-smoke.err.log"
 Remove-Item $out, $err -ErrorAction SilentlyContinue
 
-$process = Start-Process -FilePath "npm" -ArgumentList @("run", "voice:dev") -WindowStyle Hidden -WorkingDirectory $root -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
+$npmCommand = if ($IsWindows -or $PSVersionTable.PSEdition -eq "Desktop") { "npm.cmd" } else { "npm" }
+$process = Start-Process -FilePath $npmCommand -ArgumentList @("run", "voice:dev") -WindowStyle Hidden -WorkingDirectory $root -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
 try {
   Start-Sleep -Seconds 8
   $response = Invoke-WebRequest -UseBasicParsing "http://localhost:$Port/health"
