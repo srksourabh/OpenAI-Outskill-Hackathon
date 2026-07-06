@@ -1,156 +1,132 @@
-# Outbound AI Calling Agent
+# eDial — Outbound AI Calling Agent
 
-## Purpose
-Build a production-shaped hackathon MVP for an outbound AI calling agent for India-focused operations teams. The app imports Excel or CSV contact lists, starts automated outbound calling campaigns, records and tracks calls, classifies outcomes, supports Hindi-first live flows with English secondary support, and exports structured pickup or de-installation readiness results.
+An AI voice agent that calls hundreds of contacts in parallel, has a real Hindi-first conversation about pickup/de-installation readiness, and hands operations teams a clean spreadsheet of results — no manual dialing required.
 
-## MVP Workflow
-1. Upload an Excel or CSV file with provider or pickup contact details.
-2. Validate and deduplicate contacts.
-3. Create a campaign with provider, language, retry, and calling settings.
-4. Start bounded parallel outbound calls through a telephony provider adapter.
-5. Ingest provider webhooks for status and recording events.
-6. Classify call outcomes into operational dispositions.
-7. Monitor original uploaded details plus enriched call results in a dashboard.
-8. Export CSV rows that preserve uploaded details and add status, disposition, recording links, summary, next action, and retry information.
+## Overview
 
-## Target Stack
-- Next.js App Router with TypeScript.
-- Tailwind CSS for UI.
-- Supabase or PostgreSQL for persistence.
-- Vercel for the dashboard, API routes, provider webhooks, and scheduled retry jobs.
-- Railway or an equivalent always-on container host for the long-lived Plivo AudioStream to OpenAI Realtime voice bridge.
-- Plivo as the first provider adapter, with Twilio and Exotel adapters scaffolded.
-- OpenAI Realtime for the Hindi-first voice agent, with `marin` as the default voice and `cedar` as fallback.
-- OpenAI Responses API for transcript summarization, disposition extraction, and language detection, with a local rule-based fallback when API analysis is unavailable.
-- Ultravox placeholders are kept as an optional managed voice-agent fallback, not the primary path.
+Operations and logistics teams in India often work from an Excel or CSV sheet of phone numbers, manually calling each contact to check if equipment is ready for pickup or an engineer needs to de-install it. That process is slow, inconsistent, hard to audit, and painful to run across multiple Indian languages.
 
-## Setup
-Run setup from the project root:
+eDial (built as a hackathon MVP for the OpenAI Outskill Hackathon) automates that workflow end to end: upload a contact sheet, launch a campaign, and the app places bounded batches of outbound calls through a real telephony provider (Plivo). A live OpenAI Realtime voice agent — Hindi-first, with English and other Indian language packs — asks whether the pickup/de-installation is ready, listens for yes/no/unclear responses, and follows up when needed. Every call is recorded, transcribed, summarized, and classified into a business outcome (confirmed, declined, follow-up needed, etc.), and the results — original sheet columns plus AI-enriched call data — are exportable as a single CSV for the operations team to act on.
+
+## Key Features
+
+- **Bulk contact upload** — import contacts from CSV or Excel (`.xlsx`), a pasted list, or a single quick-check number; validates, normalizes, and de-duplicates rows while preserving every original column.
+- **Parallel outbound calling** — dispatches calls in configurable concurrency batches (default 5 at a time) instead of dialing one contact at a time.
+- **Live AI voice agent** — powered by the OpenAI Realtime API, Hindi-first with English fallback and scripted support for 10 additional Indian languages (Bengali, Punjabi, Gujarati, Marathi, Tamil, Telugu, Malayalam, Kannada, Odia, Assamese).
+- **Provider-agnostic telephony** — a shared adapter interface with Plivo fully implemented and Twilio/Exotel scaffolded for future providers.
+- **Automatic call classification** — OpenAI Responses API summarizes transcripts, detects language, and extracts a disposition (`confirmed_pickup`, `declined`, `follow_up_needed`, `manual_review`, etc.), with a deterministic rule-based fallback when the API is unavailable.
+- **Retry scheduling** — unanswered, failed, or not-connected calls are automatically retried up to a configurable limit.
+- **Operations dashboard** — live campaign stats, per-call detail (recording, transcript, summary, next action), and filtering.
+- **CSV export** — download an operations-ready file that keeps every uploaded column and appends call status, disposition, recording link, summary, and next action.
+- **Simulated demo mode** — campaigns can run against simulated provider callbacks so the product is demoable even without live telephony credentials.
+- **Session-based authentication** — simple admin/read-only login gate protecting campaign write routes.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router) + React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL / Supabase
+- **Telephony**: Plivo (adapter interface also scaffolds Twilio and Exotel)
+- **Voice AI**: OpenAI Realtime API (live conversation) + OpenAI Responses API (transcript summarization, disposition classification)
+- **Voice bridge**: standalone Node/TypeScript WebSocket server (`src/voice-bridge`) relaying audio between Plivo AudioStream and OpenAI Realtime, run with `tsx`
+- **Validation**: Zod
+- **File parsing**: `csv-parse`, `read-excel-file`
+- **Testing**: Vitest (unit/integration), Playwright patterns for e2e
+- **Deployment targets**: Vercel (Next.js app, API routes, webhooks, cron), Railway or Render (always-on voice bridge process), Supabase (Postgres)
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client["Operations Team"]
+        U[Upload CSV / Excel / quick-check number]
+        D[Dashboard: campaign stats, call detail, export]
+    end
+
+    subgraph Vercel["Next.js App on Vercel"]
+        UP["/api/upload"]
+        CAMP["/api/campaigns"]
+        WEBHOOK["Plivo webhook routes\n(answer, hangup, recording, stream-status)"]
+        CRON["Cron routes\n(retry-unanswered, reconcile-status)"]
+        AI["AI classification service\n(OpenAI Responses API)"]
+    end
+
+    subgraph Bridge["Voice Bridge on Railway/Render (always-on)"]
+        WS[Plivo AudioStream WebSocket]
+        RT[OpenAI Realtime client]
+    end
+
+    DB[(PostgreSQL / Supabase)]
+    PLIVO[Plivo Telephony]
+
+    U --> UP --> DB
+    D <--> CAMP
+    CAMP --> DB
+    CAMP -- "start campaign, bounded parallel dispatch" --> PLIVO
+    PLIVO -- "answer webhook" --> WEBHOOK --> DB
+    PLIVO -- "audio stream" --> WS
+    WS <--> RT
+    RT -- "call transcript + outcome" --> AI --> DB
+    PLIVO -- "recording / status webhooks" --> WEBHOOK
+    CRON --> DB
+    CRON -- "retry calls" --> PLIVO
+    D --> AI
+```
+
+## Setup & Installation
+
+Requirements: Node.js 20+, npm, and a PostgreSQL database (Supabase recommended).
 
 ```sh
-./scripts/setup.sh
-```
+# 1. Clone the repo
+git clone https://github.com/srksourabh/OpenAI-Outskill-Hackathon.git
+cd OpenAI-Outskill-Hackathon
 
-On Windows PowerShell:
+# 2. Install dependencies
+npm ci
+# or, using the bundled setup script:
+./scripts/setup.sh        # macOS/Linux
+.\scripts\setup.ps1       # Windows PowerShell
 
-```powershell
-.\scripts\setup.ps1
-```
+# 3. Configure environment variables
+cp .env.example .env
+# then fill in DATABASE_URL, OPENAI_API_KEY, PLIVO_* credentials, SESSION_SECRET, etc.
 
-## Development Commands
-Current project entry points:
-
-```sh
-./scripts/setup.sh
-./scripts/verify.sh
-```
-
-Windows PowerShell:
-
-```powershell
-.\scripts\setup.ps1
-.\scripts\verify.ps1
-```
-
-Node commands:
-
-```sh
+# 4. Run the app locally
 npm run dev
-npm run lint
-npm run test
-npm run build
+```
+
+Open `http://localhost:3000/campaigns` to use the app. Log in with the demo credentials shown in `docs/architecture.md` (available automatically when no `AUTH_*` env vars are set and the app is not running in production), or with the admin credentials you configure in `.env`.
+
+To run the standalone voice bridge locally (needed for live Plivo calls):
+
+```sh
 npm run voice:dev
 ```
 
-Voice bridge smoke test:
-
-```powershell
-.\scripts\smoke-voice-bridge.ps1
-```
-
-Open the local app at `http://localhost:3000/campaigns`.
-
-## Live Calling Prerequisites
-For a real Plivo outbound call, the app now requires all of the following before `Start campaign` will dial:
-
-- `provider=plivo` on the created campaign.
-- `APP_BASE_URL` must be a public URL that Plivo can reach, not `localhost`.
-- `VOICE_BRIDGE_PUBLIC_WS_URL` must point to the public `wss://` voice bridge endpoint.
-- `OPENAI_API_KEY` must be set for the voice bridge runtime.
-- `OPENAI_RESPONSES_MODEL` controls the text model used for transcript analysis. The checked-in default is `gpt-4.1-mini`.
-- `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` must be set.
-
-If any of these are missing, the dashboard now returns a clear error instead of pretending the live call started.
-
-## Authentication Setup
-Configure these values before production deployment:
-
-- `SESSION_SECRET`: at least 32 random characters, used to sign the HTTP-only session cookie.
-- `AUTH_ADMIN_EMAIL` and `AUTH_ADMIN_PASSWORD`: admin login credentials.
-- `AUTH_USER_EMAIL` and `AUTH_USER_PASSWORD`: optional read-only user login credentials.
-- `ADMIN_API_KEY`: optional API-key fallback for admin-protected write routes.
-
-Local development keeps demo login credentials available only when no `AUTH_*` credentials are configured and the app is not running in production.
-
-## Provider Setup
-1. Create or reuse a Plivo application and verified outbound number.
-2. Set `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, and `PLIVO_NUMBER` in the dashboard/API environment.
-3. Set `APP_BASE_URL` to the public Vercel URL that Plivo can reach.
-4. Deploy the voice bridge and set `VOICE_BRIDGE_PUBLIC_WS_URL` to its public `wss://.../plivo/audio-stream` URL.
-5. Set the same `VOICE_OUTCOME_SECRET` in the web app and voice bridge environments.
-6. Optional but recommended: set `PLIVO_WEBHOOK_SECRET`; generated callback URLs include it and webhook routes reject mismatches.
-7. Start with simulated campaigns for rehearsal, then switch campaign provider to `plivo` for live calls.
-
-## Testing
-Testing should be added in layers:
-
-- `tests/unit/`: validation, status mapping, language scripts, AI classification helpers.
-- `tests/integration/`: upload parsing, campaign creation, provider webhook idempotency, retry scheduling.
-- `tests/e2e/`: upload-to-dashboard demo workflow.
-
-Run verification with:
+To verify everything (lint, tests, build) in one step:
 
 ```sh
-./scripts/verify.sh
+./scripts/verify.sh       # macOS/Linux
+.\scripts\verify.ps1      # Windows PowerShell
 ```
 
-On this Windows workspace, prefer:
+## Usage
 
-```powershell
-.\scripts\verify.ps1
-```
+1. **Upload contacts** — go to `/campaigns/contacts` and upload a CSV/Excel file (see `samples/demo-contacts.csv` or `samples/demo-contacts.xlsx` for the expected columns), paste a list, or use the one-number quick-check form.
+2. **Create a campaign** — set provider (`plivo` or simulated), default language (Hindi by default), retry limit, and call concurrency.
+3. **Start the campaign** — the app dispatches calls in bounded parallel batches. Without live Plivo credentials configured, campaigns run in simulated callback mode so the flow can still be demoed end to end.
+4. **Monitor results** — the dashboard at `/campaigns` shows live status, per-call detail (recording, transcript, summary, disposition, next action), and filters.
+5. **Export** — download the CSV export, which preserves every original uploaded column and appends the enriched call-result columns.
 
-The Bash script can fail under WSL if `node_modules` was installed for Windows because Rollup/Vitest optional native packages are platform-specific.
+Live outbound calling requires additional setup — a public `APP_BASE_URL`, a deployed voice bridge with a public `wss://` URL, and valid `PLIVO_*` and `OPENAI_API_KEY` credentials. See the **Live Calling Prerequisites** and **Provider Setup** sections in `docs/architecture.md` for the full checklist.
 
-## Demo Data
-Use [samples/demo-contacts.csv](samples/demo-contacts.csv) for the first upload demo. It contains 10 Hindi-first contacts, plus English and regional-language rows, and one unsupported language row that falls back to Hindi.
-Use [samples/demo-contacts.xlsx](samples/demo-contacts.xlsx) when you need the same demo flow as an Excel upload.
+## Project Docs
 
-For quick testing in the app:
-- Download `/sample-mobile-upload.csv` from the dashboard for a lightweight mobile-number template.
-- Uploads can now use common phone headers such as `phone`, `mobile`, `mobile_number`, `phone_number`, or `contact_number`.
-- The dashboard also includes a one-number quick-check form that creates a single-contact test campaign without a spreadsheet.
-
-## Deployment Notes
-- Deploy the Next.js dashboard and API to Vercel.
-- Deploy the Node WebSocket voice bridge to Render, Fly.io, Railway, Cloud Run, or another always-on container service. Render is the current recommended MVP choice for this repo because it can run a persistent Node process for Plivo AudioStream and expose a simple health check.
-- Use Supabase or managed PostgreSQL for the database.
-- Configure Plivo answer/status/recording webhooks to point at the Vercel app.
-- Configure Plivo AudioStream XML to point at the public Render WebSocket URL from `VOICE_BRIDGE_PUBLIC_WS_URL`.
-- The Plivo answer XML now starts background recording, keeps the call alive during bidirectional streaming, and sends ring, stream-status, hangup, and recording callbacks back to the app.
-- The voice bridge serves HTTP health checks on `/health` and accepts WebSocket upgrades on `/plivo/audio-stream`.
-- Store real credentials only in local `.env` or Vercel environment variables.
-- The demo JSON file store now writes to a temp directory on Vercel instead of `/var/task/.data`, so serverless uploads can persist during a runtime instance without hitting the read-only filesystem.
-- Store voice bridge secrets in the Render service environment as well.
-- Keep `.env.example` limited to placeholder variable names.
-- Add Vercel Cron routes for retry and provider status reconciliation.
-- The checked-in `vercel.json` currently uses once-daily cron schedules so Hobby deployments succeed. Upgrade to Vercel Pro and restore the higher-frequency retry cadence when you need `*/10` and `*/15` production jobs.
-- Ship through preview deployments first, then promote one production Vercel deployment and one production Render service after smoke tests pass.
-
-## Key Docs
-- `PRD.md`: Product requirements.
-- `TASKS.md`: Phased implementation checklist.
-- `docs/architecture.md`: System design and module boundaries.
-- `docs/api.md`: API route contracts.
-- `docs/implementation-plan.md`: Build sequence and score gates.
-- `docs/decisions.md`: Architecture decision records.
+- [`PRD.md`](PRD.md) — product requirements
+- [`TASKS.md`](TASKS.md) — phased implementation checklist
+- [`docs/architecture.md`](docs/architecture.md) — system design, data model, and module boundaries
+- [`docs/api.md`](docs/api.md) — API route contracts
+- [`docs/implementation-plan.md`](docs/implementation-plan.md) — build sequence
+- [`docs/decisions.md`](docs/decisions.md) — architecture decision records
+- [`docs/security-data-policy.md`](docs/security-data-policy.md) — access, audit, and retention policy for recordings/transcripts
